@@ -1,0 +1,34 @@
+# Yavas sorgu incelemesi (istege bagli, varsayilan KAPALI): pg_stat_statements eklentisini
+# PostgreSQL'e yukler. shared_preload_libraries yalnizca baslangicta okunur; bu nedenle
+# postgres konteyneri YENIDEN BASLAR (birkac saniyelik kesinti; servisler yeniden baglanir).
+#
+#   docker compose -f docker-compose.yml -f deploy/postgres/pg-stat-statements.yml up -d postgres
+#   scripts/slow-queries.sh enable      # CREATE EXTENSION (bir kez)
+#   scripts/slow-queries.sh             # en cok sure harcayan sorgular
+#
+# Kalici yapmak icin .env'de COMPOSE_FILE=docker-compose.yml:deploy/postgres/pg-stat-statements.yml
+# Kapatmak: bu dosya olmadan "up -d postgres" (eklenti kalir ama veri toplamaz).
+# Ayrinti: docs/runbooks/yavas-sorgu.md
+#
+# KVKK: pg_stat_statements sabitleri $1, $2 ... ile degistirerek saklar (normalize); yine de
+# cikti yalnizca sunucuda okunur, repoya/bilet sistemine ham olarak konmaz.
+services:
+  postgres:
+    command:
+      - postgres
+      - -c
+      - max_connections=300
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.max=5000
+      - -c
+      - pg_stat_statements.track=top
+      - -c
+      - track_io_timing=on
+      # 500 ms'den uzun sorgulari postgres loguna yazar (Loki'de "duration:" ile aranir).
+      # Parametre degerleri yazilmaz (log_parameter_max_length=0) - kisisel veri loga dusmesin.
+      - -c
+      - log_min_duration_statement=${PG_SLOW_QUERY_MS:-500}
+      - -c
+      - log_parameter_max_length=0

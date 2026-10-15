@@ -1,0 +1,46 @@
+# HR360 — Grafana Tempo (dagitik izleme deposu, "monitoring" profili).
+# Izler yalnizca otel-collector'dan (hr360-net icinden) gelir; Tempo disariya acilmaz,
+# Grafana "Tempo" veri kaynagi ile sorgulanir.
+#
+# KVKK: izler kisisel veriden arindirilmis olsa da (servis ici maskeleme + collector
+# redaction) teknik iz verisi de "gerektigi kadar saklama" ilkesine tabidir. Bloklar
+# TEMPO_RETENTION (varsayilan 72h) sonunda compactor tarafindan KALICI olarak silinir.
+stream_over_http_enabled: true
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+  log_level: warn
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+ingester:
+  # Izler en gec 5 dk sonra bloga yazilir (bellek tavanini dusuk tutar).
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    # Saklama suresi (KVKK): bu sureden eski izler silinir.
+    block_retention: ${TEMPO_RETENTION:-72h}
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+overrides:
+  defaults:
+    ingestion:
+      # Tek sunucu: asiri yukte izler dusurulur, servisler etkilenmez.
+      rate_limit_bytes: 5000000
+      burst_size_bytes: 10000000
+    global:
+      max_bytes_per_trace: 2000000

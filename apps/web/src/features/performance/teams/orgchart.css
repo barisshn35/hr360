@@ -1,0 +1,169 @@
+/* ==========================================================================
+   Organizasyon diyagramı — bağlantı çizgileri.
+
+   Klasik iç içe <ul>/<li> ağacı: her düğüm kendi üst yatay yarısını ve
+   dikey inişini çizer, her alt liste ebeveyninden aşağı bir sap indirir.
+   Renkler yalnızca token'lardan; vurgulanan yol (`.on-path`) birincil renge
+   döner. index.css'e dokunulmaz — bu dosya yalnızca bu bileşene aittir.
+   ========================================================================== */
+
+.org {
+  --gap: 30px;
+  --line-w: 1.5px;
+}
+
+.org ul {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding: var(--gap) 0 0;
+  list-style: none;
+}
+
+.org > ul {
+  padding-top: 0;
+}
+
+.org li {
+  --line: hsl(var(--border));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--gap) 8px 0;
+  animation: org-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.org li.on-path {
+  --line: hsl(var(--primary));
+}
+
+.org > ul > li {
+  padding-top: 0;
+}
+
+/* Kardeşlere uzanan yatay çizgi + kendi düğümüne iniş */
+.org li::before,
+.org li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: var(--gap);
+  border-top: var(--line-w) solid var(--line);
+  transition: border-color 0.25s ease;
+}
+
+.org li::after {
+  right: auto;
+  left: 50%;
+  border-left: var(--line-w) solid var(--line);
+}
+
+.org li:first-child::before,
+.org li:last-child::after {
+  border: 0 none;
+}
+
+.org li:last-child::before {
+  border-right: var(--line-w) solid var(--line);
+  border-radius: 0 10px 0 0;
+}
+
+.org li:first-child::after {
+  border-radius: 10px 0 0 0;
+}
+
+/* Tek çocuk: yatay çizgi yok, yalnızca düz iniş — hizası kardeşli dallarla aynı kalır. */
+.org li:only-child::before {
+  display: none;
+}
+
+.org li:only-child::after {
+  left: 50%;
+  border-left: var(--line-w) solid var(--line);
+  width: 0;
+  border-top: 0 none;
+  border-radius: 0;
+}
+
+.org > ul > li::before,
+.org > ul > li::after {
+  display: none;
+}
+
+/* Ebeveynden aşağı sap */
+.org ul ul::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: var(--gap);
+  border-left: var(--line-w) solid var(--line);
+  transition: border-color 0.25s ease;
+}
+
+@keyframes org-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Liste görünümü: soldan girintili ağaç */
+.org-list ul {
+  margin: 0;
+  padding: 0 0 0 22px;
+  list-style: none;
+}
+
+.org-list > ul {
+  padding-left: 0;
+}
+
+.org-list li {
+  --line: hsl(var(--border));
+  position: relative;
+  padding: 6px 0 0 18px;
+}
+
+.org-list > ul > li {
+  padding-left: 0;
+}
+
+.org-list li.on-path {
+  --line: hsl(var(--primary));
+}
+
+.org-list ul ul li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 26px;
+  border-left: var(--line-w, 1.5px) solid var(--line);
+  border-bottom: var(--line-w, 1.5px) solid var(--line);
+  border-bottom-left-radius: 8px;
+}
+
+.org-list ul ul li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-left: var(--line-w, 1.5px) solid hsl(var(--border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .org li {
+    animation: none;
+  }
+}

@@ -1,0 +1,36 @@
+# YALNIZCA TEST: OpenLDAP (deploy/testing/chat-mock.yml -> openldap) tohum verisi.
+# Iki TEST kullanicisi; gercek kisi verisi degildir. telephoneNumber / postalAddress KASITLI olarak
+# eklendi: HR360 bu nitelikleri hic istememeli ve saklamamali (veri minimizasyonu testi).
+dn: dc=hr360test,dc=local
+objectClass: dcObject
+objectClass: organization
+dc: hr360test
+o: HR360 LDAP Test
+
+dn: ou=people,dc=hr360test,dc=local
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=testldap.ada,ou=people,dc=hr360test,dc=local
+objectClass: inetOrgPerson
+uid: testldap.ada
+cn: TestLdap Ada
+givenName: TestLdap
+sn: Ada
+mail: testldap.ada@example.com
+title: TEST Uzman
+departmentNumber:: TcO8aGVuZGlzbGlr
+telephoneNumber: +90 555 000 00 01
+postalAddress: TEST Sokak 1
+userPassword: test-only-1
+
+dn: uid=testldap.bora,ou=people,dc=hr360test,dc=local
+objectClass: inetOrgPerson
+uid: testldap.bora
+cn: TestLdap Bora
+givenName: TestLdap
+sn: Bora
+mail: testldap.bora@example.com
+title: TEST Analist
+telephoneNumber: +90 555 000 00 02
+userPassword: test-only-2

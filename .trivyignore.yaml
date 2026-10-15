@@ -1,0 +1,7 @@
+# Bilinçli istisnalar — her birinin gerekçesi yazılı olmalı.
+misconfigurations:
+  # Postfix master süreci root olarak başlamak zorunda; çalışan süreçleri (smtpd, qmgr,
+  # smtp) kendisi "postfix" kullanıcısına düşürür, OpenDKIM "opendkim" ile çalışır.
+  - id: AVD-DS-0002
+    paths:
+      - "deploy/mailer/Dockerfile"

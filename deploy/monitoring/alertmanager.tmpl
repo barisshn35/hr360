@@ -1,0 +1,33 @@
+{{/* HR360 alarm mesajlari (e-posta, Slack, Teams ortak). */}}
+
+{{ define "hr360.title" -}}
+{{ if eq .Status "firing" }}🔴 [{{ .Alerts.Firing | len }}] {{ else }}✅ Düzeldi: {{ end -}}
+{{ .CommonLabels.alertname }}{{ with .CommonLabels.service }} — {{ . }}{{ end }}
+{{- end }}
+
+{{ define "hr360.text" -}}
+{{ range .Alerts -}}
+{{ if eq .Status "firing" }}•{{ else }}✓{{ end }} {{ .Annotations.summary }}
+  Önem: {{ .Labels.severity }} · Başlangıç: {{ .StartsAt.Local.Format "02.01.2006 15:04" }}{{ if eq .Status "resolved" }} · Bitiş: {{ .EndsAt.Local.Format "02.01.2006 15:04" }}{{ end }}
+{{ end -}}
+{{- end }}
+
+{{ define "hr360.email" -}}
+<div style="font-family:Arial,sans-serif;font-size:14px;color:#111">
+<h2 style="margin:0 0 12px">{{ template "hr360.title" . }}</h2>
+<table cellpadding="6" style="border-collapse:collapse;border:1px solid #ddd">
+<tr style="background:#f4f4f5"><th align="left">Durum</th><th align="left">Alarm</th><th align="left">Servis</th><th align="left">Önem</th><th align="left">Özet</th><th align="left">Başlangıç</th></tr>
+{{ range .Alerts -}}
+<tr>
+<td>{{ if eq .Status "firing" }}Aktif{{ else }}Düzeldi{{ end }}</td>
+<td>{{ .Labels.alertname }}</td>
+<td>{{ .Labels.service }}</td>
+<td>{{ .Labels.severity }}</td>
+<td>{{ .Annotations.summary }}</td>
+<td>{{ .StartsAt.Local.Format "02.01.2006 15:04" }}</td>
+</tr>
+{{ end -}}
+</table>
+<p style="color:#666;font-size:12px;margin-top:16px">HR360 izleme · Panolar: Grafana › HR360 — Servis sağlığı</p>
+</div>
+{{- end }}

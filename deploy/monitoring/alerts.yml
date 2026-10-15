@@ -1,0 +1,281 @@
+# Temel alarm kurallari. Alarmlar Prometheus (/alerts) ve Grafana "HR360 — Servis
+# sagligi" panosunda gorunur; Alertmanager tanimli kanallara (e-posta, Slack,
+# Microsoft Teams) iletir (scripts/monitoring.sh alerts ...).
+groups:
+  - name: hr360
+    rules:
+      - alert: ServisErisilemiyor
+        expr: up == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.service }} 2 dakikadir yanit vermiyor"
+
+      - alert: Yuksek5xxOrani
+        expr: |
+          sum by (service) (rate(http_request_duration_seconds_count{code=~"5.."}[5m]))
+            / clamp_min(sum by (service) (rate(http_request_duration_seconds_count[5m])), 0.001) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.service }} isteklerinin %5'inden fazlasi 5xx donuyor"
+
+      - alert: YavasYanit
+        expr: |
+          histogram_quantile(0.95, sum by (service, le) (rate(http_request_duration_seconds_bucket{endpoint!~".*stream.*"}[5m]))) > 2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.service }} p95 yanit suresi 2 sn'nin uzerinde (SSE akislari haric)"
+
+      - alert: OnbellekKullanilamiyor
+        expr: sum by (service) (rate(hr360_cache_requests_total{result=~"bypass|error"}[5m])) > 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.service }} Redis onbellegine ulasamiyor; istekler dogrudan veritabanina gidiyor (redis konteynerini kontrol edin)"
+
+      - alert: BellekSiniraYakin
+        expr: process_working_set_bytes{job="hr360-services"} > 340 * 1024 * 1024
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.service }} bellek kullanimi konteyner sinirina yakin"
+
+      - alert: DiskDoluyor
+        expr: (node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}) < 0.10
+        for: 15m
+        labels: { severity: critical }
+        annotations:
+          summary: "Sunucu diskinde %10'dan az bos alan kaldi"
+
+      - alert: PostgresBaglantiYuksek
+        expr: sum(pg_stat_database_numbackends) > 150
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "PostgreSQL acik baglanti sayisi yuksek"
+
+      - alert: DenetimZinciriBozuk
+        expr: max(hr360_audit_chain_problems) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Denetim kaydi zinciri {{ $value }} kiracida bozuk ya da gecelik capa tutmuyor (governance-service gunlugu: 'Denetim zinciri SORUNU')"
+
+      - alert: DenetimZinciriKontrolEdilmiyor
+        expr: time() - max(hr360_audit_chain_last_check_timestamp_seconds) > 30 * 3600
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Denetim kaydi zincirinin gecelik kontrolu 30 saattir calismadi"
+
+      # Devir riski modeli veri kaymasi (ml-inference gunluk olcum; kiracilar arasi en yuksek PSI).
+      # PSI > 0,2 belirgin kaymadir: model karti "Veri kaymasi" bolumune bakin, yeniden egitimi
+      # ve bu surede skorlarin yalnizca insan incelemesiyle kullanilmasini degerlendirin.
+      - alert: MLOzellikKaymasi
+        expr: max by (feature) (hr360_ml_feature_psi) > 0.2
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Devir riski modeli: {{ $labels.feature }} ozelliginde belirgin veri kaymasi (PSI {{ $value }})"
+
+      - alert: MLTahminKaymasi
+        expr: max(hr360_ml_prediction_psi) > 0.2
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Devir riski modeli: skor dagilimi egitimdekinden belirgin farkli (PSI {{ $value }})"
+
+  # ------------------------------------------------------------------------------------------
+  # Dalga 12 alarm paketi. Esikler tek sunuculu kurulum icindir; gerekirse burada degistirin
+  # ve "curl -X POST 127.0.0.1:9090/-/reload" ile yukleyin. Ayrinti: docs/runbooks/izleme-alarmlari.md
+  # ------------------------------------------------------------------------------------------
+  - name: hr360-servis
+    rules:
+      - alert: Yuksek5xxOraniKritik
+        expr: |
+          sum by (service) (rate(http_request_duration_seconds_count{code=~"5.."}[5m]))
+            / clamp_min(sum by (service) (rate(http_request_duration_seconds_count[5m])), 0.001) > 0.20
+          and sum by (service) (rate(http_request_duration_seconds_count[5m])) > 0.05
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.service }} isteklerinin %20'sinden fazlasi 5xx donuyor"
+          description: "Servis gunlugu: Grafana > HR360 — Servis sagligi > Loglar (servis secin). Son dagitim ya da veritabani/Kafka erisimi kontrol edilmeli."
+
+      # ml-inference (FastAPI) olcumleri farkli adlandirilir: http_requests_total{status="5xx"}.
+      - alert: MLServisi5xx
+        expr: |
+          sum by (service) (rate(http_requests_total{job="ml-inference",status="5xx"}[5m]))
+            / clamp_min(sum by (service) (rate(http_requests_total{job="ml-inference"}[5m])), 0.001) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "ml-inference isteklerinin %5'inden fazlasi 5xx donuyor"
+
+      - alert: YavasYanitKritik
+        expr: |
+          histogram_quantile(0.95, sum by (service, le) (rate(http_request_duration_seconds_bucket{endpoint!~".*stream.*"}[5m]))) > 5
+          and on (service) sum by (service) (rate(http_request_duration_seconds_count[5m])) > 0.05
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.service }} p95 yanit suresi 5 sn'nin uzerinde (SSE akislari haric)"
+          description: "Yavas uclar: Grafana > 'En yavas uclar' tablosu. Veritabani sorgulari icin docs/runbooks/yavas-sorgu.md."
+
+      - alert: GatewayYanitVermiyor
+        expr: probe_success{job="gateway-http"} == 0
+        for: 3m
+        labels: { severity: critical }
+        annotations:
+          summary: "Gateway (nginx) ic agdan HTTP isteklerine yanit vermiyor; uygulama kullanicilar icin erisilemez olabilir"
+
+      - alert: PostgresErisilemiyor
+        expr: pg_up == 0
+        for: 2m
+        labels: { severity: critical, service: postgres }
+        annotations:
+          summary: "postgres-exporter veritabanina baglanamiyor (PostgreSQL kapali ya da baglanti dolu)"
+
+  - name: hr360-kuyruk
+    rules:
+      # Kaynak: postgres-exporter ek sorgusu (deploy/monitoring/postgres-exporter-queries.yml).
+      - alert: OutboxBirikiyor
+        expr: max(hr360_outbox_oldest_pending_age_seconds) > 300
+        for: 5m
+        labels: { severity: warning, service: kafka }
+        annotations:
+          summary: "Kafka outbox'inda {{ $value | humanizeDuration }} once yazilmis olay hala yayinlanmadi"
+          description: "Izin/masraf/calisan/akis olaylari Kafka'ya gitmiyor (bildirimler ve onay adimlari gecikir). kafka konteynerini ve employee/leave/expense/workflow servis gunluklerindeki 'Event yayinlanamadi' uyarilarini kontrol edin."
+
+      - alert: OutboxTeslimEdilemedi
+        expr: max(hr360_outbox_failed) > 0
+        for: 5m
+        labels: { severity: warning, service: kafka }
+        annotations:
+          summary: "{{ $value }} outbox olayi 10 denemede Kafka'ya yayinlanamadi ve artik denenmiyor"
+          description: "messaging_outbox'ta \"PublishedAt\" bos ve \"AttemptCount\" >= 10 olan satirlar; \"LastError\" sutunu nedeni gosterir. Neden giderildikten sonra \"AttemptCount\" sifirlanirsa yayincilar yeniden dener."
+
+      - alert: BotKuyruguBirikiyor
+        expr: max(hr360_chat_outbox_depth) > 200
+        for: 30m
+        labels: { severity: warning, service: governance-service }
+        annotations:
+          summary: "Sohbet botu yeniden deneme kuyrugunda {{ $value }} mesaj var (Slack/Teams erisimi ya da hiz siniri)"
+
+  - name: hr360-altyapi
+    rules:
+      - alert: DiskDolacak
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}[6h], 24 * 3600) < 0
+          and node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} < 0.25
+        for: 30m
+        labels: { severity: warning, service: host }
+        annotations:
+          summary: "Sunucu diski bu hizla 24 saat icinde dolacak"
+          description: "Buyuyenler genellikle: docker imajlari (docker image prune), backups/ dizini (--keep), Prometheus/Loki verisi (PROMETHEUS_RETENTION, loki.yml retention)."
+
+      - alert: DiskDoluyorDiger
+        expr: |
+          node_filesystem_avail_bytes{mountpoint!="/",fstype!~"tmpfs|overlay|squashfs|vfat|nsfs|fuse.*|ramfs"}
+            / node_filesystem_size_bytes{mountpoint!="/",fstype!~"tmpfs|overlay|squashfs|vfat|nsfs|fuse.*|ramfs"} < 0.10
+        for: 15m
+        labels: { severity: warning, service: host }
+        annotations:
+          summary: "{{ $labels.mountpoint }} diskinde %10'dan az bos alan kaldi"
+
+      - alert: DiskInodeAzaldi
+        expr: |
+          node_filesystem_files_free{fstype!~"tmpfs|overlay|squashfs|vfat|nsfs|fuse.*|ramfs"}
+            / node_filesystem_files{fstype!~"tmpfs|overlay|squashfs|vfat|nsfs|fuse.*|ramfs"} < 0.10
+        for: 15m
+        labels: { severity: warning, service: host }
+        annotations:
+          summary: "{{ $labels.mountpoint }} dosya sisteminde inode'larin %90'indan fazlasi dolu"
+
+      # Kaynak: blackbox-exporter (gateway:443). HTTPS kapaliysa olcum yoktur, alarm calmaz.
+      # Let's Encrypt sertifikalari bitisten 30 gun once yenilenir; 21 gun kalmissa yenileme
+      # basarisiz demektir (scripts/tls.sh check, docker compose logs certbot).
+      - alert: SertifikaBitiyor
+        expr: (probe_ssl_earliest_cert_expiry{job="tls-cert"} - time()) < 21 * 86400
+        for: 1h
+        labels: { severity: warning, service: gateway }
+        annotations:
+          summary: "TLS sertifikasinin bitmesine {{ $value | humanizeDuration }} kaldi"
+          description: "Let's Encrypt: scripts/tls.sh check / retry. Kendi sertifikaniz: scripts/tls.sh enable --cert ... --key ..."
+
+      - alert: SertifikaBitiyorKritik
+        expr: (probe_ssl_earliest_cert_expiry{job="tls-cert"} - time()) < 7 * 86400
+        for: 10m
+        labels: { severity: critical, service: gateway }
+        annotations:
+          summary: "TLS sertifikasinin bitmesine {{ $value | humanizeDuration }} kaldi; bittiginde tarayicilar uygulamayi acmaz"
+
+      - alert: PrometheusKuralHatasi
+        expr: increase(prometheus_rule_evaluation_failures_total[10m]) > 0
+        for: 10m
+        labels: { severity: warning, service: prometheus }
+        annotations:
+          summary: "Prometheus alarm kurallari degerlendirilemiyor ({{ $labels.rule_group }}); alarmlar calmayabilir"
+
+      - alert: PrometheusYapilandirmaYuklenemedi
+        expr: prometheus_config_last_reload_successful == 0
+        for: 5m
+        labels: { severity: warning, service: prometheus }
+        annotations:
+          summary: "Prometheus yapilandirmasi yeniden yuklenemedi; eski kurallarla calisiyor (docker compose logs prometheus)"
+
+      - alert: AlarmIletilemiyor
+        expr: increase(alertmanager_notifications_failed_total[15m]) > 0
+        for: 5m
+        labels: { severity: warning, service: alertmanager }
+        annotations:
+          summary: "Alertmanager {{ $labels.integration }} kanalina alarm iletemiyor (scripts/monitoring.sh alerts test)"
+
+  # Kaynak: scripts/backup.sh ve restore-drill.sh'in yazdigi deploy/monitoring/textfile/*.prom
+  # (node-exporter textfile toplayicisi). Zamanlama: scripts/schedule.sh install backup restore-drill
+  - name: hr360-yedek
+    rules:
+      - alert: YedekEski
+        expr: time() - max(hr360_backup_last_success_timestamp_seconds) > 26 * 3600
+        for: 30m
+        labels: { severity: warning, service: backup }
+        annotations:
+          summary: "Son basarili yedek {{ $value | humanizeDuration }} once alindi (gecelik yedek calismiyor)"
+          description: "scripts/schedule.sh status ve backups/backup.log'a bakin; elle: scripts/backup.sh"
+
+      - alert: YedekCokEski
+        expr: time() - max(hr360_backup_last_success_timestamp_seconds) > 50 * 3600
+        for: 30m
+        labels: { severity: critical, service: backup }
+        annotations:
+          summary: "Iki gundur basarili yedek yok ({{ $value | humanizeDuration }})"
+
+      - alert: YedekKaydiYok
+        expr: absent(hr360_backup_last_success_timestamp_seconds) and on () (up{job="node"} == 1)
+        for: 24h
+        labels: { severity: warning, service: backup }
+        annotations:
+          summary: "Bu sunucuda kaydi tutulan bir yedek yok (scripts/backup.sh hic basariyla calismadi ya da zamanlanmadi)"
+          description: "Zamanlamak icin: sudo scripts/schedule.sh install backup restore-drill"
+
+      - alert: YedekSunucuDisindaDegil
+        expr: max(hr360_backup_last_offsite) == 0
+        for: 1h
+        labels: { severity: info, service: backup }
+        annotations:
+          summary: "Yedekler yalnizca bu sunucuda; sunucu kaybinda yedek de kaybolur (BACKUP_S3_* ya da --to-minio)"
+
+      - alert: GeriYuklemeTestiBasarisiz
+        expr: min by (tool) (hr360_restore_test_success) == 0
+        labels: { severity: critical, service: backup }
+        annotations:
+          summary: "Son geri yukleme testi ({{ $labels.tool }}) basarisiz: yedekten geri donulemeyebilir"
+          description: "backups/restore-drill.log ya da backups/verify.log; elle: scripts/restore-drill.sh"
+
+      - alert: GeriYuklemeTestiEski
+        expr: time() - max(hr360_restore_test_last_success_timestamp_seconds) > 8 * 86400
+        for: 1h
+        labels: { severity: warning, service: backup }
+        annotations:
+          summary: "Son basarili geri yukleme testi {{ $value | humanizeDuration }} once (haftalik tatbikat calismiyor)"

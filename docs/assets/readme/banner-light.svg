@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="HR360">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3faf7"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#10b981" stop-opacity=".35"/><stop offset="1" stop-color="#10b981" stop-opacity="0"/></radialGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14c48a"/><stop offset="1" stop-color="#0b8f63"/></linearGradient>
+    <style>
+      .orbit{transform-origin:200px 150px;animation:spin 14s linear infinite}
+      .orbit2{transform-origin:200px 150px;animation:spin 22s linear infinite reverse}
+      .pulse{transform-origin:200px 150px;animation:pulse 4s ease-in-out infinite}
+      .rise{animation:rise 1.2s ease-out both}
+      .rise2{animation:rise 1.2s .25s ease-out both}
+      .rise3{animation:rise 1.2s .5s ease-out both}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      @keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+      @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+      @media (prefers-reduced-motion:reduce){.orbit,.orbit2,.pulse,.rise,.rise2,.rise3{animation:none}}
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif}
+    </style>
+  </defs>
+  <rect width="1200" height="300" rx="24" fill="url(#bg)"/>
+  <circle class="pulse" cx="200" cy="150" r="120" fill="url(#glow)"/>
+  <circle cx="200" cy="150" r="78" fill="none" stroke="#cfe6dc" stroke-width="1.5" stroke-dasharray="3 7"/>
+  <circle cx="200" cy="150" r="108" fill="none" stroke="#cfe6dc" stroke-width="1"/>
+  <g class="orbit"><circle cx="278" cy="150" r="6" fill="#10b981"/></g>
+  <g class="orbit2"><circle cx="200" cy="42" r="4.5" fill="#34d399"/><circle cx="92" cy="150" r="3" fill="#10b981" opacity=".7"/></g>
+  <rect x="158" y="108" width="84" height="84" rx="22" fill="url(#tile)"/>
+  <rect x="179" y="133" width="42" height="12" rx="6" fill="#fff"/>
+  <rect x="172" y="155" width="25" height="12" rx="6" fill="#fff"/>
+  <rect x="203" y="155" width="25" height="12" rx="6" fill="#fff"/>
+  <text class="rise" x="360" y="128" font-size="64" font-weight="700" fill="#0c1a14" letter-spacing="-1.5">HR360</text>
+  <text class="rise2" x="362" y="176" font-size="26" fill="#0c1a14" opacity=".92">İnsan kaynakları, tek ışıkta.</text>
+  <text class="rise3" x="362" y="216" font-size="18" fill="#4b5f57">Açık kaynak · kendi sunucunuzda · KVKK odaklı · Türkçe / English</text>
+</svg>

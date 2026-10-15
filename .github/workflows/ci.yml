@@ -1,0 +1,272 @@
+# HR360 surekli entegrasyon: her push / PR'da arayuz, .NET servisleri,
+# ML servisi, dagitim dosyalari ve guvenlik taramasi (Trivy, npm audit, NuGet) dogrulanir. main'e push'ta ek olarak Docker
+# imajlari derlenir (yayinlanmaz).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Arayuz (tsc + vite build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Tip denetimi
+        run: npm run lint
+      - name: Birim testleri (Vitest)
+        run: npm test
+      - name: Çeviri sözlüğü (eksik ya da yer tutucusu uyumsuz anahtar)
+        run: npm run i18n:check
+      - name: Tema kontrastı (WCAG 2.1 AA, açık ve koyu tema)
+        run: npm run contrast:check
+      - name: Uretim derlemesi
+        env:
+          VITE_KEYCLOAK_URL: /auth
+          VITE_KEYCLOAK_REALM: hr360
+          VITE_KEYCLOAK_CLIENT_ID: hr360-web
+          VITE_API_BASE: ""
+        run: npx vite build
+      - name: Paket boyutu
+        run: |
+          echo "### Arayuz paketleri" >> "$GITHUB_STEP_SUMMARY"
+          find dist/assets -name '*.js' -printf '%s %p\n' | sort -rn | head -8 | awk '{printf "- %s — %.0f KB\n", $2, $1/1024}' >> "$GITHUB_STEP_SUMMARY"
+
+  dotnet:
+    name: .NET — ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - compensation-service
+          - employee-service
+          - engagement-service
+          - expense-service
+          - governance-service
+          - learning-service
+          - leave-service
+          - notification-service
+          - onboarding-service
+          - organization-service
+          - performance-service
+          - recruitment-service
+          - tenant-service
+          - timeshift-service
+          - workflow-service
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 9.0.x
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ matrix.service }}-${{ hashFiles(format('apps/services/{0}/*.csproj', matrix.service)) }}
+          restore-keys: nuget-
+      - name: Derle
+        working-directory: apps/services/${{ matrix.service }}
+        run: dotnet build -c Release -nologo
+
+  dotnet-tests:
+    name: .NET birim testleri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 9.0.x
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-tests-${{ hashFiles('tests/dotnet/**/*.csproj', 'apps/services/governance-service/*.csproj', 'apps/services/engagement-service/*.csproj') }}
+          restore-keys: nuget-
+      - name: xUnit
+        run: |
+          for p in tests/dotnet/*/; do dotnet test "$p" --nologo --logger "trx;LogFileName=results.trx"; done
+
+  ml:
+    name: ML servisi (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ml-inference
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: apps/ml-inference/requirements*.txt
+      - name: Bagimliliklar
+        # Testler yalnizca ai_tools router'ini yukler; mlflow/shap gibi agir
+        # paketler gerekmez. Surumler requirements dosyalarindan alinir.
+        run: |
+          grep -E '^(fastapi|starlette|pydantic|httpx|numpy|scikit-learn|prometheus-fastapi-instrumentator|ortools)==' requirements.txt > ci-req.txt
+          cat requirements-ai.txt requirements-dev.txt >> ci-req.txt
+          pip install -r ci-req.txt
+      - name: Sozdizimi
+        run: python -m compileall -q .
+      - name: Testler
+        run: python -m pytest -q tests
+
+  deploy-config:
+    name: Dagitim dosyalari
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Ornek .env
+        # .env.example'dan; orada olmayan degiskenler (sir/parola) sahte degerle eklenir.
+        run: |
+          cp .env.example .env
+          grep -oE '\$\{[A-Z0-9_]+' docker-compose.yml | cut -c3- | sort -u | while read -r v; do
+            grep -q "^$v=" .env || echo "$v=ci" >> .env
+          done
+      - name: docker compose config (tum profiller)
+        run: docker compose --profile monitoring --profile letsencrypt --profile mailer config -q
+      - name: nginx -t
+        run: docker run --rm --network none -v "$PWD/deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:1.27-alpine nginx -t
+      - name: Prometheus kurallari
+        run: |
+          docker run --rm --entrypoint promtool -v "$PWD/deploy/monitoring:/m:ro" prom/prometheus:v2.55.1 check rules /m/alerts.yml
+          # Esik birim testleri (outbox, yedek, sertifika, 5xx)
+          docker run --rm --entrypoint promtool -v "$PWD/deploy/monitoring:/m:ro" -w /m prom/prometheus:v2.55.1 test rules /m/alerts.test.yml
+          # prometheus.yml rule_files yolunu konteyner icinden cozer
+          docker run --rm --entrypoint sh -v "$PWD/deploy/monitoring:/etc/prometheus:ro" prom/prometheus:v2.55.1 -c 'promtool check config /etc/prometheus/prometheus.yml'
+      - name: Alertmanager yapilandirmasi (tum kanallar acik)
+        run: |
+          docker run --rm --entrypoint /bin/sh \
+            -e ALERT_EMAIL_TO=a@example.com,b@example.com -e ALERT_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T/B/X \
+            -e ALERT_TEAMS_WEBHOOK_URL=https://example.logic.azure.com/workflows/x -e SMTP_HOST=smtp.office365.com -e SMTP_PORT=587 \
+            -e SMTP_USER=u -e "SMTP_PASSWORD=p'q" \
+            -v "$PWD/deploy/monitoring/alertmanager-entrypoint.sh:/e.sh:ro" -v "$PWD/deploy/monitoring/alertmanager.tmpl:/etc/alertmanager/templates/hr360.tmpl:ro" \
+            prom/alertmanager:v0.28.1 /e.sh check
+      - name: Grafana panoları JSON
+        run: for f in deploy/monitoring/grafana/dashboards/*.json; do python3 -m json.tool "$f" > /dev/null || exit 1; done
+      - name: blackbox-exporter ve postgres-exporter yapılandırması
+        run: |
+          docker run --rm -v "$PWD/deploy/monitoring/blackbox.yml:/b.yml:ro" prom/blackbox-exporter:v0.25.0 --config.file=/b.yml --config.check
+          python3 -c "import yaml,sys; q=yaml.safe_load(open('deploy/monitoring/postgres-exporter-queries.yml')); assert all('query' in v and 'metrics' in v for v in q.values())"
+      - name: Kabuk betikleri (bash -n + shellcheck)
+        run: |
+          for f in install.sh scripts/*.sh scripts/lib/*.sh tests/install/*.sh; do bash -n "$f"; done
+          shellcheck -x -S error install.sh scripts/*.sh scripts/lib/*.sh tests/install/*.sh
+      - name: Kurulum otomasyonu (HTTPS, DNS, SMTP; sahte docker/curl ile)
+        run: tests/install/test_install.sh
+      - name: Yedek ve guncelleme (sifreleme, dis depo, geri yukleme testi, otomatik geri donus)
+        run: tests/install/test_backup_update.sh
+      - name: Sirlar dosyada ve anahtar halkasi (secrets-migrate, crypto-keys)
+        run: tests/install/test_secrets.sh
+      - name: Veritabani rolleri (uretilen GRANT listesi koda uygun)
+        run: python3 tests/support/test_db_roles.py
+      - name: SQL semasi (bos Postgres'e uygulanir)
+        run: |
+          docker run -d --name pg -e POSTGRES_PASSWORD=ci -e POSTGRES_USER=hr360admin -e POSTGRES_DB=hr360_operational postgres:18-alpine
+          for _ in $(seq 1 30); do docker exec pg pg_isready -U hr360admin && break; sleep 2; done
+          docker exec -i pg psql -U hr360admin -d hr360_operational -v ON_ERROR_STOP=1 -q < data/migrations/sql-all-schemas.sql
+          docker exec pg psql -U hr360admin -d hr360_operational -Atc "select count(*) from information_schema.tables where table_schema='public'"
+
+  security:
+    name: Guvenlik taramasi
+    runs-on: ubuntu-latest
+    env:
+      TRIVY_IMAGE: aquasec/trivy:0.57.1@sha256:5c59e08f980b5d4d503329773480fcea2c9bdad7e381d846fbf9f2ecb8050f6b
+    steps:
+      - uses: actions/checkout@v7
+      - name: Trivy — bagimliliklar, gizli anahtarlar, Dockerfile/compose
+        run: |
+          docker run --rm -v "$PWD:/src:ro" "$TRIVY_IMAGE" fs --scanners vuln,secret,misconfig --ignorefile /src/.trivyignore.yaml --file-patterns 'pip:requirements-.*\.txt' \
+            --severity HIGH,CRITICAL --exit-code 1 --skip-dirs /src/apps/web/node_modules /src
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: npm audit (uretim bagimliliklari)
+        working-directory: apps/web
+        run: npm audit --omit=dev --audit-level=high
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 9.0.x
+      - name: NuGet — bilinen acigi olan paketler
+        run: |
+          rc=0
+          for p in apps/services/*/; do
+            out=$(cd "$p" && dotnet list package --vulnerable --include-transitive 2>&1)
+            if echo "$out" | grep -q "has the following vulnerable packages"; then echo "$out"; rc=1; fi
+          done
+          exit $rc
+
+  images:
+    name: Docker imajlari
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [web, dotnet, dotnet-tests, ml, deploy-config, security]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: web, context: apps/web }
+          - { name: ml-inference, context: apps/ml-inference }
+          - { name: compensation-service, context: apps/services/compensation-service }
+          - { name: employee-service, context: apps/services/employee-service }
+          - { name: engagement-service, context: apps/services/engagement-service }
+          - { name: expense-service, context: apps/services/expense-service }
+          - { name: governance-service, context: apps/services/governance-service }
+          - { name: learning-service, context: apps/services/learning-service }
+          - { name: leave-service, context: apps/services/leave-service }
+          - { name: notification-service, context: apps/services/notification-service }
+          - { name: onboarding-service, context: apps/services/onboarding-service }
+          - { name: organization-service, context: apps/services/organization-service }
+          - { name: performance-service, context: apps/services/performance-service }
+          - { name: recruitment-service, context: apps/services/recruitment-service }
+          - { name: tenant-service, context: apps/services/tenant-service }
+          - { name: timeshift-service, context: apps/services/timeshift-service }
+          - { name: workflow-service, context: apps/services/workflow-service }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          push: false
+          load: true
+          tags: hr360-${{ matrix.name }}:ci
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+      - name: Trivy — imaj (duzeltmesi yayimlanmis kritik aciklar)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.57.1@sha256:5c59e08f980b5d4d503329773480fcea2c9bdad7e381d846fbf9f2ecb8050f6b \
+            image --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 1 hr360-${{ matrix.name }}:ci
+      # Guvenlik dalgasi 1: her imajin yazilim bilesen listesi (SBOM, CycloneDX). Yeni bir acik
+      # duyuruldugunda hangi imajin etkilendigi bu listeden bulunur; 90 gun saklanir.
+      - name: SBOM (CycloneDX)
+        run: |
+          mkdir -p sbom
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/sbom:/out" \
+            aquasec/trivy:0.57.1@sha256:5c59e08f980b5d4d503329773480fcea2c9bdad7e381d846fbf9f2ecb8050f6b \
+            image --format cyclonedx --output /out/hr360-${{ matrix.name }}.cdx.json hr360-${{ matrix.name }}:ci
+          test -s sbom/hr360-${{ matrix.name }}.cdx.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ matrix.name }}
+          path: sbom/hr360-${{ matrix.name }}.cdx.json
+          retention-days: 90

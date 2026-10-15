@@ -1,0 +1,127 @@
+# YALNIZCA TEST: governance-service'i Slack, Teams, Microsoft, Google ve Zoom uclarinin sahtesine
+# (tests/integration/chatmock.py) yonlendirir. Uretimde KULLANMAYIN.
+#   docker compose -f docker-compose.yml -f deploy/testing/chat-mock.yml up -d governance-service notification-service
+services:
+  governance-service:
+    environment:
+      SLACK_API_BASE: "http://chatmock:8000/api"
+      TEAMS_LOGIN_BASE: "http://chatmock:8000"
+      TEAMS_OPENID_METADATA: "http://chatmock:8000/botframework/openid"
+      GOOGLE_AUTH_URL: "http://chatmock:8000/google/auth"
+      GOOGLE_OAUTH_BASE: "http://chatmock:8000/google"
+      GOOGLE_API_BASE: "http://chatmock:8000/googleapis"
+      MS_LOGIN_BASE: "http://chatmock:8000/ms"
+      GRAPH_BASE: "http://chatmock:8000/graph/v1.0"
+      ZOOM_OAUTH_BASE: "http://chatmock:8000/zoom"
+      ZOOM_API_BASE: "http://chatmock:8000/zoomapi/v2"
+      # Dalga 12: hesap acma/kapatma (Google Admin SDK / Microsoft Graph sahtesi).
+      ACCOUNT_PROVISIONING_ENABLED: "true"
+      GOOGLE_ADMIN_BASE: "http://chatmock:8000/googleadmin"
+      LLM_PROVIDER: "anthropic"
+      LLM_BASE_URL: "http://chatmock:8000/anthropic"
+      LLM_API_KEY: "test"
+      LLM_MODEL: "mock-model"
+      LLM_HOURLY_LIMIT: "20"
+      LLM_QUOTA_WINDOW_MINUTES: "1"
+      # Gonderilemeyen sohbet mesajlari 2, 10, 30... sn sonra yeniden denenir.
+      CHAT_RETRY_BASE_SECONDS: "2"
+      # Dalga 12: basarisiz webhook teslimatlari 2, 10, 60... sn sonra yeniden denenir (uretimde 60 sn taban).
+      WEBHOOK_RETRY_BASE_SECONDS: "2"
+      # Denetim kaydi SIEM aktarimi (sahte syslog alicisi, 2 sn'de bir).
+      SIEM_SYSLOG_ENDPOINT: "udp://chatmock:5514"
+      SIEM_INTERVAL_SECONDS: "2"
+      # Zamanlanmis rapor teslimi 3 sn'de bir (uretimde 5 dk).
+      SAVED_REPORTS_INTERVAL_SECONDS: "3"
+      # Dalga 5e sohbet botu: zamanlanmis bot isleri dakikada bir (uretimde 5 dk; test ayrica
+      # POST /api/governance/chat-admin/jobs/run ile tetikler); kullanici basina 40 komut/dk
+      # (uretimde 20); fis okuma icin ml-inference hizmet hesabi (client_credentials).
+      CHAT_JOBS_SECONDS: "60"
+      CHAT_RATE_USER: "40"
+      OCR_CLIENT_SECRET: "${ML_KEYCLOAK_CLIENT_SECRET:-}"
+  notification-service:
+    environment:
+      # Sahte Web Push servisine (chatmock) gonderime izin; anlik bildirim turu 2 sn.
+      PUSH_ALLOWED_HOSTS: "chatmock"
+      PUSH_POLL_SECONDS: "2"
+      # Bildirim tercihleri (G11): e-posta kuyrugu 2 sn, gunluk ozet iscisi 3 sn'de bir;
+      # servisler arasi tercih ucu (/api/notifications/preferences/effective) icin anahtar
+      # (uretimde docker-compose.yml notification-service ortamina da eklenmeli).
+      EMAIL_POLL_SECONDS: "2"
+      DIGEST_CHECK_SECONDS: "3"
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+  workflow-service:
+    environment:
+      # Vekalet ve sure asimi isleri 5 sn'de bir (uretimde 5 dk).
+      WORKFLOW_JOBS_SECONDS: "5"
+      # G25: dagitik izleme testi (tests/integration/test_telemetry.py) - izler
+      # monitoring profilindeki otel-collector'a gider (collector yoksa sessizce duser).
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  leave-service:
+    environment:
+      # G25: dagitik izleme testi (bkz. workflow-service).
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  expense-service:
+    environment:
+      # Sahte TCMB kur dosyalari; pasaport temizligi dakikada bir.
+      TCMB_RATES_URL: "http://chatmock:8000/tcmb"
+      TRAVEL_PURGE_MINUTES: "1"
+      # G25: messaging_outbox dort servisin (employee, leave, expense, workflow) ortak tablosu;
+      # herhangi biri yayinlayabildigi icin Kafka iz testi dordunde de izleme ister.
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  employee-service:
+    environment:
+      # G25: bkz. expense-service (ortak outbox yayincisi).
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  compensation-service:
+    environment:
+      EXPORT_PURGE_MINUTES: "1"
+  learning-service:
+    environment:
+      # Sertifika bitiş hatırlatmaları 3 sn'de bir (üretimde saatte bir).
+      CERT_REMINDER_SECONDS: "3"
+  recruitment-service:
+    environment:
+      # Kariyer sayfası istek sınırı testte kısa pencereli (üretimde 10 istek / 10 dk);
+      # imha işçisi dakikada bir (üretimde 6 saatte bir).
+      RECRUITMENT_PUBLIC_RATE_LIMIT: "25"
+      RECRUITMENT_PUBLIC_RATE_WINDOW_SECONDS: "30"
+      # Dalga 11: durum bağlantısı/öz-hizmet GET sınırı (üretimde 60 istek / 10 dk).
+      RECRUITMENT_STATUS_RATE_LIMIT: "40"
+      RECRUITMENT_STATUS_RATE_WINDOW_SECONDS: "30"
+      RECRUITMENT_RETENTION_INTERVAL_MINUTES: "1"
+  onboarding-service:
+    environment:
+      # Ilk gun karsilama ve zimmet iade hatirlatma isleri 3 sn'de bir (uretimde 15 dk).
+      ONBOARDING_JOBS_SECONDS: "3"
+  ml-inference:
+    environment:
+      # G5: kiracı verisiyle (satır/CSV) model eğitimini servisler arası çağrıya açar
+      # (X-Internal-Token). Sentetik yeniden eğitim İK rolleriyle, bu anahtar olmadan da çalışır.
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+  tenant-service:
+    environment:
+      # Dalga 5d: DNS TXT saptirma dosyasi (yalnizca TENANT_TEST_MODE=true iken okunur),
+      # testteki OpenLDAP konteynerine (openldap, ozel ag) izin, arka plan LDAP esitlemesi 12 sn.
+      TENANT_TEST_MODE: "true"
+      DNS_TXT_OVERRIDE_FILE: "/tmp/hr360-dns-override.json"
+      LDAP_ALLOW_PRIVATE_HOSTS: "openldap"
+      DIRECTORY_SYNC_MINUTES: "0.2"
+      # Guvenlik dalgasi 2A: supheli giris tespiti Keycloak olaylarini 5 sn'de bir okur (uretimde 60 sn).
+      LOGIN_WATCH_INTERVAL_SECONDS: "5"
+  # YALNIZCA TEST (Y26 LDAP esitlemesi): iki TEST kullanicili OpenLDAP.
+  #   docker compose -f docker-compose.yml -f deploy/testing/chat-mock.yml up -d openldap
+  # bitnami/openldap Docker Hub'dan kaldirildigi icin bitnamilegacy kopyasi kullanilir.
+  openldap:
+    image: bitnamilegacy/openldap:2.6
+    profiles: ["ldaptest"]
+    environment:
+      LDAP_ROOT: "dc=hr360test,dc=local"
+      LDAP_ADMIN_USERNAME: "admin"
+      LDAP_ADMIN_PASSWORD: "${LDAP_TEST_ADMIN_PASSWORD:-test-only-ldap-admin}"
+      LDAP_CUSTOM_LDIF_DIR: "/ldifs"
+      LDAP_ALLOW_ANON_BINDING: "no"
+    volumes:
+      - ./tests/integration/ldap:/ldifs:ro
+    mem_limit: "128m"

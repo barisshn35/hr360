@@ -1,0 +1,27 @@
+{
+  "version": "2026-10-19",
+  "source": "HR360 projesi için elle derlenmiş küçük Türkçe duygu sözlüğü (engagement-service Sentiment.cs sözlüğünün genişletilmiş hâli). Dış bir sözlükten kopyalanmamıştır; lisansı depo lisansıyla aynıdır. Biçim: sözcükler ASCII'ye indirgenmiş (ı->i, ş->s ...) köklerdir ve önek olarak eşleşir; 'verbs' köklerinde -me/-ma olumsuzluk eki aranır; 'exclusions' yanlış önek eşleşmelerini engeller.",
+  "positive": [
+    "iyi", "guzel", "harika", "mukemmel", "super", "memnun", "mutlu", "basari", "keyif", "olumlu", "verimli", "huzur",
+    "adil", "esnek", "takdir", "gelisim", "kolay", "seffaf", "motive", "motivasyon", "samimi", "saygi", "uyumlu", "rahat",
+    "firsat", "eglenceli", "yardimsever", "profesyonel", "muhtesem", "basarili", "sevgi", "hosnut", "tesekkur", "destek",
+    "dengeli", "anlayisli", "ilham", "gurur", "keyifli", "acik iletisim", "isbirligi", "dayanisma", "ozgur", "guvenli",
+    "takdir edil", "cozum odakli", "yenilikci", "kaliteli", "hizli", "duzenli", "tatmin"
+  ],
+  "negative": [
+    "kotu", "berbat", "yorgun", "yorucu", "stres", "baski", "yogun", "dusuk", "adaletsiz", "sorun", "problem", "sikayet",
+    "mutsuz", "yetersiz", "zor", "belirsiz", "kaos", "karmasa", "toksik", "eksik", "gergin", "tuken", "haksiz", "ilgisiz",
+    "daginik", "yavas", "sikici", "endise", "kaygi", "korku", "mobbing", "bikkin", "rezalet", "vasat", "dengesiz", "agir",
+    "kopuk", "plansiz", "gecik", "fazla mesai", "maas dusuk", "dusuk maas", "iletisimsizlik", "kayirma", "baskici", "israf",
+    "bitkin", "tukenmislik", "hayal kirikligi", "umutsuz"
+  ],
+  "verbs_positive": ["sev", "begen", "oner", "guven", "destekle", "ogren", "gelis", "memnun ol", "keyif al"],
+  "verbs_negative": ["zorlan", "yorul", "sikil", "bik", "uzul", "kayg", "endiselen", "bunal", "tuken"],
+  "exclusions": [
+    "seviye", "sevk", "zorunlu", "iyiles", "destekci", "oneri", "onerge", "guvenlik", "bicak", "yogunlas", "problemsiz",
+    "sorunsuz", "stressiz", "endisesiz", "kaygisiz", "ogrenci", "netice", "sinirli sayida", "sinirsiz", "agirlik", "hizlandir"
+  ],
+  "positive_compounds": ["sorunsuz", "problemsiz", "stressiz", "endisesiz", "kaygisiz", "baskisiz"],
+  "negators": ["degil", "yok", "olmuyor", "olmadi", "olmaz", "olamiyor", "olamadi", "olmayan"],
+  "intensifiers": ["cok", "asiri", "son derece", "gercekten", "oldukca", "fazlasiyla"]
+}

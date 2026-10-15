@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" sizes="16x16" href="/favicon-16.png" />
+    <link rel="alternate icon" sizes="32x32" href="/favicon-32.png" />
+    <link rel="alternate icon" sizes="48x48" href="/favicon-48.png" />
+    <link rel="apple-touch-icon" href="/appicon-dark-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="HR360" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/appicon-dark-192.png" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#050a08" />
+    <script src="/theme-init.js"></script>
+    <meta
+      name="description"
+      content="HR360 — şirketinizin bütün İK süreçleri tek platformda: açık kaynak, kendi sunucunuzda, KVKK'ya göre tasarlanmış."
+    />
+    <!-- Paylasim onizlemesi (Open Graph / X). __HR360_ORIGIN__ web kapsayicisinin nginx'inde
+         istegin kokeniyle degistirilir (og:image mutlak adres olmali). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="HR360" />
+    <meta property="og:locale" content="tr_TR" />
+    <meta property="og:title" content="HR360 — İnsan kaynakları, tek ışıkta." />
+    <meta property="og:description" content="Açık kaynak İK platformu: izin, bordro, performans, işe alım, vardiya ve daha fazlası — kendi sunucunuzda, KVKK'ya göre tasarlanmış." />
+    <meta property="og:url" content="__HR360_ORIGIN__/" />
+    <meta property="og:image" content="__HR360_ORIGIN__/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="HR360 — İnsan kaynakları, tek ışıkta." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="HR360 — İnsan kaynakları, tek ışıkta." />
+    <meta name="twitter:description" content="Açık kaynak İK platformu — kendi sunucunuzda, KVKK'ya göre tasarlanmış." />
+    <meta name="twitter:image" content="__HR360_ORIGIN__/og-image.png" />
+    <title>HR360</title>
+    <!-- JS yuklenmeden once gorunen acilis ekrani (CSP: stil satir ici serbest, betik yok). -->
+    <style>
+      #hr-splash{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:hsl(0 0% 99%);color:hsl(240 4% 40%);font:500 13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.02em;transition:opacity .45s ease,visibility .45s ease}
+      .dark #hr-splash{background:hsl(240 8% 3.5%);color:hsl(240 5% 64%)}
+      #hr-splash.hr-splash-out{opacity:0;visibility:hidden}
+      .hr-sp-stage{position:relative;width:224px;height:224px;display:flex;align-items:center;justify-content:center}
+      .hr-sp-glow{position:absolute;width:96px;height:96px;border-radius:50%;background:hsl(158 80% 41%/.22);filter:blur(28px);animation:hr-sp-pulse 2.4s ease-in-out infinite}
+      .hr-sp-mark{position:relative;width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,hsl(158 80% 41%),hsl(170 80% 32%));box-shadow:0 0 40px -6px hsl(158 80% 41%);animation:hr-sp-in .6s cubic-bezier(.2,.8,.2,1) both}
+      .hr-sp-mark img{width:32px;height:32px}
+      .hr-sp-ring{position:absolute;inset:0;margin:auto;border-radius:50%;border:1px dashed hsl(240 5% 50%/.18)}
+      .hr-sp-r1{width:124px;height:124px}.hr-sp-r2{width:196px;height:196px}
+      .hr-sp-orbit{position:absolute;inset:0;margin:auto;border-radius:50%;animation:hr-sp-spin 8s linear infinite}
+      .hr-sp-orbit.o2{width:196px;height:196px;animation-duration:14s;animation-direction:reverse}
+      .hr-sp-orbit.o1{width:124px;height:124px}
+      .hr-sp-dot{position:absolute;top:-5px;left:50%;margin-left:-5px;width:10px;height:10px;border-radius:50%;background:hsl(158 80% 41%);box-shadow:0 0 12px hsl(158 80% 41%)}
+      .o2 .hr-sp-dot{width:8px;height:8px;top:-4px;margin-left:-4px;background:hsl(170 85% 60%);box-shadow:none}
+      .hr-sp-label{animation:hr-sp-fade .5s .2s ease both}
+      .hr-sp-label span{animation:hr-sp-blink 1s steps(1) infinite}
+      @keyframes hr-sp-spin{to{transform:rotate(360deg)}}
+      @keyframes hr-sp-pulse{0%,100%{transform:scale(.9);opacity:.7}50%{transform:scale(1.1);opacity:1}}
+      @keyframes hr-sp-in{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
+      @keyframes hr-sp-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+      @keyframes hr-sp-blink{50%{opacity:0}}
+      @media (prefers-reduced-motion:reduce){#hr-splash *{animation:none!important}#hr-splash{transition:none}}
+    </style>
+  </head>
+  <body>
+    <noscript>HR360 için JavaScript gereklidir. / HR360 requires JavaScript.</noscript>
+    <div id="root"></div>
+    <div id="hr-splash" role="status" aria-live="polite">
+      <div class="hr-sp-stage" aria-hidden="true">
+        <span class="hr-sp-ring hr-sp-r1"></span>
+        <span class="hr-sp-ring hr-sp-r2"></span>
+        <span class="hr-sp-glow"></span>
+        <span class="hr-sp-orbit o1"><i class="hr-sp-dot"></i></span>
+        <span class="hr-sp-orbit o2"><i class="hr-sp-dot"></i></span>
+        <span class="hr-sp-mark"><img src="/icon-white.svg" alt="" /></span>
+      </div>
+      <p class="hr-sp-label">HR360<span>_</span></p>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

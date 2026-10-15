@@ -1,0 +1,929 @@
+name: hr360
+
+# ---------------------------------------------------------------------------
+# HR360 Enterprise — tek sunucuda (all-in-one) çalışan demo/portföy sürümü.
+#
+# Orijinal mimari 7 ayrı sanal sunucuya (uygulama x2, DB primary+standby, veri
+# servisleri, ops, ML) dağıtılmış durumdaydı (bkz. README, "Orijinal prodüksiyon
+# mimarisi hakkında not"). Bu
+# dosya aynı servislerin tamamını tek makinede, servis adı üzerinden birbirini
+# bulacak şekilde çalıştırır. Kurulum için kökteki install.sh scriptini
+# kullanın — .env dosyasını elle oluşturmanıza gerek yok.
+# ---------------------------------------------------------------------------
+
+x-dotnet-service: &dotnet-service
+  restart: unless-stopped
+  # Guvenlik dalgasi 1 (konteyner sertlestirme): servisler root olmayan kullaniciyla (APP_UID)
+  # calisir; kok dosya sistemi salt okunur, yalnizca /tmp yazilabilir (bellekte), Linux
+  # yetkilerinin tamami dusurulur ve setuid ile yetki yukseltme kapatilir.
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  # G25: dagitik izleme ayarlari (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_TRACES_SAMPLER_ARG).
+  # Dosya yoksa izleme kapali; scripts/monitoring.sh tracing on|off yazar/siler.
+  env_file:
+    - path: ./deploy/monitoring/tracing.env
+      required: false
+  depends_on:
+    postgres:
+      condition: service_healthy
+    keycloak:
+      condition: service_started
+
+networks:
+  default:
+    name: hr360-net
+
+volumes:
+  postgres-data:
+  minio-data:
+  kafka-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  alertmanager-data:
+  tempo-data:
+  mailer-dkim:
+  mailer-spool:
+
+services:
+  # --------------------------------------------------------------------- #
+  # Veri katmanı
+  # --------------------------------------------------------------------- #
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    # Baglanti butcesi: 15 servis x (12 ana + 3 kiraci durum) havuzu + Keycloak (20) + MLflow.
+    # Onceden varsayilan 100'du; her servis 100'luk havuzla acildigindan yuk altinda
+    # "too many clients" ile 500 donuyordu (k6 stress testiyle bulundu).
+    command: ["postgres", "-c", "max_connections=300"]
+    environment:
+      POSTGRES_USER: hr360admin
+      POSTGRES_PASSWORD: ${HR360_DB_PASSWORD}
+      POSTGRES_DB: hr360_operational
+    volumes:
+      # NOT: postgres 18+ imaji artik /var/lib/postgresql/data'ya dogrudan
+      # mount edilmesini reddediyor ("legacy" kabul edip baslamayi
+      # reddediyor - bkz. https://github.com/docker-library/postgres/pull/1259).
+      # Resmi onerilen kullanim: ust dizine (/var/lib/postgresql) mount
+      # etmek, imaj kendi ici surum-ozel alt dizini (orn. 18/docker) kullansin.
+      - postgres-data:/var/lib/postgresql
+      - ./deploy/postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-init-databases.sh:ro
+      - ./data/migrations/sql-all-schemas.sql:/docker-entrypoint-initdb.d/02-sql-all-schemas.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hr360admin -d hr360_operational"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  # Kisa omurlu paylasilan onbellek (Valkey: Redis ile uyumlu, BSD lisansli).
+  # Kalici veri tutmaz; silinirse servisler veritabanindan okumaya devam eder.
+  redis:
+    image: valkey/valkey:8.1-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command:
+      - sh
+      - -c
+      - >-
+        exec docker-entrypoint.sh valkey-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru
+        $${REDIS_PASSWORD:+--requirepass "$$REDIS_PASSWORD"}
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli $${REDIS_PASSWORD:+-a \"$$REDIS_PASSWORD\" --no-auth-warning} ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    mem_limit: "160m"
+
+  # NOT: resmi minio/minio ve minio/mc imajlari 2026 itibariyle hem Docker
+  # Hub'da hem quay.io'da anonim (girissiz) pull'a kapatildi ("pull access
+  # denied" / kimlik dogrulama zorunlu). Bunun yerine, hala serbestce pull
+  # edilebilen ve MinIO ile ayni env degiskenlerini/'mc' aracini kullanan
+  # bitnamilegacy/minio ve bitnamilegacy/minio-client imajlarina gecildi.
+  # Surumler sabit (":latest" degil): bitnamilegacy depolari artik guncellenmiyor; sabit etiket
+  # her kurulumda ayni imaji getirir. Yukseltme bilincli yapilir (etiketi degistirip test edin).
+  minio:
+    image: bitnamilegacy/minio:2025.5.24-debian-12-r5
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      # bitnami imajinda web konsolu varsayilan olarak KAPALI gelir - biz
+      # asagida http://localhost:9001'de yayinladigimiz icin acik olmali.
+      MINIO_BROWSER: "on"
+    volumes:
+      # bitnami imaji veriyi /data degil /bitnami/minio/data altinda tutar.
+      - minio-data:/bitnami/minio/data
+    healthcheck:
+      # NOT: bitnami imaji acilista once KISA SURELI bir "bootstrap"
+      # instance'i baslatip durduruyor, ardindan gercek sunucuyu baslatiyor
+      # (loglarda "Starting MinIO" -> "Stopping MinIO" -> "Starting MinIO").
+      # Tek seferlik "mc ready local" bu geciste sansli/sanssiz yakalanip
+      # bootstrap instance'ini "healthy" olarak isaretleyebiliyor - depends_on
+      # bekleyen minio-init o an baglanmaya calisip "connection refused"
+      # aliyor. Kisa bir aralikla IKI kez kontrol ederek bu yariş durumunu
+      # buyuk olcude ortadan kaldiriyoruz (bootstrap penceresi ~5sn).
+      test: ["CMD-SHELL", "mc ready local && sleep 3 && mc ready local"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+    ports:
+      - "127.0.0.1:9001:9001"
+
+  minio-init:
+    image: bitnamilegacy/minio-client:2025.5.21-debian-12-r4
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing local/tenant-logos &&
+      mc mb --ignore-existing local/hr360-mlflow-artifacts &&
+      mc anonymous set download local/tenant-logos
+      "
+
+  kafka:
+    image: apache/kafka:3.8.0
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: hr360kafkacluster01
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    mem_limit: "768m"
+
+  # NOT: Konular onceden ilk mesajla otomatik olusuyordu. Yeni bir sunucuda
+  # tuketiciler (orn. bildirim servisi) konudan ONCE basliyor ve yeni konuyu
+  # ancak 5 dk'lik meta veri yenilemesinde fark ediyordu - ilk kurulumdaki ilk
+  # onay e-postalari dakikalarca gecikiyordu. Konular kurulumda olusturulur.
+  kafka-init:
+    image: apache/kafka:3.8.0
+    restart: "no"
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        for i in $$(seq 1 60); do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1 && break
+          sleep 2
+        done
+        for t in hr360.employee.events hr360.workflow.events hr360.leave.events; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+            --topic "$$t" --partitions 1 --replication-factor 1
+        done
+    mem_limit: "512m"
+
+  # Varsayilan e-posta sunucusu (temiz kurulum): test kutusu, gercek gonderim yapmaz.
+  # Uretimde gercek SMTP: install.sh --smtp-from ... ya da scripts/smtp.sh set.
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+
+  # Istege bagli "sunucu kendisi gondersin" posta servisi (install.sh --mail-mode=self;
+  # yalnizca "mailer" profili acikken calisir). Yalnizca giden posta: servisler ic agdan
+  # mailer:25'e birakir, Postfix alicinin MX'ine teslim eder, OpenDKIM imzalar.
+  # Disari port ACILMAZ. DKIM anahtari mailer-dkim biriminde (repo disi) bir kez uretilir.
+  mailer:
+    build: ./deploy/mailer
+    profiles: ["mailer"]
+    restart: unless-stopped
+    hostname: mailer
+    environment:
+      MAIL_HOSTNAME: "${MAIL_HOSTNAME:-}"
+      MAIL_DOMAIN: "${MAIL_DOMAIN:-}"
+      DKIM_SELECTOR: "${DKIM_SELECTOR:-hr360}"
+    volumes:
+      - mailer-dkim:/var/lib/dkim
+      - mailer-spool:/var/spool/postfix
+    mem_limit: "128m"
+
+  # --------------------------------------------------------------------- #
+  # Kimlik
+  # --------------------------------------------------------------------- #
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # GUVENLIK: Onceden "start-dev" (gelistirme modu) + KC_HOSTNAME_STRICT=false ile
+    # calisiyordu: Keycloak disari verdigi adresleri (parola sifirlama e-postasindaki
+    # baglanti dahil) istegin Host / X-Forwarded-Host basligindan uretiyordu - sahte
+    # bir baslikla sifirlama baglantisi saldirganin alan adina yonlendirilebilirdi.
+    # Artik uretim modu ("start"), genel adres sabit (KC_HOSTNAME = uygulamanin
+    # tarayicidaki koken + /auth). Servislerin ic agdan (keycloak:8080) yaptigi
+    # istekler icin adres istege gore uretilir (backchannel dinamik). TLS gateway'de
+    # ya da onundeki dengeleyicide sonlanir; Keycloak arkada HTTP konusur.
+    command: ["start", "--import-realm", "--http-relative-path=/auth", "--features=organization"]
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      # Yonetim konsolu ayri bir adresten (ornegin firewall ile kisitlanan ayri
+      # port) yayinlanacaksa onun adresi. Bos = ana adresle ayni. Bkz.
+      # docs/runbooks/keycloak-yonetim-paneli-erisimi.md
+      KC_HOSTNAME_ADMIN: "${KEYCLOAK_ADMIN_URL:-}"
+      KC_CACHE: local
+      KC_HEALTH_ENABLED: "true"
+      # GUVENLIK/VERI KALICILIGI: Onceden KC_DB tanimli degildi - start-dev,
+      # konteyner icindeki dosya veritabanini (dev-file) kullaniyordu ve volume
+      # yoktu. Konteyner her yeniden olusturuldugunda (imaj guncellemesi, compose
+      # degisikligi) TUM kullanicilar, parolalar ve sirket organizasyonlari
+      # siliniyor, platform_tenants ise eski KeycloakOrgId'leri tutmaya devam
+      # ediyordu. Artik paylasilan Postgres'teki "keycloak" veritabani kullanilir.
+      # Mevcut kurulumlar icin gecis: docs/runbooks/keycloak-postgres-gecisi.md
+      KC_DB: postgres
+      KC_DB_URL: "jdbc:postgresql://postgres:5432/keycloak"
+      KC_DB_USERNAME: "hr360admin"
+      KC_DB_PASSWORD: "${HR360_DB_PASSWORD}"
+      KC_DB_POOL_MAX_SIZE: "20"
+    volumes:
+      - ./deploy/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      # HR360 giris ekrani temasi (Obsidyen Zumrut). Bkz. scripts/keycloak-theme.sh
+      - ./deploy/keycloak/themes/hr360:/opt/keycloak/themes/hr360:ro
+    mem_limit: "768m"
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  # --------------------------------------------------------------------- #
+  # .NET mikroservisleri — hepsi ayni Postgres DB'sini (hr360_operational),
+  # ayni Keycloak realm'ini ve (varsa) ayni Kafka broker'ini paylasir.
+  # --------------------------------------------------------------------- #
+  organization-service:
+    <<: *dotnet-service
+    build: ./apps/services/organization-service
+    environment:
+      ORG_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ORGANIZATION:-hr360admin};Password=${HR360_DB_PASSWORD_ORGANIZATION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ORGANIZATION:-hr360admin};Password=${HR360_DB_PASSWORD_ORGANIZATION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  employee-service:
+    <<: *dotnet-service
+    build: ./apps/services/employee-service
+    environment:
+      EMPLOYEE_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_EMPLOYEE:-hr360admin};Password=${HR360_DB_PASSWORD_EMPLOYEE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_EMPLOYEE:-hr360admin};Password=${HR360_DB_PASSWORD_EMPLOYEE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      ORGANIZATION_SERVICE_URL: "http://organization-service:8080"
+      # Dizin sağlama (SCIM/LDAP) iç ucu: /api/internal/employees/directory-upsert.
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  workflow-service:
+    <<: *dotnet-service
+    build: ./apps/services/workflow-service
+    environment:
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      WORKFLOW_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_WORKFLOW:-hr360admin};Password=${HR360_DB_PASSWORD_WORKFLOW:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_WORKFLOW:-hr360admin};Password=${HR360_DB_PASSWORD_WORKFLOW:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  leave-service:
+    <<: *dotnet-service
+    build: ./apps/services/leave-service
+    environment:
+      LEAVE_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_LEAVE:-hr360admin};Password=${HR360_DB_PASSWORD_LEAVE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_LEAVE:-hr360admin};Password=${HR360_DB_PASSWORD_LEAVE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      ORGANIZATION_SERVICE_URL: "http://organization-service:8080"
+      WORKFLOW_SERVICE_URL: "http://workflow-service:8080"
+      # Sohbet botundan (Slack/Teams) izin talebi icin servisler arasi ic uc anahtari.
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  recruitment-service:
+    <<: *dotnet-service
+    build: ./apps/services/recruitment-service
+    environment:
+      # Teklif onay akisi (workflow-service) ve karar olaylari (Kafka).
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      WORKFLOW_SERVICE_URL: "http://workflow-service:8080"
+      # Dalga 11: teklif e-imzası governance tek imza motoru iç uçlarıyla (X-Internal-Token).
+      GOVERNANCE_SERVICE_URL: "http://governance-service:8080"
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      # Dalga 11: aday durum bağlantısı e-postası ve ilan JSON-LD adresleri için genel adres.
+      PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}"
+      RECRUITMENT_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_RECRUITMENT:-hr360admin};Password=${HR360_DB_PASSWORD_RECRUITMENT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_RECRUITMENT:-hr360admin};Password=${HR360_DB_PASSWORD_RECRUITMENT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  onboarding-service:
+    <<: *dotnet-service
+    build: ./apps/services/onboarding-service
+    environment:
+      # Sohbet botunun "görev tamamlandı" çağrısı (servisler arası iç uç)
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      ONBOARDING_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ONBOARDING:-hr360admin};Password=${HR360_DB_PASSWORD_ONBOARDING:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ONBOARDING:-hr360admin};Password=${HR360_DB_PASSWORD_ONBOARDING:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  timeshift-service:
+    <<: *dotnet-service
+    build: ./apps/services/timeshift-service
+    environment:
+      TIMESHIFT_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_TIMESHIFT:-hr360admin};Password=${HR360_DB_PASSWORD_TIMESHIFT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_TIMESHIFT:-hr360admin};Password=${HR360_DB_PASSWORD_TIMESHIFT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      ORGANIZATION_SERVICE_URL: "http://organization-service:8080"
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      # Fazla mesai talebinin onay akisi workflow-service ic ucuyla acilir.
+      WORKFLOW_SERVICE_URL: "http://workflow-service:8080"
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  performance-service:
+    <<: *dotnet-service
+    build: ./apps/services/performance-service
+    environment:
+      PERFORMANCE_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_PERFORMANCE:-hr360admin};Password=${HR360_DB_PASSWORD_PERFORMANCE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_PERFORMANCE:-hr360admin};Password=${HR360_DB_PASSWORD_PERFORMANCE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      ORGANIZATION_SERVICE_URL: "http://organization-service:8080"
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      ML_INFERENCE_URL: "http://ml-inference:8000"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  learning-service:
+    <<: *dotnet-service
+    build: ./apps/services/learning-service
+    environment:
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      # SCORM iframe başlatma jetonu (imzalı çerez) bu anahtardan türetilir.
+      TENANT_SECRET_KEY: "${TENANT_SECRET_KEY:-}"
+      LEARNING_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_LEARNING:-hr360admin};Password=${HR360_DB_PASSWORD_LEARNING:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_LEARNING:-hr360admin};Password=${HR360_DB_PASSWORD_LEARNING:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  # Calisan deneyimi: takdir duvari, kutlamalar, ofis/masa, mentorluk, ic ilan,
+  # 1:1, ardil planlama, anket/eNPS, offboarding, ekip sagligi, org senaryolari.
+  engagement-service:
+    <<: *dotnet-service
+    build: ./apps/services/engagement-service
+    environment:
+      ENGAGEMENT_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ENGAGEMENT:-hr360admin};Password=${HR360_DB_PASSWORD_ENGAGEMENT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ENGAGEMENT:-hr360admin};Password=${HR360_DB_PASSWORD_ENGAGEMENT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      # Offboarding: ayrilan calisanin hesabini tenant-service ic ucuyla kapatir (G15).
+      TENANT_SERVICE_URL: "http://tenant-service:8080"
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      # KVKK m.12: profildeki TCKN ve IBAN bu anahtarla veritabaninda sifrelenir.
+      TENANT_SECRET_KEY: "${TENANT_SECRET_KEY:-}"
+      # Anahtar yenileme (docs/guvenlik/README.md "Şifreleme anahtarı yenileme"): "kimlik:base64,..."
+      # ilk = etkin. Bos ise tek anahtar TENANT_SECRET_KEY (k0).
+      TENANT_SECRET_KEYS: "${TENANT_SECRET_KEYS:-}"
+      CRYPTO_REENCRYPT: "${CRYPTO_REENCRYPT:-auto}"
+      # Paylasilan onbellek (dizin, ofis dolulugu, ekip sagligi). Bos ise kapali.
+      REDIS_URL: "redis:6379,password=${REDIS_PASSWORD:-}"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "384m"
+
+  # Yonetisim: denetim kaydi, canli olay radari (Kafka), zaman makinesi, KVKK,
+  # belge sablonlari, kural motoru, webhook/API anahtari/acik API, Slack/Teams,
+  # faturalama, takvim (.ics), analitik, IK asistani, teklif->ise alim sagasi.
+  governance-service:
+    <<: *dotnet-service
+    build: ./apps/services/governance-service
+    environment:
+      # Sohbet botunda fis okuma: ml-inference OCR icin istemci kimligi (yerel, veri disari cikmaz).
+      OCR_CLIENT_SECRET: "${ML_KEYCLOAK_CLIENT_SECRET:-}"
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      GOVERNANCE_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_GOVERNANCE:-hr360admin};Password=${HR360_DB_PASSWORD_GOVERNANCE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_GOVERNANCE:-hr360admin};Password=${HR360_DB_PASSWORD_GOVERNANCE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      # Paylasilan onbellek (dizin, analitik) ve acik API hiz siniri sayaci. Bos ise kapali.
+      REDIS_URL: "redis:6379,password=${REDIS_PASSWORD:-}"
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      ONBOARDING_SERVICE_URL: "http://onboarding-service:8080"
+      WORKFLOW_SERVICE_URL: "http://workflow-service:8080"
+      # Slack/Teams'e verilecek geri cagri adresleri ve mesajlardaki baglantilar icin.
+      PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}"
+      # Entegrasyon sirlari (bot jetonlari, OAuth) bu anahtarla sifrelenir.
+      TENANT_SECRET_KEY: "${TENANT_SECRET_KEY:-}"
+      # Anahtar yenileme (docs/guvenlik/README.md "Şifreleme anahtarı yenileme"): "kimlik:base64,..."
+      # ilk = etkin. Bos ise tek anahtar TENANT_SECRET_KEY (k0).
+      TENANT_SECRET_KEYS: "${TENANT_SECRET_KEYS:-}"
+      CRYPTO_REENCRYPT: "${CRYPTO_REENCRYPT:-auto}"
+      # Saklama isi audit_log silmesini bu baglantiyla yapar (en az yetki: hr360_retention rolu).
+      RETENTION_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_RETENTION:-hr360admin};Password=${HR360_DB_PASSWORD_RETENTION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=2"
+      ML_INFERENCE_URL: "http://ml-inference:8000"
+      LEAVE_SERVICE_URL: "http://leave-service:8080"
+      # KVKK uyum ekrani: SMTP saglayicisi yurt disindaysa uyari verir.
+      SMTP_HOST: "${SMTP_HOST:-mailpit}"
+      # Yapay zeka (istege bagli): anthropic | openai | ollama. Bos ise kapali.
+      # Kiraci yoneticisi ayrica AI araclari ekranindan acmadikca veri gonderilmez.
+      SIEM_SYSLOG_ENDPOINT: "${SIEM_SYSLOG_ENDPOINT:-}"
+      SIEM_PSEUDONYM_KEY: "${SIEM_PSEUDONYM_KEY:-}"
+      LLM_PROVIDER: "${LLM_PROVIDER:-}"
+      LLM_MODEL: "${LLM_MODEL:-}"
+      LLM_API_KEY: "${LLM_API_KEY:-}"
+      LLM_BASE_URL: "${LLM_BASE_URL:-}"
+      LLM_LOCAL: "${LLM_LOCAL:-false}"
+      LLM_HOURLY_LIMIT: "${LLM_HOURLY_LIMIT:-200}"
+      LLM_QUOTA_WINDOW_MINUTES: "${LLM_QUOTA_WINDOW_MINUTES:-60}"
+      # Dalga 12: Google Workspace / Microsoft 365 hesap acma/kapatma (IK onayli; varsayilan kapali).
+      ACCOUNT_PROVISIONING_ENABLED: "${ACCOUNT_PROVISIONING_ENABLED:-false}"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      kafka:
+        condition: service_started
+    mem_limit: "384m"
+
+  compensation-service:
+    <<: *dotnet-service
+    build: ./apps/services/compensation-service
+    environment:
+      # Bordro/masraf dosyaları ve pasaport no bu anahtarla şifrelenir; TCKN/IBAN açılır.
+      TENANT_SECRET_KEY: "${TENANT_SECRET_KEY:-}"
+      # Anahtar yenileme (docs/guvenlik/README.md "Şifreleme anahtarı yenileme"): "kimlik:base64,..."
+      # ilk = etkin. Bos ise tek anahtar TENANT_SECRET_KEY (k0).
+      TENANT_SECRET_KEYS: "${TENANT_SECRET_KEYS:-}"
+      CRYPTO_REENCRYPT: "${CRYPTO_REENCRYPT:-auto}"
+      COMPENSATION_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_COMPENSATION:-hr360admin};Password=${HR360_DB_PASSWORD_COMPENSATION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_COMPENSATION:-hr360admin};Password=${HR360_DB_PASSWORD_COMPENSATION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  expense-service:
+    <<: *dotnet-service
+    build: ./apps/services/expense-service
+    environment:
+      # Bordro/masraf dosyaları ve pasaport no bu anahtarla şifrelenir; TCKN/IBAN açılır.
+      TENANT_SECRET_KEY: "${TENANT_SECRET_KEY:-}"
+      # Anahtar yenileme (docs/guvenlik/README.md "Şifreleme anahtarı yenileme"): "kimlik:base64,..."
+      # ilk = etkin. Bos ise tek anahtar TENANT_SECRET_KEY (k0).
+      TENANT_SECRET_KEYS: "${TENANT_SECRET_KEYS:-}"
+      CRYPTO_REENCRYPT: "${CRYPTO_REENCRYPT:-auto}"
+      # Sohbet botunun masraf taslağı / İK vakası çağrıları (servisler arası iç uç)
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      EXPENSE_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_EXPENSE:-hr360admin};Password=${HR360_DB_PASSWORD_EXPENSE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_EXPENSE:-hr360admin};Password=${HR360_DB_PASSWORD_EXPENSE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      ORGANIZATION_SERVICE_URL: "http://organization-service:8080"
+      WORKFLOW_SERVICE_URL: "http://workflow-service:8080"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    mem_limit: "512m"
+
+  notification-service:
+    <<: *dotnet-service
+    build: ./apps/services/notification-service
+    environment:
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      NOTIFICATION_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_NOTIFICATION:-hr360admin};Password=${HR360_DB_PASSWORD_NOTIFICATION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_NOTIFICATION:-hr360admin};Password=${HR360_DB_PASSWORD_NOTIFICATION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      TENANT_SERVICE_URL: "http://tenant-service:8080"
+      # NOT: POST /api/notifications (Email kanali), calisanin e-postasini
+      # cozmek icin EmployeeDirectoryClient ile employee-service'e HTTP
+      # cagrisi yapiyor (hardcore test, 2. tur) - bu degisken tanimlanmadan
+      # istemci koddaki kullanilamaz varsayilan adrese (172.33.55.2) dusuyor
+      # ve GERCEK network'te yaniti hicbir zaman almadigi icin cagri
+      # dakikalarca askida kaliyor (POST /api/notifications zaman asimina
+      # ugruyordu). Bu adresi kullanan diger servisler de degiskeni tanimliyor.
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      TENANT_SECRET_KEY: "${TENANT_SECRET_KEY:-}"
+      # Anahtar yenileme (docs/guvenlik/README.md "Şifreleme anahtarı yenileme"): "kimlik:base64,..."
+      # ilk = etkin. Bos ise tek anahtar TENANT_SECRET_KEY (k0).
+      TENANT_SECRET_KEYS: "${TENANT_SECRET_KEYS:-}"
+      CRYPTO_REENCRYPT: "${CRYPTO_REENCRYPT:-auto}"
+      # E-postadaki karar bağlantısı ve anlık bildirim (VAPID) için genel adres.
+      PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}"
+      ASPNETCORE_ENVIRONMENT: "Production"
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME}
+    mem_limit: "512m"
+
+  tenant-service:
+    <<: *dotnet-service
+    build: ./apps/services/tenant-service
+    environment:
+      KEYCLOAK_PASSKEYS: "${KEYCLOAK_PASSKEYS:-true}"
+      TENANT_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_TENANT:-hr360admin};Password=${HR360_DB_PASSWORD_TENANT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
+      KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
+      KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
+      TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_TENANT:-hr360admin};Password=${HR360_DB_PASSWORD_TENANT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      KEYCLOAK_BASE_URL: "http://keycloak:8080/auth"
+      KEYCLOAK_REALM: "hr360"
+      # Guvenlik dalgasi 2A: yonetim API'si hr360 realm'indeki "hr360-tenant-admin" servis
+      # hesabiyla (client_credentials, en az yetki). Anahtari scripts/keycloak-service-account.sh
+      # uretir. Master yonetici parolasi yalnizca gecis icin geri donus yoludur; betik servis
+      # hesabini dogruladiktan sonra KEYCLOAK_TENANT_ADMIN_LEGACY_* degiskenlerini bos yazar
+      # ve master parolasi bu konteynere hic verilmez.
+      KEYCLOAK_TENANT_ADMIN_CLIENT_SECRET: "${KEYCLOAK_TENANT_ADMIN_CLIENT_SECRET:-}"
+      KEYCLOAK_ADMIN_USER: "${KEYCLOAK_TENANT_ADMIN_LEGACY_USER-${KEYCLOAK_ADMIN_USER}}"
+      KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_TENANT_ADMIN_LEGACY_PASSWORD-${KEYCLOAK_ADMIN_PASSWORD}}"
+      # Iki adimli dogrulama: platform yoneticisi hesaplarinda da zorunlu (MFA_REQUIRE_PLATFORM_ADMIN=true).
+      # Testler platform.admin ile tarayicidan parola girisi yaptigi icin varsayilan kapali.
+      MFA_REQUIRE_PLATFORM_ADMIN: "${MFA_REQUIRE_PLATFORM_ADMIN:-false}"
+      # Demo verisi ("demo" sirketi, demo.admin): install.sh --demo -> true. Bos/tanimsiz = acik
+      # (bu ayardan onceki kurulumlar demo sirketini korur).
+      HR360_DEMO: "${HR360_DEMO:-}"
+      # Herkese acik sirket kaydi; false ise kayit uclari 404, giris ekraninda kayit girisi gizli.
+      PUBLIC_SIGNUP_ENABLED: "${PUBLIC_SIGNUP_ENABLED:-true}"
+      NOTIFICATION_SERVICE_URL: "http://notification-service:8080"
+      TENANT_SECRET_KEY: "${TENANT_SECRET_KEY:-}"
+      # Anahtar yenileme (docs/guvenlik/README.md "Şifreleme anahtarı yenileme"): "kimlik:base64,..."
+      # ilk = etkin. Bos ise tek anahtar TENANT_SECRET_KEY (k0).
+      TENANT_SECRET_KEYS: "${TENANT_SECRET_KEYS:-}"
+      CRYPTO_REENCRYPT: "${CRYPTO_REENCRYPT:-auto}"
+      # /internal/users/disable (offboarding hesap kapatma) yalnizca bu jetonla.
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      MINIO_ENDPOINT_URL: "http://minio:9000"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      # Port ve sema (https) PUBLIC_ORIGIN'de; PUBLIC_URL'de port yok.
+      LOGO_PUBLIC_BASE_URL: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/logos"
+      # SSO: kimlik saglayicisina kaydedilecek yonlendirme adresi bundan uretilir.
+      PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      # Ortak sablondaki depends_on burada yeniden tanimlandigi icin Keycloak
+      # ayrica yazilmali (demo kiracisini Keycloak'ta olusturur).
+      keycloak:
+        condition: service_started
+    mem_limit: "256m"
+
+  # --------------------------------------------------------------------- #
+  # ML alt sistemi
+  # --------------------------------------------------------------------- #
+  mlflow:
+    build: ./apps/ml-platform
+    restart: unless-stopped
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: "http://minio:9000"
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      # Baglanti dizesi sunucu komut satirinda degil ortamda: parola "ps" ciktisinda gorunmez.
+      MLFLOW_BACKEND_STORE_URI: "postgresql://hr360admin:${HR360_DB_PASSWORD}@postgres:5432/hr360_mlflow"
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: "s3://hr360-mlflow-artifacts/"
+      # MLflow 3'un GenAI arka plan isleri kullanilmiyor; ek surec ve bellek harcamasin.
+      MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
+    # Surum yukseltmelerinde sema once guncellenir (bos veritabaninda da calisir).
+    # Host basligi denetimi: yalnizca ic ag adi ve yerel erisim kabul edilir.
+    # Her isci ~200 MB; varsayilan 4 isci bellek sinirini asar.
+    command:
+      - sh
+      - -c
+      - >-
+        mlflow db upgrade "$$MLFLOW_BACKEND_STORE_URI" &&
+        exec mlflow server --host 0.0.0.0 --port 5000 --workers 2
+        --allowed-hosts mlflow,mlflow:5000,localhost,localhost:5000,127.0.0.1,127.0.0.1:5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    mem_limit: "1024m"
+    ports:
+      - "127.0.0.1:5000:5000"
+
+  ml-inference:
+    build: ./apps/ml-inference
+    restart: unless-stopped
+    # Model dosyalari calisma aninda indirildiginden kok dosya sistemi yazilabilir kalir.
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
+      KEYCLOAK_URL: "http://keycloak:8080/auth"
+      KEYCLOAK_REALM: "hr360"
+      KEYCLOAK_CLIENT_ID: "hr360-ml-inference"
+      KEYCLOAK_CLIENT_SECRET: ${ML_KEYCLOAK_CLIENT_SECRET}
+      MLFLOW_TRACKING_URI: "http://mlflow:5000"
+      MODEL_NAME: "hr360-attrition-risk"
+      MODEL_STAGE: "1"
+      MLFLOW_S3_ENDPOINT_URL: "http://minio:9000"
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      - mlflow
+      - keycloak
+    mem_limit: "768m"
+
+  # --------------------------------------------------------------------- #
+  # Web + Gateway
+  # --------------------------------------------------------------------- #
+  web:
+    build:
+      context: ./apps/web
+      # Arayuzdeki surum (hesap menusu): install.sh ve scripts/update.sh depo kokundeki VERSION
+      # dosyasindan verir. Elle derlerken: HR360_VERSION=$(cat VERSION) docker compose build web
+      args:
+        HR360_VERSION: "${HR360_VERSION:-}"
+    restart: unless-stopped
+    mem_limit: "128m"
+    # nginx-unprivileged (uid 101): salt okunur kok, gecici dosyalar /tmp'de.
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  # Let's Encrypt sertifikasini 12 saatte bir yeniler (suresi 30 gunden az kalinca).
+  # --------------------------------------------------------------------- #
+  # Izleme (istege bagli): scripts/monitoring.sh enable
+  # Prometheus (metrikler) + Grafana (panolar) + Loki/Promtail (loglar).
+  # Grafana: PUBLIC_ORIGIN/grafana/ (gateway) ve 127.0.0.1:3000/grafana/.
+  # --------------------------------------------------------------------- #
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Saklama: hangisi once dolarsa (sure ya da boyut) en eski bloklar silinir.
+      # Ayrinti: docs/runbooks/izleme-saklama.md
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-5GB}
+      - --web.enable-lifecycle
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    mem_limit: "512m"
+
+  # Alarm iletimi: e-posta (SMTP_* ayarlari; Microsoft 365 dahil), Slack ve
+  # Microsoft Teams. Kanallar: scripts/monitoring.sh alerts ...
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/etc/alertmanager/entrypoint.sh"]
+    # Arayuzu kimlik dogrulamasizdir; disariya acilmaz. Alarmlar Grafana'da
+    # (Alerting > Alert rules / Silences, "Alertmanager" veri kaynagi) gorulur.
+    environment:
+      TZ: ${ALERT_TIMEZONE:-Europe/Istanbul}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+      ALERT_SLACK_WEBHOOK_URL: ${ALERT_SLACK_WEBHOOK_URL:-}
+      ALERT_TEAMS_WEBHOOK_URL: ${ALERT_TEAMS_WEBHOOK_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@hr360.local}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-HR360}
+    volumes:
+      - ./deploy/monitoring/alertmanager-entrypoint.sh:/etc/alertmanager/entrypoint.sh:ro
+      - ./deploy/monitoring/alertmanager.tmpl:/etc/alertmanager/templates/hr360.tmpl:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      - "127.0.0.1:${ALERTMANAGER_PORT:-9093}:9093"
+    mem_limit: "64m"
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_URI: postgres:5432/hr360_operational?sslmode=disable
+      DATA_SOURCE_USER: hr360admin
+      DATA_SOURCE_PASS: ${HR360_DB_PASSWORD}
+      # Dalga 12: uygulamaya ozgu sorgular (Kafka outbox birikimi; yalnizca sayi/sure, kisisel veri yok).
+      PG_EXPORTER_EXTEND_QUERY_PATH: /etc/postgres-exporter/queries.yml
+    volumes:
+      - ./deploy/monitoring/postgres-exporter-queries.yml:/etc/postgres-exporter/queries.yml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: "64m"
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($$|/)
+      # Dalga 12: scripts/backup.sh ve restore-drill.sh'in yazdigi yedek/geri yukleme metrikleri.
+      - --collector.textfile.directory=/textfile
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - ./deploy/monitoring/textfile:/textfile:ro
+    mem_limit: "64m"
+
+  # Dalga 12: TLS sertifikasi bitis tarihi (gateway:443; HTTPS kapaliyken yoklama basarisiz olur,
+  # alarm yalnizca sertifika okunabildiginde calisir). Disariya port acmaz.
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ./deploy/monitoring/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    mem_limit: "32m"
+
+  loki:
+    image: grafana/loki:3.3.2
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    # Saklama LOKI_RETENTION (varsayilan 168h = 7 gun); bkz. docs/runbooks/izleme-saklama.md
+    command: ["-config.file=/etc/loki/loki.yml", "-config.expand-env=true"]
+    environment:
+      LOKI_RETENTION: ${LOKI_RETENTION:-168h}
+      LOKI_INGESTION_RATE_MB: ${LOKI_INGESTION_RATE_MB:-4}
+    volumes:
+      - ./deploy/monitoring/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    mem_limit: "384m"
+
+  promtail:
+    image: grafana/promtail:3.3.2
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/promtail.yml"]
+    volumes:
+      - ./deploy/monitoring/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    mem_limit: "128m"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_SERVER_ROOT_URL: ${PUBLIC_ORIGIN:-http://localhost}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/hr360-overview.json
+    volumes:
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+      - loki
+    mem_limit: "256m"
+
+  # G25: dagitik izleme. Servisler izleri (OTEL_EXPORTER_OTLP_ENDPOINT tanimliysa)
+  # collector'a gonderir; collector KVKK maskelemesini ikinci kez uygulayip Tempo'ya
+  # yazar. Ikisi de disariya acilmaz; izler Grafana > Explore > Tempo'dan sorgulanir.
+  # Saklama: TEMPO_RETENTION (varsayilan 72h). Ac/kapat: scripts/monitoring.sh tracing on|off
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yml"]
+    volumes:
+      - ./deploy/monitoring/otel-collector.yml:/etc/otelcol/config.yml:ro
+    depends_on:
+      - tempo
+    mem_limit: "256m"
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yml", "-config.expand-env=true"]
+    environment:
+      TEMPO_RETENTION: ${TEMPO_RETENTION:-72h}
+    volumes:
+      - ./deploy/monitoring/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+    mem_limit: "512m"
+
+  # Yalnizca "letsencrypt" profili acikken calisir: scripts/tls.sh enable --letsencrypt
+  # .env'e COMPOSE_PROFILES=letsencrypt yazar.
+  certbot:
+    image: certbot/certbot:v2.11.0
+    profiles: ["letsencrypt"]
+    restart: unless-stopped
+    volumes:
+      - ./deploy/letsencrypt:/etc/letsencrypt
+      - ./deploy/nginx/acme:/var/www/certbot
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $$!; done
+    mem_limit: "128m"
+
+  gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/keycloak-admin:/etc/nginx/keycloak-admin:ro
+      - ./deploy/nginx/tls:/etc/nginx/tls:ro
+      # Let's Encrypt (scripts/tls.sh enable --letsencrypt): certbot'un sertifikalari
+      # ve HTTP-01 dogrulama dosyalari.
+      - ./deploy/letsencrypt:/etc/letsencrypt:ro
+      - ./deploy/nginx/acme:/var/www/certbot:ro
+      # Uygulama/Keycloak yanit vermezken gosterilen statik bakim sayfasi (502/503/504).
+      - ./deploy/nginx/errors:/etc/nginx/errors:ro
+    # nginx sertifika dosyasi degisince kendiliginden okumaz; certbot yenilediginde
+    # yeni sertifika en gec 6 saat icinde devreye girsin diye periyodik reload.
+    command: ["/bin/sh", "-c", "(while :; do sleep 21600; nginx -s reload; done) & exec nginx -g 'daemon off;'"]
+    depends_on:
+      - web
+      - keycloak
+      - organization-service
+      - employee-service
+    mem_limit: "128m"
+    ports:
+      - "${GATEWAY_PORT:-80}:80"
+      # Keycloak yonetim paneli icin ayri giris ("port" modu). Varsayilan yalnizca
+      # sunucunun kendisinden erisilebilir; bkz. scripts/keycloak-admin-access.sh
+      - "${KEYCLOAK_ADMIN_BIND:-127.0.0.1}:${KEYCLOAK_ADMIN_PORT:-8090}:${KEYCLOAK_ADMIN_CONTAINER_PORT:-8090}"
+      # HTTPS (scripts/tls.sh enable); kapaliyken yalnizca sunucunun kendisine baglanir.
+      - "${GATEWAY_TLS_BIND:-127.0.0.1}:${GATEWAY_TLS_PORT:-443}:443"

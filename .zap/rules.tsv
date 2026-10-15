@@ -1,0 +1,31 @@
+# HR360 OWASP ZAP temel tarama (zap-baseline.py -c) kural dosyasi.
+# Bicim: <kural no><TAB><IGNORE|WARN|FAIL><TAB>(<aciklama>). Listede olmayan kurallar WARN sayilir.
+# FAIL: gerilemesi istenmeyen korumalar (guvenlik basliklari, CSP, bilinen acikli JS kutuphanesi).
+# IGNORE: docs/guvenlik/README.md 'Bilinen ve kabul edilen riskler' bolumunde gerekcelendirilmis
+# ya da bilgi amacli kurallar. Yeni bir IGNORE eklerken gerekcesini o bolume de yazin.
+10003	FAIL	(Bilinen acigi olan JS kutuphanesi - Retire.js)
+10017	FAIL	(Baska alan adindan betik yukleme - CSP script-src 'self')
+10020	FAIL	(X-Frame-Options / frame-ancestors - gateway ve arayuz ekler)
+10021	FAIL	(X-Content-Type-Options: nosniff - gateway ve arayuz ekler)
+10033	FAIL	(Dizin listeleme)
+10037	FAIL	(X-Powered-By basligi)
+10038	FAIL	(CSP basligi yok - arayuz kati CSP ile sunulur)
+10040	FAIL	(HTTPS sayfada HTTP icerik)
+10041	FAIL	(HTTP'den HTTPS'e form gonderimi)
+10042	FAIL	(HTTPS'ten HTTP'ye form gonderimi)
+10063	FAIL	(Permissions-Policy basligi yok)
+10099	FAIL	(Kaynak kod sizintisi)
+10115	FAIL	(Zararli alandan betik - polyfill)
+10010	WARN	(HttpOnly olmayan cerez - Keycloak'in KEYCLOAK_SESSION/KEYCLOAK_IDENTITY cerezleri tasarim geregi)
+10011	WARN	(Secure bayragi olmayan cerez - HTTP uzerinden taranirsa beklenir; HTTPS'te incelenmeli)
+10035	WARN	(HSTS yok - yalnizca guvenilir sertifikayla eklenir, bkz. Guvenlik basliklari)
+10054	WARN	(SameSite olmayan cerez - KEYCLOAK_LOCALE SameSite=None kabul edildi)
+10055	IGNORE	(CSP style-src 'unsafe-inline' - kabul edilen risk: React style ozniteligi, betik calistirmaz)
+90004	IGNORE	(Cross-Origin-Embedder-Policy yok - kabul edilen risk: SCORM/iframe ve dis gorseller COEP ile calismaz; COOP ve CORP zaten var)
+10096	IGNORE	(Zaman damgasi - derlenmis paketlerdeki sayilar, bilgi amacli)
+10049	IGNORE	(Onbelleklenebilirlik - bilgi amacli)
+10109	IGNORE	(Modern web uygulamasi - bilgi amacli)
+10111	IGNORE	(Kimlik dogrulama istegi tespit edildi - bilgi amacli)
+10112	IGNORE	(Oturum yonetimi yaniti tespit edildi - bilgi amacli)
+10113	IGNORE	(Dogrulama istegi tespit edildi - bilgi amacli)
+10116	IGNORE	(ZAP surumu eski - imaj ozet degeriyle sabit, bilerek)

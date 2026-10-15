@@ -1,0 +1,64 @@
+# HR360 haftalik OWASP ZAP temel taramasi (pasif kurallar + kisa orumcek).
+#
+# Tum yigin (Keycloak, Kafka, 15 servis, PostgreSQL) CI'da ayaga kaldirilmaz; agir ve
+# yavas. Bunun yerine canli kurulumla AYNI iki parca taranir: arayuz imaji (apps/web,
+# kendi nginx'i, CSP ve guvenlik basliklari) ve onun onundeki gateway (deploy/nginx/nginx.conf,
+# ayni nginx:1.27-alpine imaji). Gateway "resolve" ile calistigi icin arka uclar olmadan da
+# acilir; /api ve /auth istekleri 502 doner. Boylece baslik/CSP/gateway yapilandirmasi
+# gerilemeleri haftada bir (ve elle) yakalanir. API ve Keycloak ekranlari icin canli
+# kurulumda: scripts/security-scan.sh zap (bkz. docs/guvenlik/README.md).
+#
+# Kurallar: .zap/rules.tsv (FAIL eslesirse is basarisiz olur). Rapor: is ciktisi (30 gun).
+name: ZAP
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"   # her pazartesi 03:17 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: zap
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: ZAP temel tarama (arayuz + gateway)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Arayuz imaji
+        run: docker build -q -t hr360-web:zap apps/web
+
+      - name: Arayuz + gateway (arka uclar olmadan)
+        run: |
+          docker network create hr360-zap
+          docker run -d --name web --network hr360-zap --network-alias web hr360-web:zap
+          docker run -d --name gateway --network hr360-zap --network-alias gateway \
+            -v "$PWD/deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            -v "$PWD/deploy/nginx/keycloak-admin:/etc/nginx/keycloak-admin:ro" \
+            -v "$PWD/deploy/nginx/tls:/etc/nginx/tls:ro" \
+            nginx:1.27-alpine
+          for _ in $(seq 1 30); do
+            docker run --rm --network hr360-zap busybox:stable wget -qO /dev/null http://gateway/ && exit 0
+            sleep 2
+          done
+          docker logs gateway; docker logs web; exit 1
+
+      - name: ZAP temel tarama
+        env:
+          ZAP_NETWORK: hr360-zap
+        run: scripts/security-scan.sh zap http://gateway/ --minutes 2
+
+      - name: Rapor
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: zap-report
+          path: security-reports/
+          retention-days: 30
+          if-no-files-found: ignore

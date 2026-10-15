@@ -1,0 +1,39 @@
+# Docker soketi uzerinden hr360 projesindeki tum konteynerlerin stdout/stderr
+# loglarini toplar. "service" etiketi compose servis adidir.
+server:
+  http_listen_port: 9080
+  log_level: warn
+positions:
+  filename: /tmp/positions.yaml
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 10s
+        filters:
+          - name: label
+            values: ["com.docker.compose.project=hr360"]
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: service
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: container
+      - source_labels: ['__meta_docker_container_log_stream']
+        target_label: stream
+    pipeline_stages:
+      # Ilk acilista eski konteyner loglari Loki'nin kabul penceresinin disinda
+      # kalir; bunlari gondermeye calismak yerine dusur.
+      - drop:
+          older_than: 24h
+          drop_counter_reason: too_old
+      # ASP.NET Core konsol loglari "fail:" / "warn:" / "info:" ile baslar.
+      - regex:
+          expression: '^(?P<lvl>fail|crit|warn|info|dbug|trce):'
+      - template:
+          source: level
+          template: '{{ if eq .lvl "fail" }}error{{ else if eq .lvl "crit" }}critical{{ else if eq .lvl "warn" }}warning{{ else if .lvl }}info{{ end }}'
+      - labels:
+          level:

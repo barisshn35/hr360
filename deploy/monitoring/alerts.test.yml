@@ -1,0 +1,120 @@
+# promtool birim testleri (CI: promtool test rules /m/alerts.test.yml). Dalga 12 alarm paketinin
+# esikleri: sahte zaman serileriyle alarmin calistigi/calismadigi denetlenir.
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 30s
+
+tests:
+  # Outbox: 10 dk boyunca en eski bekleyen olay 600 sn -> OutboxBirikiyor; 0 -> sessiz.
+  - interval: 1m
+    input_series:
+      - series: 'hr360_outbox_oldest_pending_age_seconds{job="postgres",service="postgres"}'
+        values: '600x15'
+      - series: 'hr360_outbox_failed{job="postgres",service="postgres"}'
+        values: '0x15'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: OutboxBirikiyor
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: OutboxBirikiyor
+        exp_alerts:
+          - exp_labels: { severity: warning, service: kafka }
+            exp_annotations:
+              summary: "Kafka outbox'inda 10m 0s once yazilmis olay hala yayinlanmadi"
+              description: "Izin/masraf/calisan/akis olaylari Kafka'ya gitmiyor (bildirimler ve onay adimlari gecikir). kafka konteynerini ve employee/leave/expense/workflow servis gunluklerindeki 'Event yayinlanamadi' uyarilarini kontrol edin."
+      - eval_time: 10m
+        alertname: OutboxTeslimEdilemedi
+        exp_alerts: []
+
+  # (Ornekler 1 dk arayla: 5 dk'lik bayatlik penceresinden seyrek ornek alarmi sifirlar.)
+  # Yedek: son basarili yedek t=0'da (zaman damgasi 0); 26 saat + 30 dk sonra YedekEski calar,
+  # 50 saatten once YedekCokEski calmaz.
+  - interval: 1m
+    input_series:
+      - series: 'hr360_backup_last_success_timestamp_seconds{job="node",service="host"}'
+        values: '0x1700'
+      - series: 'up{job="node",service="host"}'
+        values: '1x1700'
+    alert_rule_test:
+      - eval_time: 25h
+        alertname: YedekEski
+        exp_alerts: []
+      - eval_time: 27h
+        alertname: YedekEski
+        exp_alerts:
+          - exp_labels: { severity: warning, service: backup }
+            exp_annotations:
+              summary: "Son basarili yedek 1d 3h 0m 0s once alindi (gecelik yedek calismiyor)"
+              description: "scripts/schedule.sh status ve backups/backup.log'a bakin; elle: scripts/backup.sh"
+      - eval_time: 27h
+        alertname: YedekCokEski
+        exp_alerts: []
+      - eval_time: 27h
+        alertname: YedekKaydiYok
+        exp_alerts: []
+
+  # Hic yedek metrigi yok, node-exporter ayakta: 24 saat sonra YedekKaydiYok.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="node",service="host"}'
+        values: '1x1600'
+    alert_rule_test:
+      - eval_time: 23h
+        alertname: YedekKaydiYok
+        exp_alerts: []
+      - eval_time: 25h
+        alertname: YedekKaydiYok
+        exp_alerts:
+          - exp_labels: { severity: warning, service: backup }
+            exp_annotations:
+              summary: "Bu sunucuda kaydi tutulan bir yedek yok (scripts/backup.sh hic basariyla calismadi ya da zamanlanmadi)"
+              description: "Zamanlamak icin: sudo scripts/schedule.sh install backup restore-drill"
+
+  # Geri yukleme testi basarisiz -> hemen kritik.
+  - interval: 1m
+    input_series:
+      - series: 'hr360_restore_test_success{job="node",service="host",tool="drill"}'
+        values: '0x5'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: GeriYuklemeTestiBasarisiz
+        exp_alerts:
+          - exp_labels: { severity: critical, service: backup, tool: drill }
+            exp_annotations:
+              summary: "Son geri yukleme testi (drill) basarisiz: yedekten geri donulemeyebilir"
+              description: "backups/restore-drill.log ya da backups/verify.log; elle: scripts/restore-drill.sh"
+
+  # Sertifika: bitis t=0'dan 10 gun sonra -> SertifikaBitiyor (21 gun esigi), kritik (7 gun) degil.
+  - interval: 5m
+    input_series:
+      - series: 'probe_ssl_earliest_cert_expiry{job="tls-cert",instance="gateway:443",service="gateway"}'
+        values: '864000x30'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: SertifikaBitiyor
+        exp_alerts:
+          - exp_labels: { severity: warning, service: gateway, job: tls-cert, instance: "gateway:443" }
+            exp_annotations:
+              summary: "TLS sertifikasinin bitmesine 9d 22h 0m 0s kaldi"
+              description: "Let's Encrypt: scripts/tls.sh check / retry. Kendi sertifikaniz: scripts/tls.sh enable --cert ... --key ..."
+      - eval_time: 2h
+        alertname: SertifikaBitiyorKritik
+        exp_alerts: []
+
+  # 5xx: 30% hata, yeterli trafik -> Yuksek5xxOraniKritik.
+  - interval: 1m
+    input_series:
+      - series: 'http_request_duration_seconds_count{job="hr360-services",service="leave-service",code="500"}'
+        values: '0+30x20'
+      - series: 'http_request_duration_seconds_count{job="hr360-services",service="leave-service",code="200"}'
+        values: '0+70x20'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: Yuksek5xxOraniKritik
+        exp_alerts:
+          - exp_labels: { severity: critical, service: leave-service }
+            exp_annotations:
+              summary: "leave-service isteklerinin %20'sinden fazlasi 5xx donuyor"
+              description: "Servis gunlugu: Grafana > HR360 — Servis sagligi > Loglar (servis secin). Son dagitim ya da veritabani/Kafka erisimi kontrol edilmeli."

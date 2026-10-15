@@ -1,0 +1,48 @@
+# Tek dugumlu Loki. Saklama LOKI_RETENTION (varsayilan 168h = 7 gun), compactor
+# her 10 dakikada suresi dolan parcalari siler. Loki boyut tabanli saklama
+# desteklemez; disk tavani alim hizi siniri + sure ile dolayli kurulur.
+# Ayrinti ve boyut tahmini: docs/runbooks/izleme-saklama.md
+# (-config.expand-env=true ile calisir; degiskenler compose environment blogundan gelir.)
+auth_enabled: false
+server:
+  http_listen_port: 3100
+  log_level: warn
+common:
+  path_prefix: /loki
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+limits_config:
+  retention_period: ${LOKI_RETENTION:-168h}
+  allow_structured_metadata: true
+  # Kontrolsuz log patlamasi diski doldurmasin (asan satirlar reddedilir, 429).
+  ingestion_rate_mb: ${LOKI_INGESTION_RATE_MB:-4}
+  ingestion_burst_size_mb: 8
+  per_stream_rate_limit: 2MB
+  per_stream_rate_limit_burst: 6MB
+  # Saklama suresinden eski veri sorgulanmasin.
+  max_query_lookback: ${LOKI_RETENTION:-168h}
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  compaction_interval: 10m
+  retention_delete_delay: 2h
+  delete_request_store: filesystem
+analytics:
+  reporting_enabled: false

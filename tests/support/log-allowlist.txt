@@ -1,0 +1,6 @@
+# scripts/test.sh log_scan: test sirasinda BEKLENEN servis gunlugu hatalari (grep -E, satir basina bir desen).
+# Yalnizca testin bilerek urettigi hatalar buraya eklenir; her desenin yanina nedenini yazin.
+# Istemci istegi yarida keserse (tarayici sayfadan cabuk ayrilir; paralel e2e) EF iptal edilen baglantiyi
+# "Connection[20004]" hatasi olarak yazar; ardindan komut hatasi ya da 500 gelmez. Gercek kesinti diger
+# desenlerle (Command[20102], Unhandled exception, 5xx) yakalanir.
+Database\.Connection\[20004\]

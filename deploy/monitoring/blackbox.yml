@@ -1,0 +1,20 @@
+# HR360 — blackbox_exporter modulleri ("monitoring" profili, dalga 12).
+# tls_cert: gateway'in sundugu sertifikanin bitis tarihini olcer (probe_ssl_earliest_cert_expiry).
+# Kendinden imzali ve gecici sertifikalar da olculsun diye zincir dogrulanmaz; amac yalnizca
+# bitis tarihi. Alarmlar: deploy/monitoring/alerts.yml (SertifikaBitiyor, SertifikaBitti).
+modules:
+  tls_cert:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      tls: true
+      tls_config:
+        insecure_skip_verify: true
+  # Uygulamanin gateway uzerinden yanit verdigi (HTTP 2xx/3xx) denetimi.
+  http_gateway:
+    prober: http
+    timeout: 5s
+    http:
+      preferred_ip_protocol: ip4
+      valid_status_codes: [200, 301, 302, 308]
+      follow_redirects: false

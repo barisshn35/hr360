@@ -1,0 +1,39 @@
+HR360
+Copyright (C) 2026 Yusuf Barış Şahin
+
+Bu program özgür yazılımdır: Free Software Foundation tarafından yayımlanan GNU Affero
+Genel Kamu Lisansı'nın 3. sürümü (AGPL-3.0) koşulları altında yeniden dağıtabilir ve/veya
+değiştirebilirsiniz. Lisansın tam metni LICENSE dosyasındadır.
+
+AGPL-3.0'ın 13. maddesi gereği: programın değiştirilmiş bir sürümünü ağ üzerinden kullanıcılara
+hizmet olarak sunuyorsanız, o kullanıcılara değiştirilmiş sürümün kaynak koduna erişim
+sağlamanız gerekir.
+
+Bu program HİÇBİR GARANTİ OLMAKSIZIN dağıtılmaktadır; ayrıntılar için LICENSE dosyasına bakın.
+
+Üçüncü taraf bileşenler
+-----------------------
+HR360, kendi lisanslarıyla dağıtılan açık kaynak bileşenler kullanır. Bu bileşenler kendi
+lisanslarına tabidir ve AGPL-3.0 bunların lisansını değiştirmez:
+
+- .NET kütüphaneleri (NuGet): apps/services/*/*.csproj içindeki paketler (çoğunlukla MIT ve
+  Apache-2.0).
+- Web arayüzü (npm): apps/web/package.json ve package-lock.json içindeki paketler (çoğunlukla
+  MIT, ISC, Apache-2.0).
+- Makine öğrenmesi servisi (PyPI): apps/ml-inference/requirements*.txt (çoğunlukla BSD, MIT,
+  Apache-2.0).
+- Çalışma ortamı imajları: PostgreSQL, Keycloak, Apache Kafka, MinIO, MLflow, nginx, Valkey,
+  Mailpit ve isteğe bağlı izleme bileşenleri (Prometheus, Grafana, Loki, Tempo) — her biri kendi
+  lisansıyla.
+- QR kodu üretimi: uqr (MIT) — parola davet linkleri tarayıcıda, harici servis olmadan QR'a çevrilir.
+- 21st.dev'den uyarlanan arayüz bileşenleri (ör. ddoemonn "Copy Button", "Accordion" ve "Logo Marquee",
+  grootstudio "Blurred Marquee", "Orbiting Circles") — projeye uyarlanmış halleriyle
+  apps/web/src/components altında.
+- Giriş sayfasındaki entegrasyon logoları (apps/web/public/integrations): Slack, Microsoft
+  (Teams, Outlook/Microsoft 365, Entra ID), Zoom, Google, Okta, Zapier, n8n, OpenAI, Anthropic ve
+  Ollama adları ve logoları sahiplerinin ticari markalarıdır; markalar sahiplerine aittir.
+  Yalnızca HR360'ın bu ürünlerle bağlantı kurabildiğini belirtmek için kullanılır, bir ortaklık
+  ya da onay anlamı taşımaz. SVG dosyaları svgl.app (MIT) ve Simple Icons (CC0) üzerinden
+  alınmıştır.
+- Geist yazı tipi (Keycloak giriş teması): SIL Open Font License 1.1 —
+  deploy/keycloak/themes/hr360/login/resources/fonts/OFL-Geist.txt

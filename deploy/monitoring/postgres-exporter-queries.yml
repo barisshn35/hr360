@@ -1,0 +1,26 @@
+# HR360 — postgres-exporter'a eklenen uygulama sorgulari (dalga 12).
+# Yalnizca toplam sayi ve sure doner; kiraci, kisi ya da olay icerigi metrige girmez (KVKK).
+#
+# hr360_outbox_*: messaging_outbox (employee, leave, expense, workflow servislerinin ortak
+# Kafka outbox tablosu). Yayincilar 5 sn'de bir tarar; birikme Kafka'nin ya da yayincinin
+# calismadigini gosterir. AttemptCount >= 10 olan satirlar artik denenmez ("teslim edilemedi").
+# Sorgu "PublishedAt" IS NULL satirlarini IX_messaging_outbox_PublishedAt_CreatedAt ile okur;
+# yine de her kazimada calismasin diye sonuc 60 sn onbellekte tutulur.
+hr360_outbox:
+  cache_seconds: 60
+  query: |
+    SELECT count(*) FILTER (WHERE "AttemptCount" < 10) AS pending,
+           count(*) FILTER (WHERE "AttemptCount" >= 10) AS failed,
+           COALESCE(EXTRACT(EPOCH FROM now() - min("CreatedAt") FILTER (WHERE "AttemptCount" < 10)), 0) AS oldest_pending_age_seconds
+    FROM messaging_outbox
+    WHERE "PublishedAt" IS NULL
+  metrics:
+    - pending:
+        usage: GAUGE
+        description: "Kafka'ya henuz yayinlanmamis (yeniden denenecek) outbox olay sayisi"
+    - failed:
+        usage: GAUGE
+        description: "10 denemede yayinlanamamis ve artik denenmeyen outbox olay sayisi"
+    - oldest_pending_age_seconds:
+        usage: GAUGE
+        description: "Yayin bekleyen en eski outbox olayinin yasi (sn); bekleyen yoksa 0"

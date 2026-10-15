@@ -1,0 +1,246 @@
+/* ==========================================================================
+   Departman şeması — bağlantı çizgileri.
+
+   İç içe <ul>/<li>: her düğüm kardeşlerine uzanan yatay yarıyı ve kendi
+   inişini çizer; her alt liste ebeveyninden aşağı bir sap indirir.
+   Performans modülündeki ekip diyagramıyla aynı teknik, ayrı önekle
+   (`.dept-chart`) — iki ekran birbirinin stilini etkilemesin.
+   ========================================================================== */
+
+.dept-chart {
+  --gap: 28px;
+  --line-w: 1.5px;
+  --line: hsl(var(--border));
+}
+
+.dept-chart ul {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding: var(--gap) 0 0;
+  list-style: none;
+}
+
+.dept-chart > ul {
+  padding-top: 0;
+}
+
+.dept-chart li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--gap) 10px 0;
+}
+
+.dept-chart > ul > li {
+  padding-top: 0;
+}
+
+.dept-chart li::before,
+.dept-chart li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: var(--gap);
+  border-top: var(--line-w) solid var(--line);
+}
+
+.dept-chart li::after {
+  right: auto;
+  left: 50%;
+  border-left: var(--line-w) solid var(--line);
+}
+
+.dept-chart li:first-child::before,
+.dept-chart li:last-child::after {
+  border: 0 none;
+}
+
+.dept-chart li:last-child::before {
+  border-right: var(--line-w) solid var(--line);
+  border-radius: 0 10px 0 0;
+}
+
+.dept-chart li:first-child::after {
+  border-radius: 10px 0 0 0;
+}
+
+.dept-chart li:only-child::before {
+  display: none;
+}
+
+.dept-chart li:only-child::after {
+  left: 50%;
+  width: 0;
+  border-top: 0 none;
+  border-left: var(--line-w) solid var(--line);
+  border-radius: 0;
+}
+
+.dept-chart > ul > li::before,
+.dept-chart > ul > li::after {
+  display: none;
+}
+
+/* Şirket düğümünden kök departmanlara inen sap */
+.dept-chart .dept-root::before,
+.dept-chart ul ul::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: var(--gap);
+  border-left: var(--line-w) solid var(--line);
+}
+
+/* Odak modunda şirket düğümü yok: köke inen sap çizilmez. */
+.dept-chart .dept-root-focus::before {
+  display: none;
+}
+
+/* Köke giden yol: seçili dalın iniş çizgisi ve üst listenin sapı vurgulanır. */
+.dept-chart li.on-path::after,
+.dept-chart li.on-path::before {
+  --line: hsl(var(--primary));
+  --line-w: 2.5px;
+}
+.dept-chart li.on-path > ul::before {
+  border-left-color: hsl(var(--primary));
+  border-left-width: 2.5px;
+}
+
+/* ==========================================================================
+   SVG görünümleri (OrgSvgView) ve matris bağları
+   ========================================================================== */
+
+.org-svg-stage {
+  transform-origin: 0 0;
+}
+.org-svg-anim {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.org-svg-node {
+  cursor: pointer;
+  outline: none;
+}
+.org-svg-root {
+  cursor: default;
+}
+.org-svg-card {
+  fill: hsl(var(--card));
+}
+.org-svg-label {
+  fill: hsl(var(--foreground));
+  font-size: 12px;
+}
+.org-svg-sub {
+  fill: hsl(var(--muted-foreground));
+  font-size: 11px;
+  font-weight: 400;
+}
+.org-svg-toggle {
+  cursor: pointer;
+}
+
+/* Matris bağları: açık temada koyulaştırılmış ton (beyaz zeminde ≥3:1), koyu temada grafik rengi.
+   Bağlantı çizgilerinin üstünde, zemin renginde bir "hale" ile çizilir ki kesiştiği yerde kaybolmasın. */
+.org-chart-root {
+  --matrix-func: 199 89% 33%;
+  --matrix-project: 340 82% 42%;
+}
+.dark .org-chart-root {
+  --matrix-func: var(--chart-2);
+  --matrix-project: var(--chart-5);
+}
+.org-matrix {
+  fill: none;
+  stroke: hsl(var(--matrix-func, var(--chart-2)));
+  stroke-dasharray: 7 4;
+  stroke-linecap: round;
+}
+.org-matrix-project {
+  stroke: hsl(var(--matrix-project, var(--chart-5)));
+}
+.org-matrix-halo {
+  fill: none;
+  stroke: hsl(var(--background));
+  stroke-opacity: 0.9;
+  stroke-linecap: round;
+}
+.org-matrix-head {
+  fill: hsl(var(--matrix-func, var(--chart-2)));
+}
+.org-matrix-head-project {
+  fill: hsl(var(--matrix-project, var(--chart-5)));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .org-svg-anim {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   PDF (yazdır): orgExport.printSvg şemayı ayrı bir katmana koyar; uygulama
+   kabuğu yalnızca bu sırada gizlenir.
+   ========================================================================== */
+
+.org-print-root {
+  display: none;
+}
+
+@media print {
+  body.org-printing > *:not(.org-print-root) {
+    display: none !important;
+  }
+  body.org-printing .org-print-root {
+    display: block !important;
+  }
+  body.org-printing .org-print-root img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 100vh;
+    object-fit: contain;
+  }
+}
+
+/* ==========================================================================
+   Zaman kaydırıcısı: kişi sayısı değişen departman kısa süre parlar.
+   Azaltılmış harekette animasyon yok, sabit çerçeve kalır.
+   ========================================================================== */
+
+@keyframes org-pulse {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.org-pulse-ring {
+  fill: none;
+  stroke: hsl(38 92% 50%);
+  stroke-width: 4;
+  pointer-events: none;
+  animation: org-pulse 1.6s ease-out forwards;
+}
+
+.org-pulse-box {
+  pointer-events: none;
+  box-shadow: 0 0 0 3px hsl(38 92% 50%);
+  animation: org-pulse 1.6s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .org-pulse-ring,
+  .org-pulse-box {
+    animation: none;
+    opacity: 0.8;
+  }
+}

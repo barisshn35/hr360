@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex">
+<!-- Gateway arkasindaki uygulama yanit vermiyor (502/503/504). JS yok: 20 sn'de bir kendiliginden yeniden dener. -->
+<meta http-equiv="refresh" content="20">
+<title>HR360 · Kısa bir ara</title>
+<style>
+:root{--bg:hsl(0 0% 99%);--fg:hsl(240 10% 6%);--muted:hsl(240 4% 40%);--card:#fff;--border:hsl(240 6% 90%);--primary:hsl(160 86% 26%);--accent:hsl(170 85% 40%);--warn:hsl(38 92% 50%)}
+@media (prefers-color-scheme:dark){:root{--bg:hsl(240 8% 3.5%);--fg:hsl(0 0% 96%);--muted:hsl(240 5% 64%);--card:hsl(240 6% 6.5%);--border:hsl(240 5% 14%);--primary:hsl(158 80% 41%);--accent:hsl(170 85% 60%)}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:32px 20px;background:var(--bg);color:var(--fg);font:400 15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+body::before{content:"";position:fixed;inset:-20%;background:radial-gradient(40% 35% at 50% 30%,color-mix(in srgb,var(--primary) 18%,transparent),transparent 70%);pointer-events:none}
+main{position:relative;max-width:460px;text-align:center}
+.stage{position:relative;width:200px;height:170px;margin:0 auto 18px}
+.rack{position:absolute;left:50%;width:132px;margin-left:-66px;height:30px;border-radius:9px;background:var(--card);border:1px solid var(--border);box-shadow:0 10px 30px -14px rgba(0,0,0,.45);display:flex;align-items:center;padding:0 12px;gap:6px}
+.rack:nth-child(1){top:22px}.rack:nth-child(2){top:60px}.rack:nth-child(3){top:98px}
+.rack i{width:7px;height:7px;border-radius:50%;background:var(--primary);opacity:.25}
+.rack b{flex:1;height:4px;margin-left:8px;border-radius:2px;background:repeating-linear-gradient(90deg,var(--border) 0 6px,transparent 6px 10px)}
+.rack:nth-child(1) i:nth-child(1){animation:led 1.2s steps(1) infinite}
+.rack:nth-child(2) i:nth-child(2){background:var(--warn);animation:led .8s steps(1) infinite .3s}
+.rack:nth-child(3) i:nth-child(1){animation:led 1.6s steps(1) infinite .6s}
+.rack:nth-child(2){animation:nudge 2.4s ease-in-out infinite}
+.pulse{position:absolute;left:0;right:0;bottom:6px;height:28px}
+.pulse path{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:240;stroke-dashoffset:240;animation:trace 2.2s linear infinite}
+.code{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1{margin:6px 0 8px;font-size:26px;line-height:1.2;letter-spacing:-.02em}
+p{margin:0;color:var(--muted)}
+.en{margin-top:6px;font-size:13px;opacity:.8}
+.retry{margin:26px auto 0;display:inline-flex;align-items:center;gap:12px;padding:10px 16px 10px 10px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb,var(--card) 70%,transparent);color:var(--fg);text-decoration:none;font-size:14px;font-weight:500}
+.retry:hover{border-color:var(--primary)}
+.ring{position:relative;width:34px;height:34px}
+.ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:3}
+.ring .t{stroke:var(--border)}
+.ring .p{stroke:var(--primary);stroke-linecap:round;stroke-dasharray:88;stroke-dashoffset:0;animation:drain 20s linear forwards}
+.ring span{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
+@property --n{syntax:"<integer>";inherits:false;initial-value:20}
+.ring span{--n:20;counter-reset:n var(--n);animation:count 20s linear forwards}
+.ring span::after{content:counter(n)}
+@keyframes count{from{--n:20}to{--n:0}}
+@keyframes drain{to{stroke-dashoffset:88}}
+@keyframes led{50%{opacity:1}}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+@keyframes trace{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.rack i{opacity:.8}.pulse path{stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+<main>
+  <div class="stage" aria-hidden="true">
+    <div class="rack"><i></i><i></i><b></b></div>
+    <div class="rack"><i></i><i></i><b></b></div>
+    <div class="rack"><i></i><i></i><b></b></div>
+    <svg class="pulse" viewBox="0 0 200 28" preserveAspectRatio="none"><path d="M0 14h60l8-10 10 20 8-18 6 8h108"/></svg>
+  </div>
+  <div class="code">502 · 503 · 504</div>
+  <h1>Kısa bir ara veriyoruz</h1>
+  <p>HR360 şu anda yanıt vermiyor; güncelleme ya da yeniden başlatma sürüyor olabilir. Sayfa kendiliğinden yeniden denenecek, verileriniz güvende.</p>
+  <p class="en">HR360 is temporarily unavailable. This page retries automatically.</p>
+  <a class="retry" href="">
+    <span class="ring" aria-hidden="true"><svg viewBox="0 0 34 34"><circle class="t" cx="17" cy="17" r="14"/><circle class="p" cx="17" cy="17" r="14"/></svg><span></span></span>
+    Şimdi yeniden dene
+  </a>
+</main>
+</body>
+</html>

@@ -1,0 +1,186 @@
+/* ==========================================================================
+   HR360 — Hareket katmanı
+
+   AYRI DOSYA OLMASININ SEBEBİ: `index.css` devir paketiyle gelen tasarım
+   token dosyası ve dokunulmuyor. Burası yalnızca keyframe ve hareket
+   yardımcıları içerir; hiçbir renk token'ı tanımlamaz, hepsini oradan okur.
+
+   JS ile yapılması pahalı olan sürekli döngüler (aurora, marquee, ışıltı,
+   dönen kenarlık) CSS'te; giriş/çıkış ve scroll'a bağlı hareketler
+   `motion/react` tarafında (bkz. src/motion/primitives.tsx).
+   ========================================================================== */
+
+/* ------------------------------- Keyframe'ler ------------------------------ */
+
+@keyframes hr-aurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(4%, -6%, 0) scale(1.12); }
+  66%  { transform: translate3d(-5%, 4%, 0) scale(0.94); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes hr-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+@keyframes hr-sheen {
+  from { transform: translate3d(-120%, 0, 0) skewX(-18deg); }
+  to   { transform: translate3d(320%, 0, 0) skewX(-18deg); }
+}
+
+@keyframes hr-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -8px, 0); }
+}
+
+@keyframes hr-ring {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes hr-conic {
+  to { transform: rotate(1turn); }
+}
+
+@keyframes hr-caret {
+  0%, 45%   { opacity: 1; }
+  50%, 95%  { opacity: 0; }
+  100%      { opacity: 1; }
+}
+
+@keyframes hr-dash {
+  to { stroke-dashoffset: 0; }
+}
+
+/* --------------------------------- Sınıflar -------------------------------- */
+
+/** Hero arkasındaki yumuşak ışık kütleleri. */
+.hr-aurora {
+  animation: hr-aurora 22s ease-in-out infinite;
+  will-change: transform;
+}
+.hr-aurora-slow { animation-duration: 34s; }
+.hr-aurora-delay { animation-delay: -11s; }
+
+/**
+ * Sonsuz yatay şerit. İçerik iki kez basılır, %50 kaydırma dikişsiz döner.
+ * Kapsayıcıya `.hr-marquee-mask` verilirse kenarlar yumuşar.
+ */
+.hr-marquee {
+  animation: hr-marquee 38s linear infinite;
+  will-change: transform;
+}
+.hr-marquee-fast { animation-duration: 24s; }
+.hr-marquee:hover { animation-play-state: paused; }
+
+.hr-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+/** Birincil düğmelerin üzerinden geçen ışık. Yalnızca hover'da tetiklenir. */
+.hr-sheen { position: relative; overflow: hidden; }
+.hr-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--primary-foreground) / 0.35),
+    transparent
+  );
+  transform: translate3d(-120%, 0, 0) skewX(-18deg);
+  pointer-events: none;
+}
+.hr-sheen:hover::after { animation: hr-sheen 0.9s ease-out; }
+
+.hr-float { animation: hr-float 6s ease-in-out infinite; }
+.hr-float-delay { animation-delay: -3s; }
+
+/** Canlı adımın etrafındaki genişleyen halka. */
+.hr-ring { animation: hr-ring 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+
+/**
+ * Dönen konik gradyan kenarlık. Kart `position: relative` ve `overflow: hidden`
+ * olmalı; içerik kendi zemininde ayrı bir katmanda durur.
+ */
+.hr-conic-border::before {
+  content: '';
+  position: absolute;
+  inset: -140%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    hsl(var(--primary) / 0.55) 40deg,
+    transparent 110deg
+  );
+  animation: hr-conic 6s linear infinite;
+  pointer-events: none;
+}
+
+.hr-caret { animation: hr-caret 1.1s steps(1) infinite; }
+
+/** SVG bağlantı çizgilerinin görünürken çizilmesi. */
+.hr-dash {
+  stroke-dasharray: var(--hr-dash, 240);
+  stroke-dashoffset: var(--hr-dash, 240);
+}
+.hr-dash-run { animation: hr-dash 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/** İmleci izleyen ışık — `--hr-x` / `--hr-y` JS'ten güncellenir. */
+.hr-spotlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    22rem circle at var(--hr-x, 50%) var(--hr-y, 50%),
+    hsl(var(--primary) / 0.16),
+    transparent 42%
+  );
+  pointer-events: none;
+}
+.hr-spotlight:hover::before { opacity: 1; }
+
+/** Nokta ızgara dokusu; kenarlara doğru soluklaşır. */
+.hr-dots {
+  background-image: radial-gradient(hsl(var(--foreground) / 0.14) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent);
+}
+
+/** İnce çizgi ızgara — bölüm zeminlerinde. */
+.hr-grid {
+  background-image:
+    linear-gradient(to right, hsl(var(--border) / 0.55) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.55) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black, transparent);
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black, transparent);
+}
+
+/* -------------------------- Hareket azaltma tercihi ------------------------- */
+
+/**
+ * Sistem "hareketi azalt" diyorsa süslemeler durur. motion/react tarafı
+ * `useReducedMotion` ile zaten aynı kararı veriyor; burası CSS karşılığı.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .hr-aurora,
+  .hr-marquee,
+  .hr-float,
+  .hr-ring,
+  .hr-caret,
+  .hr-dash-run,
+  .hr-conic-border::before {
+    animation: none !important;
+  }
+  .hr-sheen:hover::after { animation: none !important; }
+  .hr-dash { stroke-dashoffset: 0; }
+}

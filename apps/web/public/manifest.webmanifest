@@ -1,0 +1,83 @@
+{
+  "id": "/panel",
+  "name": "HR360 Enterprise",
+  "short_name": "HR360",
+  "description": "Çok kiracılı kurumsal insan kaynakları platformu",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "/panel",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/appicon-dark-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/appicon-dark-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/appicon-emerald-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "İzin talebi oluştur",
+      "short_name": "İzin talebi",
+      "url": "/panel/izin?yeni=1",
+      "icons": [
+        {
+          "src": "/appicon-dark-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Masraf ekle",
+      "short_name": "Masraf",
+      "url": "/panel/masraf?yeni=1",
+      "icons": [
+        {
+          "src": "/appicon-dark-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Onay kutusu",
+      "url": "/panel/onaylar",
+      "icons": [
+        {
+          "src": "/appicon-dark-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Kim nerede",
+      "url": "/panel/ofis",
+      "icons": [
+        {
+          "src": "/appicon-dark-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}

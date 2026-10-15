@@ -1,0 +1,124 @@
+{
+  "realm": "hr360",
+  "enabled": true,
+  "displayName": "HR360",
+  "loginTheme": "hr360",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["tr", "en"],
+  "defaultLocale": "tr",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "smtpServer": {
+    "host": "__SMTP_HOST__",
+    "port": "__SMTP_PORT__",
+    "from": "__SMTP_FROM_ADDRESS__",
+    "fromDisplayName": "__SMTP_FROM_NAME__",
+    "auth": "__SMTP_AUTH__",
+    "user": "__SMTP_USER__",
+    "password": "__SMTP_PASSWORD__",
+    "ssl": "__SMTP_SSL__",
+    "starttls": "__SMTP_STARTTLS__"
+  },
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "passwordPolicy": "length(12) and notUsername and notEmail and passwordHistory(3)",
+  "eventsEnabled": true,
+  "eventsExpiration": 2592000,
+  "enabledEventTypes": ["LOGIN", "LOGIN_ERROR"],
+  "browserSecurityHeaders": {
+    "contentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
+    "contentSecurityPolicyReportOnly": "",
+    "xContentTypeOptions": "nosniff",
+    "xFrameOptions": "SAMEORIGIN",
+    "referrerPolicy": "no-referrer",
+    "xRobotsTag": "none",
+    "strictTransportSecurity": "max-age=31536000; includeSubDomains"
+  },
+  "organizationsEnabled": true,
+  "roles": {
+    "realm": [
+      { "name": "employee", "description": "Standart çalışan" },
+      { "name": "manager", "description": "Departman yöneticisi" },
+      { "name": "accounting", "description": "Muhasebe / bordro uzmanı" },
+      { "name": "hr-admin", "description": "İK yöneticisi" },
+      { "name": "tenant-admin", "description": "Şirket yöneticisi" },
+      { "name": "platform-admin", "description": "Platform süper yöneticisi" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "hr360-web",
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "enabled": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["__PUBLIC_ORIGIN__/*"],
+      "webOrigins": ["__PUBLIC_ORIGIN__"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "__PUBLIC_ORIGIN__/*"
+      }
+    },
+    {
+      "clientId": "hr360-ml-inference",
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "enabled": true,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "secret": "__ML_KEYCLOAK_CLIENT_SECRET__"
+    },
+    {
+      "clientId": "hr360-tenant-admin",
+      "name": "tenant-service yonetim API servis hesabi",
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "enabled": true,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "frontchannelLogout": false,
+      "secret": "__TENANT_ADMIN_CLIENT_SECRET__"
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-hr360-tenant-admin",
+      "enabled": true,
+      "serviceAccountClientId": "hr360-tenant-admin",
+      "clientRoles": {
+        "realm-management": ["manage-users", "manage-realm", "manage-identity-providers", "manage-clients", "view-events"]
+      }
+    },
+    {
+      "username": "demo.admin",
+      "email": "demo.admin@hr360.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "Admin",
+      "credentials": [
+        { "type": "password", "value": "__DEMO_ADMIN_PASSWORD__", "temporary": false }
+      ],
+      "realmRoles": ["tenant-admin"]
+    },
+    {
+      "username": "platform.admin",
+      "email": "__PLATFORM_ADMIN_EMAIL__",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Platform",
+      "lastName": "Yonetici",
+      "credentials": [
+        { "type": "password", "value": "__PLATFORM_ADMIN_PASSWORD__", "temporary": false }
+      ],
+      "realmRoles": ["platform-admin"]
+    }
+  ]
+}

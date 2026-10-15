@@ -1,0 +1,119 @@
+# HR360 — Prometheus kazima yapilandirmasi ("monitoring" profili).
+# Tum .NET servisleri prometheus-net ile /metrics, ml-inference ise
+# prometheus-fastapi-instrumentator ile /metrics yayinlar. Bu uclar gateway
+# uzerinden disariya acik degildir; yalnizca hr360-net icinden kazinir.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [alertmanager:9093]
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: hr360-services
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - organization-service:8080
+          - employee-service:8080
+          - workflow-service:8080
+          - leave-service:8080
+          - recruitment-service:8080
+          - onboarding-service:8080
+          - timeshift-service:8080
+          - performance-service:8080
+          - learning-service:8080
+          - engagement-service:8080
+          - governance-service:8080
+          - compensation-service:8080
+          - expense-service:8080
+          - notification-service:8080
+          - tenant-service:8080
+    relabel_configs:
+      # "employee-service:8080" -> service="employee-service"
+      - source_labels: [__address__]
+        regex: '([^:]+):\d+'
+        target_label: service
+    metric_relabel_configs:
+      # .NET'in QUIC/ic tanilama sayaclari yuzlerce seri uretir ve kullanilmaz.
+      - source_labels: [__name__]
+        regex: 'private_internaldiagnostics_.*|prometheus_net_.*'
+        action: drop
+
+  - job_name: ml-inference
+    static_configs:
+      - targets: [ml-inference:8000]
+        labels: { service: ml-inference }
+
+  - job_name: postgres
+    static_configs:
+      - targets: [postgres-exporter:9187]
+        labels: { service: postgres }
+
+  - job_name: node
+    static_configs:
+      - targets: [node-exporter:9100]
+        labels: { service: host }
+
+  # Dalga 12: TLS sertifikasi bitis tarihi ve gateway erisilebilirligi (blackbox-exporter).
+  # HTTPS kapaliysa tls-cert yoklamasi basarisiz olur (probe_success 0); alarm yalnizca
+  # sertifika okunabildiginde (probe_ssl_earliest_cert_expiry varsa) calisir.
+  - job_name: tls-cert
+    metrics_path: /probe
+    params: { module: [tls_cert] }
+    scrape_interval: 5m
+    static_configs:
+      - targets: [gateway:443]
+        labels: { service: gateway }
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: gateway-http
+    metrics_path: /probe
+    params: { module: [http_gateway] }
+    static_configs:
+      - targets: [http://gateway/]
+        labels: { service: gateway }
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: blackbox
+    static_configs:
+      - targets: [blackbox-exporter:9115]
+        labels: { service: blackbox-exporter }
+
+  - job_name: alertmanager
+    static_configs:
+      - targets: [alertmanager:9093]
+        labels: { service: alertmanager }
+
+  # G25: dagitik izleme bilesenleri (yalnizca "monitoring" profilinde).
+  - job_name: otel-collector
+    static_configs:
+      - targets: [otel-collector:8888]
+        labels: { service: otel-collector }
+
+  - job_name: tempo
+    static_configs:
+      - targets: [tempo:3200]
+        labels: { service: tempo }
+
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+        labels: { service: prometheus }

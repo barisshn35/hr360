@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="15">
+<title>HR360 · Çevrimdışı</title>
+<style>
+:root{--bg:hsl(0 0% 99%);--fg:hsl(240 10% 6%);--muted:hsl(240 4% 40%);--card:#fff;--border:hsl(240 6% 90%);--primary:hsl(160 86% 26%);--bad:hsl(0 72% 51%)}
+@media (prefers-color-scheme:dark){:root{--bg:hsl(240 8% 3.5%);--fg:hsl(0 0% 96%);--muted:hsl(240 5% 64%);--card:hsl(240 6% 6.5%);--border:hsl(240 5% 14%);--primary:hsl(158 80% 41%)}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:32px 20px;background:var(--bg);color:var(--fg);font:400 15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:440px;text-align:center}
+.tile{width:112px;height:112px;margin:0 auto 22px;border-radius:18px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;box-shadow:0 10px 40px -12px rgba(0,0,0,.35)}
+svg{width:80px;height:68px;color:var(--primary)}
+.arc{fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:round;animation:fade 2.6s infinite}
+.a2{animation-delay:.25s}.a3{animation-delay:.5s}
+.cut{fill:none;stroke:var(--bad);stroke-width:5;stroke-linecap:round;stroke-dasharray:90;stroke-dashoffset:90;animation:draw .8s .5s ease-out forwards}
+h1{margin:0 0 8px;font-size:24px;letter-spacing:-.02em}
+p{margin:0;color:var(--muted)}
+.en{margin-top:6px;font-size:13px;opacity:.8}
+a{display:inline-block;margin-top:24px;padding:9px 16px;border-radius:10px;border:1px solid var(--border);color:var(--fg);text-decoration:none;font-weight:500}
+a:hover{border-color:var(--primary)}
+@keyframes fade{0%,100%{opacity:1}30%,70%{opacity:.15}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.cut{stroke-dashoffset:0}.arc{opacity:.4}}
+</style>
+</head>
+<body>
+<main>
+  <div class="tile" aria-hidden="true">
+    <svg viewBox="0 0 96 80"><path class="arc" d="M20 34a40 40 0 0 1 56 0"/><path class="arc a2" d="M29 44a27 27 0 0 1 38 0"/><path class="arc a3" d="M38 54a14 14 0 0 1 20 0"/><circle cx="48" cy="64" r="4" fill="currentColor"/><path class="cut" d="M18 12 78 72"/></svg>
+  </div>
+  <h1>İnternet bağlantısı yok</h1>
+  <p>Cihazınız çevrimdışı görünüyor. Bağlantı geri geldiğinde HR360 kendiliğinden açılır.</p>
+  <p class="en">You appear to be offline. HR360 will reopen when the connection is back.</p>
+  <a href="/">Yeniden dene</a>
+</main>
+</body>
+</html>

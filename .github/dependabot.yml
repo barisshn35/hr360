@@ -1,0 +1,70 @@
+# Guvenlik dalgasi 1: bagimlilik guncellemeleri. Haftalik, ekosistem basina en fazla iki toplu PR:
+# kucuk+yama surumleri bir PR, buyuk surumler (tum dizinler birlikte, ör. 15 serviste Swashbuckle)
+# ayri tek bir PR. Buyuk surum PR'i CI'dan gecmeden ve kirici degisiklikler incelenmeden
+# birlestirilmez. Guvenlik guncellemeleri (Dependabot security updates) beklemeden acilir.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Istanbul }
+    open-pull-requests-limit: 5
+    groups:
+      web-minor-patch: { update-types: [minor, patch] }
+      web-major: { update-types: [major] }
+    ignore:
+      # Çalışma ortamı Node 22; tipler çalışma zamanıyla aynı ana sürümde kalır.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+    commit-message: { prefix: "Bagimlilik (web)" }
+
+  - package-ecosystem: nuget
+    directories: ["/apps/services/*", "/tests/dotnet/*"]
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Istanbul }
+    open-pull-requests-limit: 5
+    groups:
+      dotnet-minor-patch: { update-types: [minor, patch] }
+      dotnet-major: { update-types: [major] }
+    commit-message: { prefix: "Bagimlilik (.NET)" }
+
+  - package-ecosystem: pip
+    directory: /apps/ml-inference
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Istanbul }
+    open-pull-requests-limit: 3
+    groups:
+      ml-minor-patch: { update-types: [minor, patch] }
+      ml-major: { update-types: [major] }
+    commit-message: { prefix: "Bagimlilik (ML)" }
+
+  - package-ecosystem: docker
+    directories: ["/apps/services/*", "/apps/web"]
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Istanbul }
+    open-pull-requests-limit: 3
+    groups:
+      base-images: { patterns: ["*"] }
+    ignore:
+      # .NET 10 / yeni Node ana sürümü ayrı bir taşıma işidir (projeler net9.0 hedefler).
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    commit-message: { prefix: "Taban imaj" }
+
+  # ML taban imaji ayri: Python'da kucuk surum (3.11 -> 3.14) de bir tasima isidir
+  # (numpy/scikit-learn/shap tekerlekleri, CI python-version ile birlikte degisir).
+  - package-ecosystem: docker
+    directory: /apps/ml-inference
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Istanbul }
+    open-pull-requests-limit: 2
+    groups:
+      ml-base-image: { patterns: ["*"] }
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "python"
+        update-types: ["version-update:semver-minor"]
+    commit-message: { prefix: "Taban imaj (ML)" }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    groups:
+      actions: { patterns: ["*"] }
+    commit-message: { prefix: "CI eylemleri" }

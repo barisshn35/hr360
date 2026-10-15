@@ -1,0 +1,72 @@
+# Kurulum sirasinda uretilen sirlar
+.env
+deploy/keycloak/realm-export.json
+
+# .NET
+bin/
+obj/
+*.user
+
+# Node / web
+node_modules/
+dist/
+apps/web/dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Eski / yedek dosyalar
+*.bak
+*.bak2
+*.bak3
+*.bak4
+
+# scripts/keycloak-admin-access.sh ciktisi (ortama ozel)
+deploy/nginx/keycloak-admin/*.conf
+
+# scripts/tls.sh ciktisi: sertifika, anahtar ve uretilen nginx parcalari
+deploy/nginx/tls/*
+!deploy/nginx/tls/README.md
+# Let's Encrypt (scripts/tls.sh enable --letsencrypt)
+deploy/letsencrypt/*
+!deploy/letsencrypt/README.md
+deploy/nginx/acme/*
+!deploy/nginx/acme/README.md
+backups/
+.env.before-restore-*
+secrets.before-restore-*
+tests/credentials.json
+.pytest_cache/
+tests/load/results/
+.update-state
+
+# Dagitik izleme acik/kapali (scripts/monitoring.sh tracing)
+deploy/monitoring/tracing.env
+
+# scripts/security-scan.sh zap raporlari
+security-reports/
+secrets/
+
+# Izleme metrik dosyalari (scripts/backup.sh, restore-drill.sh; node-exporter textfile)
+deploy/monitoring/textfile/*
+!deploy/monitoring/textfile/README.md
+
+# Derleme ve test yan ürünleri
+*.tsbuildinfo
+coverage/
+TestResults/
+test-results/
+playwright-report/
+*.log
+*.swp
+*~
+
+# install.sh --mail-mode=self / scripts/smtp.sh dns ciktisi (ortama ozel DNS kayitlari)
+deploy/mailer/dns-kayitlari.txt

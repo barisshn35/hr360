@@ -1,0 +1,14 @@
+fastapi==0.143.0
+starlette==1.7.0
+uvicorn[standard]==0.54.0
+httpx==0.28.1
+pydantic==2.14.1
+prometheus-fastapi-instrumentator==8.1.0
+mlflow==3.17.0
+scikit-learn==1.9.1
+numpy==2.5.4
+boto3==1.43.111
+shap==0.53.0
+# Vardiya planı optimizasyonu (dalga 9, madde 44): CP-SAT çözücüsü (~27 MB tekerlek; 9.15 numpy 2 ister).
+# Kurulamazsa shift_optimizer.py açgözlü sezgisele düşer.
+ortools==9.15.6755
