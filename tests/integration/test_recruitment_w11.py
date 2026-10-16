@@ -89,8 +89,13 @@ ref = {"jobPostingId": PID, "firstName": "Deniz", "lastName": "Önerilen", "emai
        "note": "Eski ekip arkadaşım, veri modellemede güçlü.", "candidateConsent": False}
 code, r0 = api("ayse", "POST", f"{R}/referrals", ref)
 check("Aday onayı işaretlenmeden öneri reddedilir", code == 400, (code, r0))
-code, r1 = api("ayse", "POST", f"{R}/referrals", {**ref, "candidateConsent": True})
+CV_TEXT = "Deniz Önerilen\nVeri mühendisi, 6 yıl deneyim.\nPython, SQL, Spark"
+code, r1 = api("ayse", "POST", f"{R}/referrals", {**ref, "candidateConsent": True, "resumeText": CV_TEXT})
 check("Çalışan aday önerir", code == 200 and r1["status"] == "InReview", (code, r1))
+stored = psql(f"""SELECT "ResumeText" FROM recruitment_candidates WHERE "Email" = '{ref["email"]}' AND "AnonymizedAt" IS NULL""")
+check("Öneriye eklenen CV metni adayın özgeçmişi olur", "Spark" in stored and "6 yıl" in stored, stored[:120])
+code, big = api("ayse", "POST", f"{R}/referrals", {**ref, "email": email("ref-big"), "candidateConsent": True, "resumeText": "x" * 20001})
+check("CV metni 20.000 karakteri aşamaz", code == 400, code)
 code, dup = api("ayse", "POST", f"{R}/referrals", {**ref, "candidateConsent": True})
 check("Aynı aday aynı ilana ikinci kez önerilemez (ayrıntı verilmeden)", code == 409, (code, dup))
 my_email = psql(f"""SELECT "Email" FROM employee_employees WHERE "Id" = '{AYSE}'""")

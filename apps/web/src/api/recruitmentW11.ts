@@ -29,6 +29,8 @@ export interface ReferralInput {
   relationship?: Relationship
   note?: string
   candidateConsent: boolean
+  /** CV'den ayıklanan metin (dosya saklanmaz). */
+  resumeText?: string
 }
 
 export interface MyReferral {

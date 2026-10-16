@@ -41,6 +41,12 @@ def test_cv_ayristirma_es_anlamlilari_kullanir():
     assert {"kubernetes", "c#", "bordro"} <= set(cv.skills)
 
 
+def test_cv_ayristirma_duz_metni_doner_ve_sinirlar():
+    cv = parse_cv_text("Ayşe Yılmaz\nayse@example.com\n\n  Deneyim:   k8s  \n" + "uzun satir " * 4000)
+    assert cv.text.startswith("Ayşe Yılmaz\nayse@example.com\nDeneyim: k8s")
+    assert len(cv.text) <= 20000
+
+
 def test_beceri_haritasi_kucuk_grup_gizler():
     people = [sm.PersonSkills(department="Mühendislik", skills=["Python", "k8s"]) for _ in range(6)]
     people += [sm.PersonSkills(department="Mühendislik", skills=["Rust"]) for _ in range(2)]

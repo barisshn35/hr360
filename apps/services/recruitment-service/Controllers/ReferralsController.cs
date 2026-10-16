@@ -78,7 +78,7 @@ public class ReferralsController : ControllerBase
     // ------------------------------------------------------------------ öneri
 
     public record ReferralInput(Guid JobPostingId, string? FirstName, string? LastName, string? Email, string? Phone,
-        string? Relationship, string? Note, bool CandidateConsent);
+        string? Relationship, string? Note, bool CandidateConsent, string? ResumeText = null);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] ReferralInput b, CancellationToken ct)
@@ -99,6 +99,9 @@ public class ReferralsController : ControllerBase
         if (phone is not null && (phone.Length > 30 || DuplicateDetector.NormalizePhone(phone) is null))
             return BadRequest(new { message = "Telefon numarası geçersiz" });
         if (b.Note is { Length: > 1000 }) return BadRequest(new { message = "Not en fazla 1000 karakter olabilir" });
+        // CV: dosya saklanmaz, kariyer sayfasındaki gibi yalnızca ayıklanan metin (en fazla 20.000 karakter).
+        var resume = string.IsNullOrWhiteSpace(b.ResumeText) ? null : b.ResumeText.Trim();
+        if (resume is { Length: > 20000 }) return BadRequest(new { message = "Özgeçmiş metni en fazla 20.000 karakter olabilir" });
         if (b.Relationship is { Length: > 0 } rel && !Relationships.Contains(rel)) return BadRequest(new { message = "Tanışıklık türü geçersiz" });
 
         var posting = await _db.JobPostings.FirstOrDefaultAsync(p => p.Id == b.JobPostingId && p.Status == JobPostingStatus.Published, ct);
@@ -131,6 +134,7 @@ public class ReferralsController : ControllerBase
             candidate = new Candidate
             {
                 FirstName = first, LastName = last, Email = email, Phone = phone, Source = "Çalışan önerisi",
+                ResumeText = resume,
             };
             candidate.Normalize();
             _db.Candidates.Add(candidate);

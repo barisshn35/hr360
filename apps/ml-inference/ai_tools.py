@@ -174,6 +174,8 @@ class CvResult(BaseModel):
     summary: str
     text_length: int
     warnings: list[str]
+    # Ayıklanan düz metin (en fazla 20.000 karakter): çağıran özgeçmiş metni olarak saklayabilir; dosya saklanmaz.
+    text: str = ""
 
 
 # Bölüm başlıkları üniversite adına karışmasın ("Eğitim\nOrta Doğu Teknik Üniversitesi")
@@ -255,7 +257,7 @@ def parse_cv_text(text: str) -> CvResult:
     summary = (name or "Aday") + (" — " + "; ".join(summary_bits) if summary_bits else "")
     return CvResult(name=name, email=email, phone=phone, linkedin=linkedin, location=city, skills=skills, languages=langs,
                     education=edu, universities=unis, experience_years=years, experience_basis=basis, summary=summary,
-                    text_length=len(clean), warnings=warnings)
+                    text_length=len(clean), warnings=warnings, text="\n".join(lines)[:20000])
 
 
 @router.post("/cv/parse", response_model=CvResult)

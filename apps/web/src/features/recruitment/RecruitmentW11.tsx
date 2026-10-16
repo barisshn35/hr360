@@ -7,7 +7,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, BarChart3, Copy, Gift, Link2, Settings2, UserPlus } from 'lucide-react'
+import { AlertTriangle, BarChart3, Copy, FileText, Gift, Link2, LoaderCircle, Settings2, Upload, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,8 @@ import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/for
 import { errMsg, isoDate, Metric, useAction } from '@/features/shared/kit'
 import { tx, txServer } from '@/lib/i18n'
 import { PiiHint } from '@/components/PiiHint'
+import { useToast } from '@/components/ui/Toast'
+import { aiApi } from '@/api/ai'
 
 const RELATIONSHIPS: Record<Relationship, string> = {
   FormerColleague: tx('Eski iş arkadaşı'),
@@ -50,14 +52,40 @@ const REWARD_TONE: Record<RewardStatus, StatusTone> = {
 export function MyReferralsPage() {
   const q = useQuery({ queryKey: ['recruitment', 'referrals', 'mine'], queryFn: ({ signal }) => recruitmentW11Api.myReferrals(signal) })
   const postings = useQuery({ queryKey: ['recruitment', 'postings', 'Published'], queryFn: ({ signal }) => recruitmentApi.listPostings('Published', signal) })
-  const empty = { jobPostingId: '', firstName: '', lastName: '', email: '', phone: '', relationship: '' as Relationship | '', note: '', consent: false }
+  const empty = { jobPostingId: '', firstName: '', lastName: '', email: '', phone: '', relationship: '' as Relationship | '', note: '', consent: false, cvName: '', resumeText: '' }
   const [f, setF] = useState(empty)
   const [error, setError] = useState<string>()
   const s = q.data?.settings
   const refer = useAction(() => recruitmentW11Api.refer({
     jobPostingId: f.jobPostingId, firstName: f.firstName.trim(), lastName: f.lastName.trim(), email: f.email.trim(),
     phone: f.phone.trim() || undefined, relationship: f.relationship || undefined, note: f.note.trim() || undefined, candidateConsent: f.consent,
+    resumeText: f.resumeText || undefined,
   }), { invalidate: [['recruitment', 'referrals']], success: tx('Öneriniz alındı; adaya KVKK bilgilendirmesi gönderildi.'), onDone: () => setF(empty) })
+  const toast = useToast()
+  const [readingCv, setReadingCv] = useState(false)
+  /** CV dosyası saklanmaz: ayıklanan metin adayın özgeçmişi olur, boş alanlar CV'den doldurulur. */
+  const readCv = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) return toast.stop(tx('Dosya 5 MB\'tan büyük olamaz'))
+    setReadingCv(true)
+    try {
+      const r = await aiApi.parseCv(file)
+      const parts = (r.name ?? '').trim().split(/\s+/).filter(Boolean)
+      setF((cur) => ({
+        ...cur,
+        firstName: cur.firstName || (parts.length > 1 ? parts.slice(0, -1).join(' ') : parts[0] ?? ''),
+        lastName: cur.lastName || (parts.length > 1 ? parts[parts.length - 1] : ''),
+        email: cur.email || r.email || '',
+        phone: cur.phone || r.phone || '',
+        cvName: file.name,
+        resumeText: (r.text || r.summary || '').slice(0, 20000),
+      }))
+      toast.ok(r.warnings.length ? tx('CV okundu; kontrol edin: {0}', [r.warnings.join(' ')]) : tx('CV okundu, boş alanlar dolduruldu'))
+    } catch (e) {
+      toast.stop(errMsg(e, tx('CV okunamadı')))
+    } finally {
+      setReadingCv(false)
+    }
+  }
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!f.jobPostingId) return setError(tx('İlan seçin.'))
@@ -79,6 +107,24 @@ export function MyReferralsPage() {
                 <SelectField label={tx('İlan')} value={f.jobPostingId} onChange={(v) => setF({ ...f, jobPostingId: v })} required
                   options={(postings.data ?? []).filter((p) => p.status === 'Published').map((p) => ({ value: p.id, label: p.title }))}
                   hint={postings.data && !postings.data.some((p) => p.status === 'Published') ? tx('Şu anda yayında ilan yok.') : undefined} />
+                {f.cvName ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-[13px]">
+                    <FileText className="size-4 shrink-0 text-primary" />
+                    <span className="min-w-0 flex-1 truncate">{f.cvName}</span>
+                    <button type="button" className="text-[12px] text-muted-foreground underline hover:text-foreground" onClick={() => setF({ ...f, cvName: '', resumeText: '' })}>{tx('Kaldır')}</button>
+                  </div>
+                ) : (
+                  <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-border px-3 py-2.5 text-[13px] transition-colors hover:border-primary/50 hover:bg-primary/5"
+                    onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files?.[0]; if (file) void readCv(file) }}>
+                    {readingCv ? <LoaderCircle className="size-4 animate-spin text-primary" /> : <Upload className="size-4 text-muted-foreground group-hover:text-primary" />}
+                    <span className="flex-1">
+                      <span className="font-medium">{readingCv ? tx('CV okunuyor…') : tx('CV ekle (isteğe bağlı)')}</span>
+                      <span className="block text-[12px] text-muted-foreground">{tx('PDF, DOCX ya da TXT, en fazla 5 MB. Ad, e-posta ve telefon boşsa CV\'den doldurulur; dosya saklanmaz, yalnızca metni İK ile paylaşılır.')}</span>
+                    </span>
+                    <input type="file" accept=".pdf,.docx,.txt" className="hidden" disabled={readingCv}
+                      onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void readCv(file) }} />
+                  </label>
+                )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <TextField label={tx('Adayın adı')} required maxLength={100} value={f.firstName} onChange={(e) => setF({ ...f, firstName: e.target.value })} />
                   <TextField label={tx('Adayın soyadı')} required maxLength={100} value={f.lastName} onChange={(e) => setF({ ...f, lastName: e.target.value })} />
@@ -96,7 +142,9 @@ export function MyReferralsPage() {
                   <Checkbox className="mt-0.5" checked={f.consent} onCheckedChange={(v) => setF({ ...f, consent: v === true })} />
                   <span>
                     <strong>{tx('Adayın onayı:')}</strong>{' '}
-                    {tx('Adayın bu pozisyona önerilmeyi ve iletişim bilgilerinin İnsan Kaynakları ile paylaşılmasını kabul ettiğini beyan ederim.')}
+                    {f.resumeText
+                      ? tx('Adayın bu pozisyona önerilmeyi, iletişim bilgilerinin ve özgeçmişinin İnsan Kaynakları ile paylaşılmasını kabul ettiğini beyan ederim.')
+                      : tx('Adayın bu pozisyona önerilmeyi ve iletişim bilgilerinin İnsan Kaynakları ile paylaşılmasını kabul ettiğini beyan ederim.')}
                     <span className="block text-[12px] text-muted-foreground">{tx('Adaya KVKK aydınlatma e-postası gönderilir; adınız e-postada yer almaz.')}</span>
                   </span>
                 </label>

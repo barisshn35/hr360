@@ -18,6 +18,8 @@ export interface CvResult {
   summary: string
   text_length: number
   warnings: string[]
+  /** Ayıklanan düz metin (en fazla 20.000 karakter). */
+  text?: string
 }
 export interface BiasFinding { phrase: string; category: string; severity: 'high' | 'low'; reason: string; suggestion: string; start: number; end: number }
 export interface BiasResult { score: number; findings: BiasFinding[]; verdict: string }
