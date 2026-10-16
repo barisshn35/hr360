@@ -41,7 +41,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 | compensation-service | `hr360_compensation` | 34 | 19 | 13 | 1 |
 | expense-service | `hr360_expense` | 21 | 10 | 5 | 3 |
 | notification-service | `hr360_notification` | 11 | 7 | 2 | 0 |
-| tenant-service | `hr360_tenant` | 15 | 11 | 2 | 1 |
+| tenant-service | `hr360_tenant` | 17 | 13 | 2 | 1 |
 
 ## leave-service (`hr360_leave`)
 

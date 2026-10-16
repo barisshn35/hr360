@@ -114,6 +114,7 @@ const SettingsPage = page(() => import('@/features/settings/SettingsPage'), 'Set
 const RolesPage = page(() => import('@/features/settings/RolesPage'), 'RolesPage')
 const TenantsPage = page(() => import('@/features/platform/TenantsPage'), 'TenantsPage')
 const SystemSettingsPage = page(() => import('@/features/platform/SystemSettingsPage'), 'SystemSettingsPage')
+const MaintenancePage = page(() => import('@/features/platform/MaintenancePage'), 'MaintenancePage')
 const SetPasswordPage = page(() => import('@/features/access/PasswordPages'), 'SetPasswordPage')
 const ForgotPasswordPage = page(() => import('@/features/access/PasswordPages'), 'ForgotPasswordPage')
 const SessionExpiredPage = page(() => import('@/features/auth/SessionExpiredPage'), 'SessionExpiredPage')
@@ -446,6 +447,7 @@ export function App() {
                       path="platform/sistem"
                       element={guarded('platform:manage', <SystemSettingsPage />)}
                     />
+                    <Route path="platform/bakim" element={guarded('platform:manage', <MaintenancePage />)} />
 
                     {/* ---------------- Hesabım ---------------- */}
                     <Route path="profil" element={<ProfilePage />} />

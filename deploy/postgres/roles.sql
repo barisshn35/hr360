@@ -832,6 +832,8 @@ DO $$ DECLARE g text[]; BEGIN
     ['organization_companies', 'SELECT, INSERT, DELETE'],
     ['organization_departments', 'SELECT'],
     ['platform_access_grants', 'SELECT, INSERT, UPDATE, DELETE'],
+    ['platform_ops_jobs', 'SELECT, INSERT, UPDATE'],
+    ['platform_ops_status', 'SELECT'],
     ['platform_settings', 'SELECT, INSERT, UPDATE, DELETE'],
     ['platform_tenant_provisioning_log', 'SELECT, INSERT, UPDATE, DELETE'],
     ['platform_tenants', 'SELECT, INSERT, UPDATE, DELETE'],

@@ -2,7 +2,7 @@
  * Platform yönetimi > Sistem ayarları: kurulumdan sonra arayüzden değiştirilen uygulama içi ayarlar
  * (e-posta sunucusu, herkese açık şirket kaydı, parola belirleme yöntemi, davet linki süresi,
  * herkese açık sitenin yasal metinleri/SSS/iletişim bilgileri ve arama motoru görünürlüğü).
- * Sunucu düzeyindeki işlemler (HTTPS, Keycloak paneli portu, yedek, güncelleme, izleme) burada değil.
+ * Sunucu düzeyindeki işlemler (HTTPS, Keycloak paneli portu, izleme) burada değil; yedek ve güncelleme Platform > Bakım ekranında.
  */
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'

@@ -1258,6 +1258,14 @@ else
 fi
 PUBLIC_ORIGIN="$(grep '^PUBLIC_ORIGIN=' .env | tail -1 | cut -d= -f2-)"
 
+# Bakim calistiricisi: yedek, dogrulama, guncelleme ve geri yukleme bundan sonra Platform > Bakim
+# ekranindan yapilir (kullanicinin crontab'ina dakikada bir calisan tek satir; root gerekmez).
+if command -v crontab >/dev/null 2>&1; then
+  scripts/ops-runner.sh install >/dev/null 2>&1 || warn "Bakim calistiricisi kurulamadi; sonra: scripts/ops-runner.sh install"
+else
+  warn "crontab yok; Platform > Bakim ekrani icin: scripts/ops-runner.sh install (cron kurduktan sonra)"
+fi
+
 info "Kurulum dogrulaniyor..."
 verify_out="$(scripts/tls.sh verify 2>&1)" && verify_ok=1 || verify_ok=0
 

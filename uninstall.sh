@@ -18,7 +18,7 @@
 # Ne yapar (sirayla):
 #   1. Veri silinecekse son yedegi alir: scripts/backup.sh arsivi (sifreli), .env, secrets/,
 #      Keycloak realm sablonu, sertifikalar ve (varsa) posta servisinin DKIM anahtari. Yedek alinamazsa durur.
-#   2. Bu kurulumun zamanlanmis islerini (yedek, bakim, sertifika yenileme) crontab'dan siler.
+#   2. Bu kurulumun zamanlanmis islerini (yedek, bakim, sertifika yenileme, bakim calistiricisi) crontab'dan siler.
 #   3. Butun konteynerleri (izleme, posta, test katmanlari dahil) durdurur ve kaldirir.
 #   4. Veri birimlerini siler (--keep-data yoksa).
 #   5. Istenirse imajlari ve klasoru siler.
@@ -169,10 +169,11 @@ fi
 
 # --- 2) Zamanlanmis isler ---------------------------------------------------
 # Isaretler: "# hr360-backup" (scripts/backup.sh), "# hr360-schedule:<is>" (scripts/schedule.sh),
-# "# hr360-tls-retry" (scripts/tls.sh). Yalnizca bu klasore ait satirlar silinir.
+# "# hr360-tls-retry" (scripts/tls.sh), "# hr360-ops-runner" (scripts/ops-runner.sh). Yalnizca bu
+# klasore ait satirlar silinir.
 if command -v crontab >/dev/null 2>&1 && crontab -l >/dev/null 2>&1; then
   current="$(crontab -l 2>/dev/null)"
-  ours="$(printf '%s\n' "$current" | grep -E '# hr360-(backup|schedule:|tls-retry)' | grep -F "$REPO" || true)"
+  ours="$(printf '%s\n' "$current" | grep -E '# hr360-(backup|schedule:|tls-retry|ops-runner)' | grep -F "$REPO" || true)"
   if [ -n "$ours" ]; then
     say "Zamanlanmis isler kaldiriliyor ($(printf '%s\n' "$ours" | wc -l) satir)"
     if [ "$DRY" = 1 ]; then printf '%s\n' "$ours" | sed 's/^/   [deneme] silinecek: /'

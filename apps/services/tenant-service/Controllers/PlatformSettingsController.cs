@@ -13,7 +13,7 @@ namespace TenantService.Controllers;
 /// Platform yönetimi > Sistem ayarları: arayüzden değiştirilen uygulama içi ayarlar (platform_settings).
 /// Yalnızca platform yöneticisi. Her değişiklik audit_log'a yazılır (parola yazılmaz). SMTP değişince
 /// Keycloak realm'inin e-posta ayarı da eşitlenir (eski yöntem e-postaları onu kullanır).
-/// Sunucu düzeyindeki ayarlar (TLS, Keycloak paneli portu, yedek, güncelleme) burada değil.
+/// Sunucu düzeyindeki ayarlar (TLS, Keycloak paneli portu) burada değil; yedek ve güncelleme PlatformOpsController.
 /// </summary>
 [ApiController]
 [Route("api/platform/settings")]
