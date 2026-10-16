@@ -278,6 +278,9 @@ ve MinIO verisini (logolar, belgeler, ML modelleri) tek arşive yazar; arşivde 
   yedek tarihinden sonra yerine getirilmiş silme başvurularını KVKK › Başvurular ekranından kontrol edin.
 - **Yeni sunucuya taşıma:** önce `./install.sh`, sonra `scripts/restore.sh <arşiv> --with-env`.
   Şifreli alanlar `.env`'deki anahtarlarla açıldığı için veri ve `.env` birlikte taşınmalıdır.
+- **Kaldırma:** `./uninstall.sh` önce son yedeği (arşiv, `.env`, sertifikalar, realm şablonu) kurulum
+  klasörünün dışına alır, zamanlanmış işleri ve konteynerleri kaldırır, verileri siler. `--keep-data`
+  verileri korur, `--purge` klasörü de siler, `--dry-run` yalnızca ne yapacağını gösterir (`./uninstall.sh --help`).
 - Arşive girmeyen ama ayrıca saklanması gerekenler: `deploy/keycloak/realm-export.json` ve
   sertifikalar (`deploy/letsencrypt/`, kendi sertifikanızsa `deploy/nginx/tls/`). Arşivleri sunucunun
   dışına da kopyalayın. Değişmez kopya, imzalı özet ve geri yükleme tatbikatı:
