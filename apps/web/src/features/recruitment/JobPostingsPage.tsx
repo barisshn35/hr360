@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useMemo, useState, useEffect } from 'react'
+import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, LoaderCircle, Plus, Users } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -39,7 +39,7 @@ interface Errors {
   headcount?: string
 }
 
-function NewPostingModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated?: () => void }) {
+function NewPostingModal({ open, onClose, onCreated, initial }: { open: boolean; onClose: () => void; onCreated?: () => void; initial?: { title: string; departmentId: string; headcount: string } | null }) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const companies = useCompanies()
@@ -51,6 +51,10 @@ function NewPostingModal({ open, onClose, onCreated }: { open: boolean; onClose:
   const [headcount, setHeadcount] = useState('1')
   const [errors, setErrors] = useState<Errors>({})
   const [submitted, setSubmitted] = useState(false)
+  // Norm kadrodan açılınca (boş pozisyon → ilan) unvan, departman ve kişi sayısı dolu gelir.
+  useEffect(() => {
+    if (open && initial) { setTitle(initial.title); setDepartmentId(initial.departmentId); setHeadcount(initial.headcount) }
+  }, [open, initial])
 
   const departments = useMemo(
     () =>
@@ -220,6 +224,15 @@ export function JobPostingsPage() {
   const navigate = useNavigate()
   const [tab, setTab] = useTabParam<TabKey>('durum', 'Published')
   const [modalOpen, setModalOpen] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const [prefill, setPrefill] = useState<{ title: string; departmentId: string; headcount: string } | null>(null)
+  useEffect(() => {
+    const unvan = params.get('unvan')
+    if (!unvan) return
+    setPrefill({ title: unvan, departmentId: params.get('departman') ?? '', headcount: params.get('kadro') ?? '1' })
+    setModalOpen(true)
+    setParams((p) => { p.delete('unvan'); p.delete('departman'); p.delete('kadro'); return p }, { replace: true })
+  }, [params, setParams])
   const postings = useJobPostings(tab === 'all' ? undefined : tab)
 
   const canManage = can('recruitment:publish')
@@ -330,7 +343,7 @@ export function JobPostingsPage() {
         }
       />
 
-      <NewPostingModal open={modalOpen} onClose={() => setModalOpen(false)} onCreated={() => setTab('Draft')} />
+      <NewPostingModal open={modalOpen} initial={prefill} onClose={() => { setModalOpen(false); setPrefill(null) }} onCreated={() => setTab('Draft')} />
     </div>
   )
 }

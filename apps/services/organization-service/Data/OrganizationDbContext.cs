@@ -25,6 +25,7 @@ public class OrganizationDbContext : DbContext, ITenantAwareContext
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
     public DbSet<DepartmentLink> DepartmentLinks => Set<DepartmentLink>();
+    public DbSet<Position> Positions => Set<Position>();
 
     /// <summary>
     /// Türkçe harf katlamalı küçük harf (SQL: public.hr360_fold, scripts/sql/2026-10-09_paging_indexes.sql).
@@ -49,6 +50,9 @@ public class OrganizationDbContext : DbContext, ITenantAwareContext
             .OnDelete(DeleteBehavior.Cascade);
 
         // --- Ekipler ---
+        modelBuilder.Entity<Position>().ConfigureTenantColumn();
+        modelBuilder.Entity<Position>().ToTable("organization_positions");
+        modelBuilder.Entity<Position>().Property(p => p.BudgetMonthly).HasPrecision(14, 2);
         modelBuilder.Entity<Team>().ConfigureTenantColumn();
         modelBuilder.Entity<TeamMember>().ConfigureTenantColumn();
         modelBuilder.Entity<Team>().ToTable("organization_teams");

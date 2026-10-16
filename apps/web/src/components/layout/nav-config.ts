@@ -100,6 +100,7 @@ export const navGroups: NavGroupData[] = [
       { id: 'organization', title: tx('Organizasyon'), description: tx('Şirket ve departman hiyerarşisi'), icon: Building2, path: '/panel/organizasyon', permission: 'organization:view' },
       { id: 'employees', title: tx('Çalışanlar'), description: tx('Kayıtlar ve çalışma durumu'), icon: Users, path: '/panel/calisanlar', permission: 'employee:viewAll' },
       { id: 'teams', title: tx('Ekipler'), description: tx('Diyagram ve ekip yönetimi'), icon: UsersRound, path: '/panel/organizasyon/ekipler', permission: 'organization:view' },
+      { id: 'positions', title: tx('Norm kadro'), description: tx('Onaylı pozisyonlar, boş kadro, bütçe'), icon: Briefcase, path: '/panel/norm-kadro', tenantOnly: true, requireRoles: ['hr-admin', 'tenant-admin', 'manager', 'platform-admin'] },
       {
         id: 'recruitment', title: tx('İşe alım'), description: tx('İlanlar, adaylar, mülakatlar'), icon: UserPlus, permission: 'recruitment:view',
         children: [

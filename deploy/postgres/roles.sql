@@ -17,9 +17,11 @@ DO $$ DECLARE g text[]; BEGIN
   FOREACH g SLICE 1 IN ARRAY ARRAY[
     ['audit_log', 'SELECT, INSERT'],
     ['employee_assignments', 'SELECT'],
+    ['employee_employees', 'SELECT'],
     ['organization_companies', 'SELECT, INSERT, UPDATE, DELETE'],
     ['organization_department_links', 'SELECT, INSERT, UPDATE, DELETE'],
     ['organization_departments', 'SELECT, INSERT, UPDATE, DELETE'],
+    ['organization_positions', 'SELECT, INSERT, UPDATE, DELETE'],
     ['organization_team_members', 'SELECT, INSERT, UPDATE, DELETE'],
     ['organization_teams', 'SELECT, INSERT, UPDATE, DELETE'],
     ['platform_access_grants', 'SELECT'],

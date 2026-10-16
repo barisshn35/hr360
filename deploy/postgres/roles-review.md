@@ -27,7 +27,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 
 | Servis | Rol | Toplam tablo | Kendi | Başka servisten salt okuma | Başka servise yazma |
 |---|---|---|---|---|---|
-| organization-service | `hr360_organization` | 9 | 5 | 3 | 0 |
+| organization-service | `hr360_organization` | 11 | 6 | 4 | 0 |
 | employee-service | `hr360_employee` | 7 | 3 | 2 | 0 |
 | workflow-service | `hr360_workflow` | 14 | 5 | 7 | 0 |
 | leave-service | `hr360_leave` | 15 | 5 | 6 | 1 |
