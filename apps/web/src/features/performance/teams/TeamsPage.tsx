@@ -11,7 +11,7 @@
 
 import { lazy, Suspense, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Network, Plus, Presentation, Settings2, Share2 } from 'lucide-react'
+import { Network, Plus, Presentation, Settings2, Share2, Upload } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/Panel'
@@ -23,6 +23,7 @@ import { PerfPageHeader } from '../components/PerfPageHeader'
 import { useDepartments } from '../hooks'
 import { OrgDiagram, type SheetTarget } from './OrgDiagram'
 import { TeamFormDialog } from './TeamDialogs'
+import { ImportTeamsModal } from './ImportTeamsModal'
 import { TeamSheet } from './TeamSheet'
 import { TeamsManage } from './TeamsManage'
 import { useOrgTree } from './useOrgTree'
@@ -48,6 +49,7 @@ export function TeamsPage() {
   const [showInactive, setShowInactive] = useState(false)
   const [sheet, setSheet] = useState<SheetTarget | null>(null)
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   const org = useOrgTree({ includeInactive: view === 'yonetim' && showInactive })
   const depts = useDepartments()
@@ -91,6 +93,12 @@ export function TeamsPage() {
                 {tx('Sunum modu')}
               </Link>
             </Button>
+            {canManage && (
+              <Button variant="outline" onClick={() => setImporting(true)}>
+                <Upload aria-hidden />
+                {tx('İçe aktar')}
+              </Button>
+            )}
             {canManage && (
               <Button onClick={() => (view === 'yonetim' ? setCreating(true) : (setParam({ gorunum: 'yonetim' }), setCreating(true)))}>
                 <Plus aria-hidden />
@@ -186,6 +194,7 @@ export function TeamsPage() {
       {creating && (
         <TeamFormDialog team={null} departments={depts.list} onClose={() => setCreating(false)} onSaved={(t) => setParam({ gorunum: 'yonetim', ekip: t.id })} />
       )}
+      {canManage && <ImportTeamsModal open={importing} onClose={() => setImporting(false)} departments={depts.list} />}
     </div>
   )
 }

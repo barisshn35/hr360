@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Plus, Waypoints } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Plus, Upload, Waypoints } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
@@ -17,6 +17,7 @@ import type { Department } from '@/api/types'
 import { formatDate, formatNumber, fullName } from '@/lib/format'
 import { DepartmentTree } from './DepartmentTree'
 import { NewDepartmentModal } from './NewDepartmentModal'
+import { ImportDepartmentsModal } from './ImportDepartmentsModal'
 import { OrgChart } from './OrgChart'
 import { DepartmentLinksModal, linkKindLabel, useDepartmentLinks } from './DepartmentLinksModal'
 import { tx } from '@/lib/i18n'
@@ -32,6 +33,7 @@ export function CompanyDetailPage() {
   const [selected, setSelected] = useState<Department | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [linksOpen, setLinksOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [view, setView] = useTabParam<View>('gorunum', 'liste')
   const queryClient = useQueryClient()
 
@@ -122,10 +124,16 @@ export function CompanyDetailPage() {
         description={tx('{0} departman, {1} kök seviyede. {2} tarihinde oluşturuldu.', [formatNumber(departments.length), formatNumber(rootCount), formatDate(data.createdAt)])}
         actions={
           canCreate && (
-            <Button className="cursor-pointer" onClick={() => setModalOpen(true)}>
-              <Plus className="size-4" />
-              {tx('Yeni departman')}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className="cursor-pointer" onClick={() => setImportOpen(true)}>
+                <Upload className="size-4" />
+                {tx('İçe aktar')}
+              </Button>
+              <Button className="cursor-pointer" onClick={() => setModalOpen(true)}>
+                <Plus className="size-4" />
+                {tx('Yeni departman')}
+              </Button>
+            </div>
           )
         }
       />
@@ -327,6 +335,9 @@ export function CompanyDetailPage() {
           departments={departments}
           defaultParentId={selected?.id ?? null}
         />
+      )}
+      {companyId && canCreate && (
+        <ImportDepartmentsModal open={importOpen} onClose={() => setImportOpen(false)} companyId={companyId} departments={departments} />
       )}
     </div>
   )
