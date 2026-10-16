@@ -19,6 +19,7 @@ import { formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { tx, appLocale } from '@/lib/i18n'
 import { WinnerSpotlight } from './EomWinnerCard'
+import { EomLeaderboard } from './EomLeaderboard'
 
 /** Dönemin aşamaları ve tarihleri (şu anki aşama vurgulu). */
 function PhaseSteps({ p }: { p: EomPeriod }) {
@@ -220,7 +221,10 @@ export function EomPage() {
             ? <UnitBallot key={`${u.id}:${u.action}:${u.myChoice ?? ''}`} unit={u} period={p} />
             : <UnitStatus key={u.id} unit={u} period={p} />))}
 
-          <History />
+          <div className="grid gap-5 xl:grid-cols-2">
+            <EomLeaderboard />
+            <History />
+          </div>
         </>
       )}
     </div>

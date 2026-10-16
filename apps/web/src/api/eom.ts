@@ -96,6 +96,21 @@ export interface EomResultUnit {
   comments: { nominee: EomPerson | null; text: string }[] | null
 }
 
+export interface EomLeaderRow {
+  person: EomPerson
+  rank: number
+  wins: number
+  subWins: number
+  lastWonKey: string
+}
+
+export interface EomLeaderboard {
+  enabled: boolean
+  periods?: number
+  company?: EomLeaderRow[]
+  departments?: { departmentId: string; name: string; isMine: boolean; periods: number; rows: EomLeaderRow[] }[]
+}
+
 export interface EomSettings {
   enabled: boolean
   cadence: 'Monthly' | 'Quarterly'
@@ -129,6 +144,7 @@ export const eomApi = {
   me: (signal?: AbortSignal) => apiFetch<EomMe>(`${B}/me`, { signal }),
   winners: (signal?: AbortSignal) => apiFetch<EomWinners>(`${B}/winners`, { signal }),
   history: (signal?: AbortSignal) => apiFetch<{ period: EomPeriod; winners: { unitId: string; name: string; winner: EomPerson }[] }[]>(`${B}/history`, { signal }),
+  leaderboard: (signal?: AbortSignal) => apiFetch<EomLeaderboard>(`${B}/leaderboard`, { signal }),
   results: (id: string, signal?: AbortSignal) => apiFetch<{ period: EomPeriod; units: EomResultUnit[] }>(`${B}/periods/${id}/results`, { signal }),
   vote: (unitId: string, employeeId: string, comment?: string) => apiFetch<void>(`${B}/vote`, { method: 'POST', body: { unitId, employeeId, comment } }),
   nominate: (unitId: string, employeeId: string) => apiFetch<void>(`${B}/nominate`, { method: 'POST', body: { unitId, employeeId } }),
@@ -146,6 +162,7 @@ export const eomKeys = {
   me: ['eom', 'me'] as const,
   winners: ['eom', 'winners'] as const,
   history: ['eom', 'history'] as const,
+  leaderboard: ['eom', 'leaderboard'] as const,
   results: (id: string) => ['eom', 'results', id] as const,
   settings: ['eom', 'settings'] as const,
   periods: ['eom', 'periods'] as const,

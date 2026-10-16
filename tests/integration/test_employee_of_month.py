@@ -17,6 +17,7 @@ Denetlenenler:
   EM9  bildirimler: oylama açılınca birim üyelerine uygulama içi + e-posta kaydı
   EM10 modül kapalıyken çalışanın ekranı ve ana sayfa kartı boş
   EM11 aday gösterme → finalistlerle oylama
+  EM13 kazananlar sıralaması (şirket geneli ve departman)
   EM12 iki aşamalı: alt birim kazananı finale kalır, ana departman kazananı belirlenir (geçici alt departmanla)
 
 Test kaydı bırakmaz: kendi dönemlerini ve eom.* bildirimlerini siler, ayarı eski hâline getirir.
@@ -235,6 +236,17 @@ try:
     finally:
         if isinstance(sub, dict) and sub.get("id"):
             api("ik", "DELETE", f"/api/organization/departments/{sub['id']}")
+
+    # EM13: kazananlar sıralaması (bu koşunun dönemleri: Ayşe 2, Mehmet 2 + 1 alt birim; Mühendislik'te Mehmet 3)
+    code, lb = api("ayse", "GET", f"{E}/leaderboard")
+    co = {r["person"]["id"]: r for r in (lb or {}).get("company", [])}
+    check("EM13: şirket sıralaması (Mehmet önde, alt birim zaferi ayrı sütun)",
+          co.get(MEHMET, {}).get("wins", 0) >= 2 and co[MEHMET]["subWins"] >= 1 and co.get(AYSE, {}).get("wins", 0) >= 2
+          and co[MEHMET]["rank"] < co[AYSE]["rank"], lb and lb.get("company"))
+    dep = next((d for d in lb.get("departments", []) if d["name"] == "Mühendislik"), None)
+    dr = {r["person"]["id"]: r for r in (dep or {}).get("rows", [])}
+    check("EM13: departman sıralaması ve kendi departmanı işaretli",
+          dep and dep["isMine"] and dr.get(MEHMET, {}).get("wins", 0) >= 3 and dr[MEHMET]["rank"] == 1, dep)
 
     # EM10
     settings(enabled=False)

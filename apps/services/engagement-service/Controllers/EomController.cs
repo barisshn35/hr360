@@ -160,6 +160,67 @@ public class EomController : AppController
         return Ok(list);
     }
 
+    public sealed record LeaderRow(PersonDto Person, int Rank, int Wins, int SubWins, string LastWonKey);
+
+    /// <summary>Puan sırası: kazanma sayısı, sonra son kazanma tarihi; eşit sayıda kazananlar aynı sırayı paylaşır.</summary>
+    public static List<LeaderRow> Rank(IEnumerable<(PersonDto Person, int Wins, int SubWins, string LastKey, DateTime LastAt)> rows)
+    {
+        var ordered = rows.OrderByDescending(r => r.Wins).ThenByDescending(r => r.SubWins).ThenByDescending(r => r.LastAt)
+            .ThenBy(r => r.Person.Name, StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true)).ToList();
+        var result = new List<LeaderRow>();
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var r = ordered[i];
+            var rank = i > 0 && ordered[i - 1].Wins == r.Wins && ordered[i - 1].SubWins == r.SubWins ? result[i - 1].Rank : i + 1;
+            result.Add(new LeaderRow(r.Person, rank, r.Wins, r.SubWins, r.LastKey));
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Kazananlar sıralaması (sonucu açıklanmış dönemler). Şirket geneli: ayın çalışanı seçilme sayısı (sonuç
+    /// birimi zaferleri; iki aşamalıda alt birim zaferleri ayrı sütun). Departman: o departmanın oylamalarında
+    /// (hangi aşama olursa olsun) kazanma sayısı. <c>isMine</c>: kişinin oylamalarına katıldığı departman.
+    /// </summary>
+    [HttpGet("leaderboard")]
+    public async Task<IActionResult> Leaderboard(CancellationToken ct)
+    {
+        var (enabled, _) = await _store.SettingsAsync(Tenant, ct);
+        if (!enabled) return Ok(new { enabled = false });
+        var wins = await Db.QueryAsync("""
+            SELECT u."DepartmentId", u."Name", u."Stage", u."ParentUnitId" IS NOT NULL, u."WinnerEmployeeId", p."PeriodKey", p."AnnouncedAt",
+                   p."Config"->>'scope' = 'TwoStage', u."MemberIds"
+            FROM engagement_eom_units u JOIN engagement_eom_periods p ON p."Id" = u."PeriodId"
+            WHERE u."TenantSlug" = $1 AND p."Status" = 'Closed' AND p."AnnouncedAt" IS NOT NULL AND u."WinnerEmployeeId" IS NOT NULL
+            """, r => (Dept: r.GetGuid(0), Name: r.GetString(1), Stage: r.GetInt32(2), HasParent: r.GetBoolean(3), Winner: r.GetGuid(4),
+                Key: r.GetString(5), At: r.GetFieldValue<DateTime>(6), TwoStage: !r.IsDBNull(7) && r.GetBoolean(7), Members: r.GetFieldValue<Guid[]>(8)), ct, Tenant);
+        var people = await PeopleMapAsync(ct);
+        var me = await MyPersonAsync(ct);
+        static bool Final(bool twoStage, int stage, bool hasParent) => !twoStage || stage == 2 || !hasParent;
+
+        var company = Rank(wins.GroupBy(w => w.Winner).Where(g => people.ContainsKey(g.Key)).Select(g =>
+        {
+            var last = g.OrderByDescending(w => w.At).First();
+            return (people[g.Key], g.Count(w => Final(w.TwoStage, w.Stage, w.HasParent)), g.Count(w => !Final(w.TwoStage, w.Stage, w.HasParent)), last.Key, last.At);
+        }));
+        var departments = wins.GroupBy(w => w.Dept).Select(d =>
+        {
+            var latest = d.OrderByDescending(w => w.At).First();
+            var rows = Rank(d.GroupBy(w => w.Winner).Where(g => people.ContainsKey(g.Key)).Select(g =>
+            {
+                var last = g.OrderByDescending(w => w.At).First();
+                return (people[g.Key], g.Count(), 0, last.Key, last.At);
+            }));
+            return new
+            {
+                departmentId = d.Key, name = latest.Name, rows,
+                isMine = me is not null && latest.Members.Contains(me.Id),
+                periods = d.Select(w => w.Key).Distinct().Count(),
+            };
+        }).OrderByDescending(d => d.isMine).ThenBy(d => d.name, StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true)).ToList();
+        return Ok(new { enabled = true, periods = wins.Select(w => w.Key).Distinct().Count(), company, departments });
+    }
+
     /// <summary>
     /// Dönem sonuçları, dondurulmuş görünürlük kuralına göre:
     ///  * kazanan: birim üyeleri ve İK (sonuç açıklanınca);

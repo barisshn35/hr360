@@ -163,4 +163,17 @@ public class EomLogicTests
         Assert.Equal(start.AddDays(2), EomLogic.LastCallAt(start, start.AddDays(3)));
         Assert.Equal(start.AddHours(12), EomLogic.LastCallAt(start, start.AddDays(1)));
     }
+
+    [Fact]
+    public void Leaderboard_shares_rank_on_equal_wins_and_orders_by_wins_then_recency()
+    {
+        EngagementService.Controllers.EomController.PersonDto P(string n) => new(Guid.NewGuid(), n, null, null, null);
+        var t0 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var rows = EngagementService.Controllers.EomController.Rank([
+            (P("Ali"), 1, 0, "2026-01", t0), (P("Can"), 3, 0, "2026-02", t0.AddMonths(1)),
+            (P("Ece"), 1, 0, "2026-03", t0.AddMonths(2)), (P("Naz"), 0, 2, "2026-04", t0.AddMonths(3)),
+        ]);
+        Assert.Equal(["Can", "Ece", "Ali", "Naz"], rows.Select(r => r.Person.Name));
+        Assert.Equal([1, 2, 2, 4], rows.Select(r => r.Rank));
+    }
 }
