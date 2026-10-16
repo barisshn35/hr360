@@ -31,7 +31,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 | employee-service | `hr360_employee` | 7 | 3 | 2 | 0 |
 | workflow-service | `hr360_workflow` | 14 | 5 | 7 | 0 |
 | leave-service | `hr360_leave` | 15 | 5 | 6 | 1 |
-| recruitment-service | `hr360_recruitment` | 23 | 12 | 4 | 5 |
+| recruitment-service | `hr360_recruitment` | 24 | 13 | 4 | 5 |
 | onboarding-service | `hr360_onboarding` | 15 | 8 | 5 | 1 |
 | timeshift-service | `hr360_timeshift` | 24 | 16 | 5 | 1 |
 | performance-service | `hr360_performance` | 24 | 18 | 5 | 0 |

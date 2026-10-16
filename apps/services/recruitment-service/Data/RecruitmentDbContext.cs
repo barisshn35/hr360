@@ -24,6 +24,7 @@ public class RecruitmentDbContext : DbContext, ITenantAwareContext
     public DbSet<Candidate> Candidates => Set<Candidate>();
     public DbSet<Application> Applications => Set<Application>();
     public DbSet<Interview> Interviews => Set<Interview>();
+    public DbSet<InterviewProposal> InterviewProposals => Set<InterviewProposal>();
     public DbSet<ScorecardTemplate> ScorecardTemplates => Set<ScorecardTemplate>();
     public DbSet<Scorecard> Scorecards => Set<Scorecard>();
     public DbSet<Offer> Offers => Set<Offer>();
@@ -102,6 +103,10 @@ public class RecruitmentDbContext : DbContext, ITenantAwareContext
 
         modelBuilder.Entity<RecruitmentService.Messaging.ProcessedEvent>().ToTable("messaging_processed_events");
         modelBuilder.Entity<RecruitmentService.Messaging.ProcessedEvent>().HasKey(p => new { p.EventId, p.Consumer });
+
+        modelBuilder.Entity<InterviewProposal>().ConfigureTenantColumn();
+        modelBuilder.Entity<InterviewProposal>().ToTable("recruitment_interview_proposals");
+        modelBuilder.Entity<InterviewProposal>().Property(p => p.Type).HasConversion<string>();
 
         modelBuilder.ApplyTenantFilters(this);
     }

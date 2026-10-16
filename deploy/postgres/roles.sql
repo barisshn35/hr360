@@ -170,6 +170,7 @@ DO $$ DECLARE g text[]; BEGIN
     ['recruitment_application_stage_events', 'SELECT, INSERT, UPDATE, DELETE'],
     ['recruitment_applications', 'SELECT, INSERT, UPDATE, DELETE'],
     ['recruitment_candidates', 'SELECT, INSERT, UPDATE, DELETE'],
+    ['recruitment_interview_proposals', 'SELECT, INSERT, UPDATE, DELETE'],
     ['recruitment_interviews', 'SELECT, INSERT, UPDATE, DELETE'],
     ['recruitment_job_postings', 'SELECT, INSERT, UPDATE, DELETE'],
     ['recruitment_offer_templates', 'SELECT, INSERT, UPDATE, DELETE'],

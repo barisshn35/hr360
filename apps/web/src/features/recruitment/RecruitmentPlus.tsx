@@ -220,6 +220,15 @@ export function ScheduleInterviewModal({ target, onClose }: { target: { applicat
   const [pick, setPick] = useState('')
   const [error, setError] = useState<string>()
   const [done, setDone] = useState<ScheduledInterview | null>(null)
+  // "Aday seçsin": birden çok saat önerilir, adaya tek kullanımlık bağlantı gider (yenilik haritası #10).
+  const [mode, setMode] = useState<'fixed' | 'candidate'>('fixed')
+  const [slots, setSlots] = useState<string[]>(['', '', ''])
+  const [validDays, setValidDays] = useState('7')
+  const [proposal, setProposal] = useState<{ link: string; expiresAt: string } | null>(null)
+  const propose = useAction(() => recruitmentApi.proposeInterview(target!.applicationId, {
+    type: f.type, durationMinutes: Number(f.duration), interviewerIds: people, location: f.location.trim() || undefined, meetingUrl: f.url.trim() || undefined,
+    slots: slots.filter(Boolean).map((s) => new Date(s).toISOString()), sendEmail: f.notify, validDays: Number(validDays),
+  }), { success: tx('Saat önerileri gönderildi'), invalidate: [['recruitment']], onDone: (r) => setProposal(r) })
   const names = useMemo(() => new Map((dir.data ?? []).map((d) => [d.id, d.fullName])), [dir.data])
   const save = useAction(() => recruitmentApi.scheduleInterviewPlus(target!.applicationId, {
     type: f.type, scheduledAt: new Date(f.at).toISOString(), interviewerEmployeeIds: people, durationMinutes: Number(f.duration),
@@ -227,15 +236,36 @@ export function ScheduleInterviewModal({ target, onClose }: { target: { applicat
   }), { success: tx('Mülakat planlandı'), invalidate: [['recruitment']], onDone: (r) => setDone(r) })
 
   useEffect(() => {
-    if (target) { setDone(null); setError(undefined); setPeople([]); setF((x) => ({ ...x, at: '', location: '', url: '' })) }
+    if (target) { setDone(null); setProposal(null); setMode('fixed'); setSlots(['', '', '']); setError(undefined); setPeople([]); setF((x) => ({ ...x, at: '', location: '', url: '' })) }
   }, [target])
   if (!target) return null
 
   const submit = () => {
+    if (mode === 'candidate') {
+      if (slots.filter(Boolean).length < 2) return setError(tx('En az iki saat önerin.'))
+      if (people.length === 0) return setError(tx('En az bir görüşmeci seçin.'))
+      setError(undefined)
+      return propose.mutate(undefined, { onError: (e) => setError(errMsg(e)) })
+    }
     if (!f.at) return setError(tx('Tarih ve saat zorunlu.'))
     if (people.length === 0) return setError(tx('En az bir görüşmeci seçin.'))
     setError(undefined)
     save.mutate(undefined, { onError: (e) => setError(errMsg(e)) })
+  }
+
+  if (proposal) {
+    return (
+      <Modal open onClose={onClose} title={tx('Saat önerileri gönderildi')}
+        note={f.notify ? tx('Adaya bağlantı e-postayla gitti. Aday bir saat seçince mülakat kurulur ve görüşmecilere bildirim gider.') : tx('Bağlantıyı adaya kendiniz iletin. Aday bir saat seçince mülakat kurulur.')}
+        footer={<Button onClick={onClose}>{tx('Kapat')}</Button>}>
+        <div className="space-y-2">
+          <TextField label={tx('Adayın bağlantısı ({0} tarihine kadar geçerli)', [formatDate(proposal.expiresAt)])} readOnly value={proposal.link} />
+          <Button variant="outline" size="sm" onClick={() => { void navigator.clipboard?.writeText(proposal.link); toast.ok(tx('Kopyalandı')) }}>
+            <Copy className="size-4" /> {tx('Bağlantıyı kopyala')}
+          </Button>
+        </div>
+      </Modal>
+    )
   }
 
   if (done) {
@@ -254,15 +284,37 @@ export function ScheduleInterviewModal({ target, onClose }: { target: { applicat
 
   return (
     <Modal open size="lg" onClose={onClose} title={tx('Mülakat planla')} note={target.candidateName}
-      footer={<><Button variant="outline" onClick={onClose}>{tx('Vazgeç')}</Button><Button disabled={save.isPending} onClick={submit}>{tx('Planla')}</Button></>}>
+      footer={<><Button variant="outline" onClick={onClose}>{tx('Vazgeç')}</Button><Button disabled={save.isPending || propose.isPending} onClick={submit}>{mode === 'candidate' ? tx('Saatleri gönder') : tx('Planla')}</Button></>}>
       <div className="space-y-3">
+        <div role="radiogroup" aria-label={tx('Saat nasıl belirlensin')} className="inline-flex rounded-lg border border-border p-0.5 text-[13px]">
+          {([['fixed', tx('Saati ben belirleyeyim')], ['candidate', tx('Aday seçsin')]] as const).map(([k, l]) => (
+            <button key={k} type="button" role="radio" aria-checked={mode === k} onClick={() => setMode(k)}
+              className={cn('cursor-pointer rounded-md px-3 py-1.5', mode === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}>{l}</button>
+          ))}
+        </div>
         <div className="grid gap-3 md:grid-cols-3">
           <SelectField label={tx('Mülakat türü')} value={f.type} onChange={(v) => setF({ ...f, type: v as InterviewType })}
             options={(Object.keys(interviewTypeLabels) as InterviewType[]).map((t) => ({ value: t, label: interviewTypeLabels[t] }))} />
-          <TextField label={tx('Tarih ve saat')} type="datetime-local" required value={f.at} onChange={(e) => setF({ ...f, at: e.target.value })} />
+          {mode === 'fixed'
+            ? <TextField label={tx('Tarih ve saat')} type="datetime-local" required value={f.at} onChange={(e) => setF({ ...f, at: e.target.value })} />
+            : <SelectField label={tx('Bağlantı geçerliliği')} value={validDays} onChange={setValidDays} options={['3', '7', '14'].map((d) => ({ value: d, label: tx('{0} gün', [d]) }))} />}
           <SelectField label={tx('Süre')} value={f.duration} onChange={(v) => setF({ ...f, duration: v })}
             options={['30', '45', '60', '90', '120'].map((m) => ({ value: m, label: tx('{0} dk', [m]) }))} />
         </div>
+        {mode === 'candidate' && (
+          <div className="space-y-2">
+            <p className="text-[13px] font-medium">{tx('Önerilen saatler (2-10)')}</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {slots.map((s, i) => (
+                <div key={i} className="flex items-end gap-1">
+                  <TextField label={tx('Seçenek {0}', [i + 1])} type="datetime-local" value={s} onChange={(e) => setSlots(slots.map((x, j) => (j === i ? e.target.value : x)))} />
+                  {slots.length > 2 && <Button type="button" size="icon" variant="ghost" aria-label={tx('Kaldır')} onClick={() => setSlots(slots.filter((_, j) => j !== i))}><Trash2 className="size-4" /></Button>}
+                </div>
+              ))}
+            </div>
+            {slots.length < 10 && <Button type="button" size="sm" variant="outline" onClick={() => setSlots([...slots, ''])}><Plus className="size-4" /> {tx('Saat ekle')}</Button>}
+          </div>
+        )}
         <div className="grid gap-3 md:grid-cols-2">
           <TextField label={tx('Yer (isteğe bağlı)')} value={f.location} maxLength={300} onChange={(e) => setF({ ...f, location: e.target.value })} placeholder={tx('Ör. Merkez ofis, 3. kat')} />
           <TextField label={tx('Çevrim içi bağlantı (isteğe bağlı)')} value={f.url} maxLength={500} onChange={(e) => setF({ ...f, url: e.target.value })} placeholder="https://" />
@@ -287,7 +339,7 @@ export function ScheduleInterviewModal({ target, onClose }: { target: { applicat
         </div>
         <label className="flex items-center gap-2 text-[13px]">
           <Checkbox checked={f.notify} onCheckedChange={(v) => setF({ ...f, notify: v === true })} />
-          {tx('Adaya e-posta daveti gönder')}
+          {mode === 'candidate' ? tx('Bağlantıyı adaya e-postayla gönder') : tx('Adaya e-posta daveti gönder')}
         </label>
         <InfoNote>{tx('Görüşmecinin aynı saatte başka bir mülakatı varsa planlama engellenir. Görüşmeci bildiriminde aday adı yer almaz.')}</InfoNote>
         {error && <p role="alert" className="text-[13px] text-destructive">{error}</p>}

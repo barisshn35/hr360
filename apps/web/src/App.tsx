@@ -54,6 +54,7 @@ const JobPostingDetailPage = page(() => import('@/features/recruitment/JobPostin
 const CandidatesPage = page(() => import('@/features/recruitment/CandidatesPage'), 'CandidatesPage')
 const CareerPage = page(() => import('@/features/recruitment/CareerPages'), 'CareerPage')
 const CandidateSelfServicePage = page(() => import('@/features/recruitment/CareerPages'), 'CandidateSelfServicePage')
+const InterviewBookingPage = page(() => import('@/features/recruitment/InterviewBookingPage'), 'InterviewBookingPage')
 const OfferSignPage = page(() => import('@/features/recruitment/OfferSignPage'), 'OfferSignPage')
 const MyInterviewsPage = page(() => import('@/features/recruitment/RecruitmentPlus'), 'MyInterviewsPage')
 // Dalga 11: çalışan önerisi, işe alım analizi, ilan ayrıntısı (JSON-LD) ve aday durum bağlantısı.
@@ -266,6 +267,7 @@ export function App() {
                 <Route path="/kariyer/:tenant/basvuru/:token" element={<Suspense fallback={<FullPageSpinner />}><CandidateSelfServicePage /></Suspense>} />
                 <Route path="/kariyer/:tenant/ilan/:jobId" element={<Suspense fallback={<FullPageSpinner />}><CareerJobPage /></Suspense>} />
                 <Route path="/kariyer/:tenant/durum/:token" element={<Suspense fallback={<FullPageSpinner />}><CandidateStatusPage /></Suspense>} />
+                <Route path="/kariyer/:tenant/mulakat/:token" element={<Suspense fallback={<FullPageSpinner />}><InterviewBookingPage /></Suspense>} />
                 <Route path="/kariyer/:tenant/teklif/:token" element={<Suspense fallback={<FullPageSpinner />}><OfferSignPage /></Suspense>} />
 
                 {/* --------------------------- Oturum gerektiren --------------------------- */}

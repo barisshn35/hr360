@@ -499,6 +499,8 @@ export const recruitmentApi = {
   /** Planlanan mülakatı iptal eder; görüşmecilere bildirim gider (aday davet edildiyse isteğe bağlı e-posta). */
   cancelInterview: (applicationId: string, interviewId: string, body: { reason?: string; notifyCandidate?: boolean } = {}) =>
     apiFetch<{ id: string; result: InterviewResult }>(`${BASE}/applications/${applicationId}/interviews/${interviewId}/cancel`, { method: 'POST', body }),
+  proposeInterview: (applicationId: string, body: { type: InterviewType; durationMinutes: number; interviewerIds: string[]; location?: string; meetingUrl?: string; slots: string[]; sendEmail: boolean; validDays: number }) =>
+    apiFetch<{ id: string; link: string; expiresAt: string; slots: string[] }>(`${BASE}/applications/${applicationId}/interview-proposals`, { method: 'POST', body }),
   rescheduleInterview: (applicationId: string, interviewId: string, body: { scheduledAt: string; durationMinutes?: number; notifyCandidate?: boolean }) =>
     apiFetch<ScheduledInterview>(`${BASE}/applications/${applicationId}/interviews/${interviewId}/reschedule`, { method: 'POST', body }),
 
@@ -548,6 +550,20 @@ export const recruitmentApi = {
 }
 
 /** Oturumsuz kariyer sayfası uçları (Y16). */
+export interface InterviewBooking {
+  company: string | null
+  position: string | null
+  firstName: string | null
+  status: 'Open' | 'Booked' | 'Cancelled' | 'Expired'
+  durationMinutes: number
+  type: InterviewType
+  location: string | null
+  online: boolean
+  slots: string[]
+  expiresAt: string
+  chosen: { scheduledAt: string; location: string | null; meetingUrl: string | null } | null
+}
+
 export const careerApi = {
   jobs: (tenant: string, signal?: AbortSignal) =>
     apiFetch<PublicJobs>(`${BASE}/public/${encodeURIComponent(tenant)}/jobs`, { signal, anonymous: true }),
@@ -556,6 +572,12 @@ export const careerApi = {
     apiFetch<{ token: string; minSeconds: number }>(`${BASE}/public/${encodeURIComponent(tenant)}/form-token`, { anonymous: true }),
   apply: (tenant: string, jobId: string, input: PublicApplyInput) =>
     apiFetch<PublicApplyResult>(`${BASE}/public/${encodeURIComponent(tenant)}/jobs/${jobId}/apply`, { method: 'POST', body: input, anonymous: true, noQueue: true }),
+  /** Adayın mülakat saatini seçtiği bağlantı (yenilik haritası #10). */
+  booking: (tenant: string, token: string, signal?: AbortSignal) =>
+    apiFetch<InterviewBooking>(`${BASE}/public/${encodeURIComponent(tenant)}/interview-booking/${encodeURIComponent(token)}`, { signal, anonymous: true }),
+  book: (tenant: string, token: string, slot: string) =>
+    apiFetch<{ scheduledAt: string; location: string | null; meetingUrl: string | null }>(`${BASE}/public/${encodeURIComponent(tenant)}/interview-booking/${encodeURIComponent(token)}`,
+      { method: 'POST', body: { slot }, anonymous: true, noQueue: true }),
   selfService: (tenant: string, token: string, signal?: AbortSignal) =>
     apiFetch<SelfService>(`${BASE}/public/${encodeURIComponent(tenant)}/self-service/${encodeURIComponent(token)}`, { signal, anonymous: true }),
   consent: (tenant: string, token: string, talentPool: boolean) =>
