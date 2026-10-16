@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, useReducedMotion } from 'motion/react'
-import { Cake, PartyPopper, Sparkles, Trophy } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Cake, Mail, PartyPopper, Sparkles, Trophy } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
 import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/States'
 import { Tabs } from '@/components/ui/Tabs'
 import { engagementApi, type Celebration } from '@/api/engagement'
+import { useMyEmployeeId } from '@/api/queries'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Initials, TenantGate, useAction } from '@/features/shared/kit'
@@ -60,6 +62,7 @@ export function Confetti({ burst }: { burst: number }) {
 
 export function CelebrationList({ days = 30, compact = false, kind }: { days?: number; compact?: boolean; kind?: Celebration['kind'] }) {
   const q = useQuery({ queryKey: ['celebrations', days], queryFn: ({ signal }) => engagementApi.celebrations(days, signal) })
+  const { employeeId: me } = useMyEmployeeId()
   const [burst, setBurst] = useState(0)
   const send = useAction((c: Celebration) => engagementApi.sendKudos({
     toEmployeeId: c.employeeId, badge: 'thanks',
@@ -102,6 +105,11 @@ export function CelebrationList({ days = 30, compact = false, kind }: { days?: n
                   {!compact && c.department ? ` · ${c.department}` : ''}
                 </p>
               </div>
+              {!compact && c.employeeId !== me && (
+                <Button asChild size="sm" variant="ghost" aria-label={tx('Grup kartı başlat')} title={tx('Grup kartı başlat')}>
+                  <Link to={`/panel/kartlar?yeni=${c.employeeId}&tur=${c.kind === 'birthday' ? 'Birthday' : c.kind === 'anniversary' ? 'Anniversary' : 'Welcome'}&tarih=${c.date}`}><Mail className="size-4" /></Link>
+                </Button>
+              )}
               {!compact && (
                 <Button size="sm" variant="outline" onClick={() => send.mutate(c)} disabled={send.isPending}>
                   {tx('Tebrik et')}

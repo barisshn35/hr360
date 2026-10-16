@@ -48,6 +48,8 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
     public DbSet<PointsEntry> PointsLedger => Set<PointsEntry>();
     public DbSet<Reward> Rewards => Set<Reward>();
     public DbSet<RewardRedemption> RewardRedemptions => Set<RewardRedemption>();
+    public DbSet<GroupCard> Cards => Set<GroupCard>();
+    public DbSet<CardSignature> CardSignatures => Set<CardSignature>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -98,6 +100,8 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
         b.Entity<PointsEntry>().ToTable("engagement_points_ledger").ConfigureTenantColumn();
         b.Entity<Reward>().ToTable("engagement_rewards").ConfigureTenantColumn();
         b.Entity<RewardRedemption>().ToTable("engagement_reward_redemptions").ConfigureTenantColumn();
+        b.Entity<GroupCard>().ToTable("engagement_cards").ConfigureTenantColumn();
+        b.Entity<CardSignature>().ToTable("engagement_card_signatures").ConfigureTenantColumn();
 
         b.ApplyTenantFilters(this);
     }

@@ -61,3 +61,37 @@ public class RewardRedemption : ITenantOwned
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? DecidedAt { get; set; }
 }
+
+/* ======================================================================
+ * Grup kartı (yenilik haritası #26). Teslim edilene kadar alıcıdan gizli.
+ * ==================================================================== */
+
+public class GroupCard : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string TenantSlug { get; set; } = "";
+    public Guid RecipientEmployeeId { get; set; }
+    public string RecipientName { get; set; } = "";
+    /// <summary>Birthday | Farewell | Welcome | Anniversary | Congrats | GetWell | Other</summary>
+    public string Occasion { get; set; } = "Other";
+    public string Title { get; set; } = "";
+    public DateTime DeliverAt { get; set; }
+    public DateTime? DeliveredAt { get; set; }
+    public Guid? CreatedByEmployeeId { get; set; }
+    public string CreatedByUserId { get; set; } = "";
+    public string? CreatedByName { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class CardSignature : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string TenantSlug { get; set; } = "";
+    public Guid CardId { get; set; }
+    public Guid EmployeeId { get; set; }
+    public string Name { get; set; } = "";
+    public string Message { get; set; } = "";
+    public string Color { get; set; } = "yellow";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
