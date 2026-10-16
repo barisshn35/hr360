@@ -52,7 +52,6 @@ import { useNewParamFlag } from '@/lib/useNewParam'
 import {
   useCompanies,
   useEmployees,
-  useGatewayHealth,
   useJobPostings,
   useLeaveRequests,
   useMyEmployeeId,
@@ -156,7 +155,6 @@ function TenantDashboard() {
   const overdue = useOverdueWorkflows({ enabled: canDecide })
   const postings = useJobPostings('Published')
   const leave = useLeaveRequests({}, can('leave:view'))
-  const health = useGatewayHealth()
 
   const activeCount = useMemo(
     () => employees.data?.filter((e) => e.status === EmployeeStatus.Active).length ?? 0,
@@ -267,7 +265,6 @@ function TenantDashboard() {
     canWorkflow && { to: '/panel/onaylar', label: tx('Onay kutusu'), icon: Inbox },
   ].filter(Boolean) as Array<{ to: string; label: string; icon: React.ElementType }>
 
-  const healthTone = health.isError ? 'danger' : health.data ? 'success' : 'neutral'
   const orbit = modules.slice(0, 8)
 
   // Ayın çalışanı: modül açık ve gösterilecek kazanan ya da kullanılacak oy varsa.
@@ -314,9 +311,6 @@ function TenantDashboard() {
                   </span>
                   <span className="text-border">•</span>
                   <LiveClock />
-                  <StatusBadge tone={healthTone}>
-                    {health.isError ? tx('Servis yanıt vermiyor') : health.data ? tx('Sistem çalışıyor') : tx('Kontrol ediliyor')}
-                  </StatusBadge>
                 </div>
 
                 <h2 className="mt-5 text-[34px] leading-[1.05] font-semibold tracking-[-0.04em] sm:text-[46px]">
