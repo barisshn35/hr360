@@ -211,7 +211,8 @@ public class WorkplaceController : AppController
             days = days.Select(d =>
             {
                 var leave = leaves.FirstOrDefault(l => l.Emp == p.Id && l.From <= d && l.To >= d);
-                if (leave != default) return new { date = d, mode = "Leave", note = (string?)leave.Type };
+                // İzin türü (ör. hastalık) şirketteki herkese açık bu tabloda gösterilmez; yalnızca "izinli".
+                if (leave != default) return new { date = d, mode = "Leave", note = (string?)null };
                 var e = entries.FirstOrDefault(x => (x.EmployeeId == p.Id || (p.UserId != null && x.UserId == p.UserId)) && x.Date == d);
                 return new { date = d, mode = e?.Mode ?? "Unknown", note = e?.Note };
             }).ToList(),

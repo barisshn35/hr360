@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { Armchair, Building2, ChevronLeft, ChevronRight, DoorOpen, Home, Laptop, MapPin, Plane, Plus, Trash2, Users } from 'lucide-react'
+import { Copy, Armchair, Building2, ChevronLeft, ChevronRight, DoorOpen, Home, Laptop, MapPin, Plane, Plus, Trash2, Users } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,9 @@ import { useAuth } from '@/auth/useAuth'
 import { isHr } from '@/auth/roles'
 import { useMyEmployeeId } from '@/api/queries'
 import { cn } from '@/lib/utils'
-import { Initials, Metric, TenantGate, isoDate, minutesToHHMM, useAction } from '@/features/shared/kit'
+import { EmployeeAvatar } from '@/components/people/EmployeeAvatar'
+import { Metric, TenantGate, isoDate, minutesToHHMM, useAction } from '@/features/shared/kit'
+import { Checkbox } from '@/components/ui/checkbox'
 import { tx, appLocale } from '@/lib/i18n'
 
 const MODE_STYLE: Record<PresenceMode, { cls: string; icon: React.ElementType }> = {
@@ -45,6 +47,25 @@ function PresenceBoard() {
   const set = useAction((v: { date: string; mode: PresenceMode }) => engagementApi.setPresence(v), { invalidate: [['presence']] })
   const today = isoDate()
   const mine = q.data?.people.find((p) => p.employeeId === employeeId)
+  const [onlyTeam, setOnlyTeam] = useState(false)
+  const team = (q.data?.people ?? []).filter((p) => mine?.department && p.department === mine.department)
+  const shown = onlyTeam && mine?.department ? team : q.data?.people ?? []
+  const teamInOffice = (d: string) => team.filter((p) => p.employeeId !== employeeId && p.days.find((x) => x.date === d)?.mode === 'Office').length
+  // Geçen haftanın planı bu haftaya kopyalanır (izinli ve boş günler atlanır, bu haftadaki izin korunur).
+  const copyLastWeek = useAction(async () => {
+    const prevFrom = isoDate(new Date(anchor.getTime() - 7 * 86400000))
+    const prevTo = isoDate(new Date(anchor.getTime() - 3 * 86400000))
+    const prev = (await engagementApi.presence(prevFrom, prevTo)).people.find((p) => p.employeeId === employeeId)
+    let n = 0
+    for (const [i, d] of (q.data?.days ?? []).entries()) {
+      const m = prev?.days[i]?.mode
+      const cur = mine?.days.find((x) => x.date === d)?.mode
+      if (!m || m === 'Leave' || m === 'Unknown' || cur === 'Leave' || cur === m) continue
+      await engagementApi.setPresence({ date: d, mode: m })
+      n++
+    }
+    return n
+  }, { success: (n) => (n ? tx('Geçen haftanın planı kopyalandı ({0} gün).', [n]) : tx('Kopyalanacak gün yok.')), invalidate: [['presence']] })
 
   return (
     <div className="space-y-5">
@@ -55,13 +76,17 @@ function PresenceBoard() {
       </div>
       {employeeId && (
         <Panel>
-          <PanelHead title={tx('Bu hafta nerede çalışıyorum?')} note={tx('Bir güne tıklayıp çalışma yerinizi seçin. Masa ayırırsanız otomatik “Ofiste” olur.')} />
+          <PanelHead title={tx('Bu hafta nerede çalışıyorum?')} note={tx('Bir güne tıklayıp çalışma yerinizi seçin. Masa ayırırsanız otomatik “Ofiste” olur.')}
+            action={<Button size="sm" variant="outline" disabled={copyLastWeek.isPending} onClick={() => copyLastWeek.mutate(undefined)}><Copy className="size-4" />{tx('Geçen haftayı kopyala')}</Button>} />
           <PanelBody className="grid gap-3 sm:grid-cols-5">
             {q.data?.days.map((d) => {
               const cur = mine?.days.find((x) => x.date === d)?.mode ?? 'Unknown'
               return (
                 <div key={d} className={cn('rounded-2xl border p-3', d === today ? 'border-primary/50 bg-primary/5' : 'border-border')}>
-                  <p className="mb-2 text-[12.5px] font-medium">{DAY.format(new Date(d))}</p>
+                  <p className="text-[12.5px] font-medium">{DAY.format(new Date(d))}</p>
+                  <p className={cn('mb-2 text-[11px]', teamInOffice(d) ? 'text-primary' : 'text-muted-foreground')}>
+                    {teamInOffice(d) ? tx('Ekipten {0} kişi ofiste', [teamInOffice(d)]) : tx('Ekipten ofiste kimse yok')}
+                  </p>
                   {cur === 'Leave' ? <p className="text-[12.5px] text-amber-400">{tx('İzinli')}</p> : (
                     <div className="grid grid-cols-2 gap-1">
                       {(['Office', 'Remote', 'Travel', 'Off'] as PresenceMode[]).map((m) => {
@@ -92,6 +117,11 @@ function PresenceBoard() {
           title={tx('Kim nerede?')}
           action={
             <div className="flex items-center gap-1">
+              {mine?.department && (
+                <label className="mr-2 flex cursor-pointer items-center gap-1.5 text-[12.5px]">
+                  <Checkbox checked={onlyTeam} onCheckedChange={(v) => setOnlyTeam(v === true)} />{tx('Yalnızca ekibim')}
+                </label>
+              )}
               <Button size="icon" variant="ghost" aria-label={tx('Önceki hafta')} onClick={() => setAnchor(new Date(anchor.getTime() - 7 * 86400000))}><ChevronLeft className="size-4" /></Button>
               <Button size="sm" variant="outline" onClick={() => setAnchor(startOfWeek(new Date()))}>{tx('Bu hafta')}</Button>
               <Button size="icon" variant="ghost" aria-label={tx('Sonraki hafta')} onClick={() => setAnchor(new Date(anchor.getTime() + 7 * 86400000))}><ChevronRight className="size-4" /></Button>
@@ -108,10 +138,10 @@ function PresenceBoard() {
                 </tr>
               </thead>
               <tbody>
-                {q.data.people.map((p, i) => (
+                {shown.map((p, i) => (
                   <motion.tr key={p.employeeId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="border-b border-border/60 last:border-0">
                     <td className="px-5 py-2.5">
-                      <div className="flex items-center gap-2.5"><Initials name={p.name} size={28} /><div><p className="font-medium">{p.name}</p><p className="text-[11.5px] text-muted-foreground">{p.department ?? '—'}</p></div></div>
+                      <div className="flex items-center gap-2.5"><EmployeeAvatar id={p.employeeId} name={p.name} size={28} /><div><p className="font-medium">{p.name}</p><p className="text-[11.5px] text-muted-foreground">{p.department ?? '—'}</p></div></div>
                     </td>
                     {p.days.map((d) => {
                       const S = MODE_STYLE[d.mode]
