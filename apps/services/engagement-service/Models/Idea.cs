@@ -52,3 +52,40 @@ public class WeeklyCheckin : ITenantOwned
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
+
+/// <summary>Şirket etkinliği (sosyal, eğitim, gönüllülük…). Kontenjan doluysa katılım bekleme listesine düşer.</summary>
+public class CompanyEvent : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string TenantSlug { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string? Description { get; set; }
+    /// <summary>Social | Training | Volunteer | Sports | Other</summary>
+    public string Kind { get; set; } = "Social";
+    public DateTime StartsAt { get; set; }
+    public DateTime EndsAt { get; set; }
+    public string? Location { get; set; }
+    public string? OnlineUrl { get; set; }
+    public int? Capacity { get; set; }
+    public DateTime? RsvpDeadline { get; set; }
+    public decimal? VolunteerHours { get; set; }
+    /// <summary>Published | Cancelled</summary>
+    public string Status { get; set; } = "Published";
+    public string CreatedByUserId { get; set; } = "";
+    public string? CreatedByName { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class EventRsvp : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string TenantSlug { get; set; } = "";
+    public Guid EventId { get; set; }
+    public Guid EmployeeId { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>Going | Waitlist</summary>
+    public string Status { get; set; } = "Going";
+    public bool Attended { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

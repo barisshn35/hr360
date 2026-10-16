@@ -42,6 +42,8 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
     public DbSet<Idea> Ideas => Set<Idea>();
     public DbSet<IdeaComment> IdeaComments => Set<IdeaComment>();
     public DbSet<WeeklyCheckin> WeeklyCheckins => Set<WeeklyCheckin>();
+    public DbSet<CompanyEvent> Events => Set<CompanyEvent>();
+    public DbSet<EventRsvp> EventRsvps => Set<EventRsvp>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -85,6 +87,9 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
         b.Entity<Idea>().ToTable("engagement_ideas").ConfigureTenantColumn();
         b.Entity<IdeaComment>().ToTable("engagement_idea_comments").ConfigureTenantColumn();
         b.Entity<WeeklyCheckin>().ToTable("engagement_weekly_checkins").ConfigureTenantColumn();
+        b.Entity<CompanyEvent>().ToTable("engagement_events").ConfigureTenantColumn();
+        b.Entity<CompanyEvent>().Property(x => x.VolunteerHours).HasPrecision(5, 1);
+        b.Entity<EventRsvp>().ToTable("engagement_event_rsvps").ConfigureTenantColumn();
 
         b.ApplyTenantFilters(this);
     }

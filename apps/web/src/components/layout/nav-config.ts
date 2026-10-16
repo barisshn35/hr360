@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Inbox, CalendarDays, Wallet, LifeBuoy, Clock,
   Building2, Users, UserPlus, ClipboardCheck, Laptop, Target, GraduationCap,
   BadgeDollarSign, FileText, Bell, Shield, UsersRound, UserRound, Crosshair,
-  ClipboardList, Gauge, LineChart, MessageSquareText, Lightbulb, CalendarRange,
+  ClipboardList, Gauge, LineChart, MessageSquareText, Lightbulb, CalendarRange, CalendarHeart,
   Ruler, SlidersHorizontal, CalendarClock, Key, Sparkles, Briefcase, Sprout,
   Settings2, Globe2, HeartHandshake, PartyPopper, MapPin, Handshake, Megaphone,
   MessagesSquare, HeartPulse, GitBranch, LogOut, ScrollText, ShieldCheck, FileStack,
@@ -174,6 +174,7 @@ export const navGroups: NavGroupData[] = [
     items: [
       { id: 'kudos', title: tx('Takdir duvarı'), description: tx('Rozetli teşekkürler'), icon: Award, path: '/panel/takdir', tenantOnly: true },
       { id: 'ideas', title: tx('Fikir kutusu'), description: tx('Öneri paylaş, destekle, yanıt al'), icon: Lightbulb, path: '/panel/fikir-kutusu', tenantOnly: true },
+      { id: 'events', title: tx('Etkinlikler'), description: tx('Katıl, takvime ekle, gönüllü ol'), icon: CalendarHeart, path: '/panel/etkinlikler', tenantOnly: true },
       { id: 'eom', title: tx('Ayın çalışanı'), description: tx('Departman oylaması ve kazananlar'), icon: Crown, path: '/panel/ayin-calisani', tenantOnly: true, feature: 'eom' },
       { id: 'celebrations', title: tx('Kutlamalar'), description: tx('Doğum günü ve iş yıl dönümleri'), icon: PartyPopper, path: '/panel/kutlamalar', tenantOnly: true },
       { id: 'surveys', title: tx('Anketler ve eNPS'), description: tx('Anonim nabız anketleri'), icon: MessagesSquare, path: '/panel/anketler', tenantOnly: true },

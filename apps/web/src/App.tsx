@@ -134,6 +134,7 @@ const NewHirePage = page(() => import('@/features/growth/NewHirePage'), 'NewHire
 const ProductInsightsPage = page(() => import('@/features/insights/ProductInsightsPage'), 'ProductInsightsPage')
 const TodosPage = page(() => import('@/features/todos/TodosPage'), 'TodosPage')
 const IdeasPage = page(() => import('@/features/community/IdeasPage'), 'IdeasPage')
+const EventsPage = page(() => import('@/features/community/EventsPage'), 'EventsPage')
 const EomPage = page(() => import('@/features/community/eom/EomPage'), 'EomPage')
 const EomAdminPage = page(() => import('@/features/community/eom/EomAdminPage'), 'EomAdminPage')
 const EomResultsPage = page(() => import('@/features/community/eom/EomResultsPage'), 'EomResultsPage')
@@ -462,6 +463,7 @@ export function App() {
                     <Route path="ekran-icgoruleri" element={guarded('performance:manage', <ProductInsightsPage />, ['hr-admin', 'tenant-admin', 'platform-admin'])} />
                     <Route path="yapilacaklarim" element={<TenantGate><TodosPage /></TenantGate>} />
                     <Route path="fikir-kutusu" element={<TenantGate><IdeasPage /></TenantGate>} />
+                    <Route path="etkinlikler" element={<TenantGate><EventsPage /></TenantGate>} />
                     <Route path="ayin-calisani" element={<TenantGate><EomPage /></TenantGate>} />
                     <Route path="ayin-calisani/yonetim" element={<TenantGate><EomAdminPage /></TenantGate>} />
                     <Route path="ayin-calisani/sonuc/:periodId" element={<TenantGate><EomResultsPage /></TenantGate>} />
