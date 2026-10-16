@@ -137,10 +137,12 @@ interface RequestOptions {
   noQueue?: boolean
   /** Ek başlıklar (ör. kiosk tabletinin X-Device-Key'i; oturumsuz uçlarla birlikte). */
   headers?: Record<string, string>
+  /** Sayfa kapanırken de tamamlansın (küçük gövdeli arka plan bildirimleri, ör. ekran sayacı). */
+  keepalive?: boolean
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, signal, anonymous = false, noQueue = false, headers: extraHeaders } = options
+  const { method = 'GET', body, signal, anonymous = false, noQueue = false, headers: extraHeaders, keepalive } = options
 
   // Çevrimdışıyken izinli talepler (izin, fazla mesai) cihazda sıraya alınır (PWA).
   if (!noQueue && typeof navigator !== 'undefined' && !navigator.onLine && isQueueable(path, method)) {
@@ -171,6 +173,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       method,
       headers,
       signal,
+      keepalive,
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch (e) {

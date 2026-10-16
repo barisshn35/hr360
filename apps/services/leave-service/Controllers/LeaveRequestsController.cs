@@ -193,7 +193,10 @@ public class LeaveRequestsController : ControllerBase
         }
         else
         {
-            if (me is null) return BadRequest(new { message = "Bir departman seçin" });
+            // Çalışan kaydı olmayan hesap (ör. yalnızca yönetici hesabı): ekibi yok, boş takvim döner.
+            if (me is null)
+                return Ok(new { teamSize = 0, people = Array.Empty<object>(), entries = Array.Empty<object>(), others = Array.Empty<object>(),
+                    holidays = Array.Empty<object>() });
             people = await TeammatesAsync(me.Value, ct);
             var self = await _db.Database.SqlQueryRaw<TeamRow>(
                 "SELECT \"Id\", \"FirstName\", \"LastName\" FROM employee_employees WHERE \"TenantSlug\" = {0} AND \"Id\" = {1}",

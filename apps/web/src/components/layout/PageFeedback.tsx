@@ -31,7 +31,8 @@ export function usePageViews() {
     const flush = () => {
       if (!queue.current.length) return
       const paths = queue.current.splice(0, 100)
-      void apiFetch('/api/engagement/product/views', { method: 'POST', body: { paths }, noQueue: true }).catch(() => undefined)
+      // keepalive: sekme kapanırken başlayan gönderim yarıda kesilmesin.
+      void apiFetch('/api/engagement/product/views', { method: 'POST', body: { paths }, noQueue: true, keepalive: true }).catch(() => undefined)
     }
     const timer = window.setInterval(flush, 30_000)
     const onHide = () => { if (document.visibilityState === 'hidden') flush() }

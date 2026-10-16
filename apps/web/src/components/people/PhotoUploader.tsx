@@ -96,13 +96,14 @@ export function PhotoUploader({ employeeId, name, size = 64, children }: {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label={tx('Fotoğrafı değiştir')}
-        className="group relative shrink-0 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+      {/* Avatar düğmenin dışında: düğmenin görünür metni (baş harfler) erişilebilir adıyla çelişmesin. */}
+      <span className="relative inline-flex shrink-0 rounded-full">
         {children ?? <EmployeeAvatar id={employeeId} name={name} size={size} />}
-        <span className="absolute inset-0 grid place-items-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-          <Camera className="size-5" />
-        </span>
-      </button>
+        <button type="button" onClick={() => setOpen(true)} aria-label={tx('Fotoğrafı değiştir')}
+          className="group absolute inset-0 grid cursor-pointer place-items-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          <Camera className="size-5" aria-hidden="true" />
+        </button>
+      </span>
 
       <Modal open={open} onClose={close} title={tx('Profil fotoğrafı')}
         note={tx('Fotoğraf şirket içinde avatarlarda ve "Ayın çalışanı" kartında görünür. Kare olarak kırpılır.')}
