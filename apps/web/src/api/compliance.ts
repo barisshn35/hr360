@@ -24,7 +24,14 @@ export interface Announcement {
   requiresAck: boolean
   read: boolean
   readAt: string | null
+  /** #31 şirket içi akış */
+  allowComments: boolean
+  reactions: Partial<Record<ReactionKind, number>>
+  myReaction: ReactionKind | null
+  commentCount: number
 }
+export type ReactionKind = 'like' | 'love' | 'celebrate' | 'clap' | 'insightful' | 'funny'
+export interface AnnouncementComment { id: string; authorEmployeeId: string | null; authorName: string; body: string; createdAt: string; mine: boolean; canDelete: boolean }
 export interface ManagedAnnouncement {
   id: string
   title: string
@@ -39,6 +46,9 @@ export interface ManagedAnnouncement {
   createdAt: string
   state: 'Scheduled' | 'Published' | 'Expired'
   stats: AckStats
+  allowComments: boolean
+  reactionCount: number
+  commentCount: number
 }
 export interface AnnouncementInput {
   title: string
@@ -48,6 +58,7 @@ export interface AnnouncementInput {
   publishAt?: string | null
   expireAt?: string | null
   requiresAck: boolean
+  allowComments?: boolean
 }
 
 /* ---------------------------------------------------------------- G19 kütüphane */
@@ -301,6 +312,10 @@ export const complianceApi = {
   createAnnouncement: (b: AnnouncementInput) => post<{ id: string; notified: number }>('/announcements', b),
   /** Planlı ya da yayımdaki duyuruyu düzenler; okuma kayıtları korunur. */
   updateAnnouncement: (id: string, b: AnnouncementInput) => put<{ id: string; notified: number }>(`/announcements/${id}`, b),
+  reactAnnouncement: (id: string, kind: ReactionKind | null) => post<{ myReaction: ReactionKind | null; reactions: Partial<Record<ReactionKind, number>> }>(`/announcements/${id}/react`, { kind }),
+  announcementComments: (id: string, s?: AbortSignal) => get<AnnouncementComment[]>(`/announcements/${id}/comments`, s),
+  addAnnouncementComment: (id: string, body: string) => post<{ id: string }>(`/announcements/${id}/comments`, { body }),
+  deleteAnnouncementComment: (id: string, commentId: string) => del(`/announcements/${id}/comments/${commentId}`),
   readAnnouncement: (id: string) => post<{ read: boolean }>(`/announcements/${id}/read`),
   expireAnnouncement: (id: string) => post<{ expired: boolean }>(`/announcements/${id}/expire`),
   deleteAnnouncement: (id: string) => del(`/announcements/${id}`),

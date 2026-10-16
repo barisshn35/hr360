@@ -189,6 +189,10 @@ public static class RetentionPlans
         Upd("UPDATE engagement_coffee_matches SET", "Kahve eşleşmeleri (kişi gruptan çıkarılır)",
             "\"MemberIds\" = ARRAY(SELECT x FROM unnest(\"MemberIds\") AS x WHERE x <> ALL($2))",
             "\"TenantSlug\" = $1 AND \"MemberIds\" && $2"),
+        Del("DELETE FROM governance_announcement_reactions", "Duyuru tepkileri", "\"TenantSlug\" = $1 AND (\"EmployeeId\" = ANY($2) OR \"UserId\" = ANY($3))"),
+        Upd("UPDATE governance_announcement_comments SET", "Duyuru yorumları (yazar adı)",
+            "\"AuthorEmployeeId\" = NULL, \"AuthorName\" = 'Anonim', \"AuthorUserId\" = ''",
+            "\"TenantSlug\" = $1 AND (\"AuthorEmployeeId\" = ANY($2) OR \"AuthorUserId\" = ANY($3))"),
         Del("DELETE FROM employee_photos", "Çalışan fotoğrafı", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         // Çalışan kaydı en sonda: KeycloakUserId ($3) yukarıdaki adımlar için önceden okundu.
         Upd("UPDATE employee_employees SET", "Çalışan kaydı (ad, e-posta, telefon, hesap bağlantısı, fotoğraf)",

@@ -68,11 +68,11 @@ public class AnnouncementsController : AppController
     public AnnouncementsController(Notifier notifier) => _notifier = notifier;
 
     public sealed record Row(Guid Id, string Title, string Body, string Audience, Guid[] DepartmentIds, DateTime PublishAt,
-        DateTime? ExpireAt, bool RequiresAck, DateTime? NotifiedAt, string CreatedBy, DateTime CreatedAt);
+        DateTime? ExpireAt, bool RequiresAck, DateTime? NotifiedAt, string CreatedBy, DateTime CreatedAt, bool AllowComments);
 
-    private const string Cols = "\"Id\",\"Title\",\"Body\",\"Audience\",\"DepartmentIds\",\"PublishAt\",\"ExpireAt\",\"RequiresAck\",\"NotifiedAt\",\"CreatedBy\",\"CreatedAt\"";
+    private const string Cols = "\"Id\",\"Title\",\"Body\",\"Audience\",\"DepartmentIds\",\"PublishAt\",\"ExpireAt\",\"RequiresAck\",\"NotifiedAt\",\"CreatedBy\",\"CreatedAt\",\"AllowComments\"";
     private static Row Map(NpgsqlDataReader r) => new(r.GetGuid(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetFieldValue<Guid[]>(4),
-        r.GetFieldValue<DateTime>(5), r.Ts(6), r.GetBoolean(7), r.Ts(8), r.GetString(9), r.GetFieldValue<DateTime>(10));
+        r.GetFieldValue<DateTime>(5), r.Ts(6), r.GetBoolean(7), r.Ts(8), r.GetString(9), r.GetFieldValue<DateTime>(10), r.GetBoolean(11));
 
     /// <summary>
     /// Yayım zamanı gelmiş ama bildirimi gönderilmemiş duyuruların kitlesine uygulama içi bildirim
@@ -113,10 +113,15 @@ public class AnnouncementsController : AppController
             ORDER BY "PublishAt" DESC LIMIT 200
             """, Map, ct, Tenant);
         var acks = (await Acks.MineAsync(Db, Tenant, Acks.Announcement, Me.UserId, ct)).ToDictionary(a => a.SubjectId, a => a.At);
-        return Ok(rows.Where(a => Visible(a, me)).Select(a => new
+        var visible = rows.Where(a => Visible(a, me)).ToList();
+        var social = await SocialAsync(visible.Select(a => a.Id).ToArray(), ct);
+        return Ok(visible.Select(a => new
         {
-            a.Id, a.Title, a.Body, a.PublishAt, a.ExpireAt, a.RequiresAck,
+            a.Id, a.Title, a.Body, a.PublishAt, a.ExpireAt, a.RequiresAck, a.AllowComments,
             read = acks.ContainsKey(a.Id), readAt = acks.TryGetValue(a.Id, out var at) ? at : (DateTime?)null,
+            reactions = social.Reactions[a.Id].ToDictionary(x => x.Kind, x => x.Count),
+            myReaction = social.Mine.GetValueOrDefault(a.Id),
+            commentCount = social.Comments.GetValueOrDefault(a.Id),
         }));
     }
 
@@ -133,6 +138,102 @@ public class AnnouncementsController : AppController
         return Ok(new { read = true });
     }
 
+    /* -------------------------------------------------- tepki ve yorum (#31) */
+
+    public static readonly string[] ReactionKinds = ["like", "love", "celebrate", "clap", "insightful", "funny"];
+
+    private sealed record Social(ILookup<Guid, (string Kind, int Count)> Reactions, Dictionary<Guid, string> Mine, Dictionary<Guid, int> Comments);
+
+    private async Task<Social> SocialAsync(Guid[] ids, CancellationToken ct)
+    {
+        var reactions = await Db.QueryAsync("""
+            SELECT "AnnouncementId", "Kind", count(*)::int, bool_or("UserId" = $3) FROM governance_announcement_reactions
+            WHERE "TenantSlug" = $1 AND "AnnouncementId" = ANY($2) GROUP BY 1, 2
+            """, r => (Id: r.GetGuid(0), Kind: r.GetString(1), Count: r.GetInt32(2), Mine: r.GetBoolean(3)), ct, Tenant, ids, Me.UserId);
+        var comments = await Db.QueryAsync("""
+            SELECT "AnnouncementId", count(*)::int FROM governance_announcement_comments WHERE "TenantSlug" = $1 AND "AnnouncementId" = ANY($2) GROUP BY 1
+            """, r => (Id: r.GetGuid(0), Count: r.GetInt32(1)), ct, Tenant, ids);
+        return new Social(reactions.ToLookup(x => x.Id, x => (x.Kind, x.Count)),
+            reactions.Where(x => x.Mine).ToDictionary(x => x.Id, x => x.Kind), comments.ToDictionary(x => x.Id, x => x.Count));
+    }
+
+    /// <summary>Yayımda ve kullanıcıya yönelik duyuru (İK yönetim için her duyuruyu görür).</summary>
+    private async Task<Row?> VisibleAsync(Guid id, CancellationToken ct)
+    {
+        var a = (await Db.QueryAsync($"""
+            SELECT {Cols} FROM governance_announcements WHERE "TenantSlug" = $1 AND "Id" = $2
+              AND "PublishAt" <= now() AND ("ExpireAt" IS NULL OR "ExpireAt" > now())
+            """, Map, ct, Tenant, id)).FirstOrDefault();
+        return a is not null && (Visible(a, await MyPersonAsync(ct)) || Me.IsHr) ? a : null;
+    }
+
+    public sealed record ReactInput(string? Kind);
+
+    /// <summary>Kişi başına tek tepki: aynısı geri alır, farklısı değiştirir, boş kaldırır.</summary>
+    [HttpPost("{id:guid}/react")]
+    public async Task<IActionResult> React(Guid id, [FromBody] ReactInput body, CancellationToken ct)
+    {
+        if (body.Kind is not null && !ReactionKinds.Contains(body.Kind)) return BadRequest(new { message = L("Geçersiz tepki.", "Invalid reaction.") });
+        if (await VisibleAsync(id, ct) is null) return NotFound(new { message = L("Duyuru bulunamadı.", "Announcement not found.") });
+        var current = (await Db.QueryAsync("""
+            SELECT "Kind" FROM governance_announcement_reactions WHERE "TenantSlug" = $1 AND "AnnouncementId" = $2 AND "UserId" = $3
+            """, r => r.GetString(0), ct, Tenant, id, Me.UserId)).FirstOrDefault();
+        var next = body.Kind == current ? null : body.Kind;
+        await Db.ExecuteAsync("""DELETE FROM governance_announcement_reactions WHERE "TenantSlug" = $1 AND "AnnouncementId" = $2 AND "UserId" = $3""", ct, Tenant, id, Me.UserId);
+        if (next is not null)
+            await Db.ExecuteAsync("""
+                INSERT INTO governance_announcement_reactions ("Id","TenantSlug","AnnouncementId","UserId","EmployeeId","Kind","CreatedAt")
+                VALUES ($1,$2,$3,$4,$5,$6,now()) ON CONFLICT ("AnnouncementId","UserId") DO UPDATE SET "Kind" = EXCLUDED."Kind"
+                """, ct, Guid.NewGuid(), Tenant, id, Me.UserId, (await MyPersonAsync(ct))?.Id, next);
+        var s = await SocialAsync([id], ct);
+        return Ok(new { myReaction = next, reactions = s.Reactions[id].ToDictionary(x => x.Kind, x => x.Count) });
+    }
+
+    [HttpGet("{id:guid}/comments")]
+    public async Task<IActionResult> Comments(Guid id, CancellationToken ct)
+    {
+        if (await VisibleAsync(id, ct) is null) return NotFound(new { message = L("Duyuru bulunamadı.", "Announcement not found.") });
+        var rows = await Db.QueryAsync("""
+            SELECT "Id", "AuthorEmployeeId", "AuthorName", "Body", "CreatedAt", "AuthorUserId" FROM governance_announcement_comments
+            WHERE "TenantSlug" = $1 AND "AnnouncementId" = $2 ORDER BY "CreatedAt" LIMIT 500
+            """, r => new { id = r.GetGuid(0), authorEmployeeId = r.GuidOrNull(1), authorName = r.GetString(2), body = r.GetString(3), createdAt = r.GetFieldValue<DateTime>(4), uid = r.GetString(5) }, ct, Tenant, id);
+        return Ok(rows.Select(c => new { c.id, c.authorEmployeeId, c.authorName, c.body, c.createdAt, mine = c.uid == Me.UserId, canDelete = c.uid == Me.UserId || Me.IsHr }));
+    }
+
+    public sealed record CommentInput(string Body);
+
+    [HttpPost("{id:guid}/comments")]
+    public async Task<IActionResult> AddComment(Guid id, [FromBody] CommentInput body, CancellationToken ct)
+    {
+        var a = await VisibleAsync(id, ct);
+        if (a is null) return NotFound(new { message = L("Duyuru bulunamadı.", "Announcement not found.") });
+        if (!a.AllowComments) return BadRequest(new { message = L("Bu duyuruda yorumlar kapalı.", "Comments are turned off for this announcement.") });
+        var text = (body.Body ?? "").Trim();
+        if (text.Length is < 1 or > 1000) return BadRequest(new { message = L("Yorum 1-1000 karakter olmalı.", "Comment must be 1-1000 characters.") });
+        var me = await MyPersonAsync(ct);
+        var cid = Guid.NewGuid();
+        await Db.ExecuteAsync("""
+            INSERT INTO governance_announcement_comments ("Id","TenantSlug","AnnouncementId","AuthorUserId","AuthorEmployeeId","AuthorName","Body","CreatedAt")
+            VALUES ($1,$2,$3,$4,$5,$6,$7,now())
+            """, ct, cid, Tenant, id, Me.UserId, me?.Id, me?.Name ?? Me.Name, text);
+        return Ok(new { id = cid });
+    }
+
+    /// <summary>Yorumu yazarı ya da İK siler; İK silmesi denetim kaydına yazılır.</summary>
+    [HttpDelete("{id:guid}/comments/{commentId:guid}")]
+    public async Task<IActionResult> DeleteComment(Guid id, Guid commentId, CancellationToken ct)
+    {
+        var author = (await Db.QueryAsync("""
+            SELECT "AuthorUserId" FROM governance_announcement_comments WHERE "TenantSlug" = $1 AND "AnnouncementId" = $2 AND "Id" = $3
+            """, r => r.GetString(0), ct, Tenant, id, commentId)).FirstOrDefault();
+        if (author is null) return NotFound();
+        if (author != Me.UserId && !Me.IsHr) return Forbid();
+        await Db.ExecuteAsync("""DELETE FROM governance_announcement_comments WHERE "TenantSlug" = $1 AND "Id" = $2""", ct, Tenant, commentId);
+        if (author != Me.UserId)
+            await ComplianceAudit.WriteAsync(Db, Tenant, "AnnouncementComment", commentId.ToString(), "Deleted", new { announcementId = id }, Me.UserId, Me.Name, ct);
+        return NoContent();
+    }
+
     /* -------------------------------------------------------------- İK yönetimi */
 
     [HttpGet("manage")]
@@ -143,9 +244,11 @@ public class AnnouncementsController : AppController
         var people = await People.ListAsync(Tenant, ct);
         var acks = (await Acks.ListAsync(Db, Tenant, Acks.Announcement, null, ct)).ToLookup(a => a.SubjectId);
         var now = DateTime.UtcNow;
+        var social = await SocialAsync(rows.Select(a => a.Id).ToArray(), ct);
         return Ok(rows.Select(a => new
         {
-            a.Id, a.Title, a.Body, a.Audience, a.DepartmentIds, a.PublishAt, a.ExpireAt, a.RequiresAck, a.NotifiedAt, a.CreatedBy, a.CreatedAt,
+            a.Id, a.Title, a.Body, a.Audience, a.DepartmentIds, a.PublishAt, a.ExpireAt, a.RequiresAck, a.NotifiedAt, a.CreatedBy, a.CreatedAt, a.AllowComments,
+            reactionCount = social.Reactions[a.Id].Sum(x => x.Count), commentCount = social.Comments.GetValueOrDefault(a.Id),
             state = a.PublishAt > now ? "Scheduled" : a.ExpireAt is { } e && e <= now ? "Expired" : "Published",
             stats = Acks.Stats(Audience.Members(a.Audience, a.DepartmentIds, people, new HashSet<Guid>()), acks[a.Id], listMissing: false),
         }));
@@ -163,7 +266,7 @@ public class AnnouncementsController : AppController
         return Ok(Acks.Stats(Audience.Members(a.Audience, a.DepartmentIds, people, new HashSet<Guid>()), acks, listMissing: a.RequiresAck));
     }
 
-    public record AnnouncementInput(string Title, string Body, string? Audience, Guid[]? DepartmentIds, DateTime? PublishAt, DateTime? ExpireAt, bool RequiresAck);
+    public record AnnouncementInput(string Title, string Body, string? Audience, Guid[]? DepartmentIds, DateTime? PublishAt, DateTime? ExpireAt, bool RequiresAck, bool AllowComments = true);
 
     [HttpPost]
     [Authorize(Policy = "RequireHrAdmin")]
@@ -183,9 +286,9 @@ public class AnnouncementsController : AppController
             return BadRequest(new { message = L("Bitiş tarihi yayım tarihinden sonra olmalı.", "Expiry must be after publish date.") });
         var id = Guid.NewGuid();
         await Db.ExecuteAsync("""
-            INSERT INTO governance_announcements ("Id","TenantSlug","Title","Body","Audience","DepartmentIds","PublishAt","ExpireAt","RequiresAck","CreatedBy","CreatedAt","UpdatedAt")
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now(),now())
-            """, ct, id, Tenant, title, text, audience, depts, publishAt, body.ExpireAt?.ToUniversalTime(), body.RequiresAck, Me.Name);
+            INSERT INTO governance_announcements ("Id","TenantSlug","Title","Body","Audience","DepartmentIds","PublishAt","ExpireAt","RequiresAck","CreatedBy","CreatedAt","UpdatedAt","AllowComments")
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now(),now(),$11)
+            """, ct, id, Tenant, title, text, audience, depts, publishAt, body.ExpireAt?.ToUniversalTime(), body.RequiresAck, Me.Name, body.AllowComments);
         var notified = await PublishDueAsync(Db, People, Tenant, ct);
         return Ok(new { id, notified });
     }
@@ -217,9 +320,9 @@ public class AnnouncementsController : AppController
         var resetNotified = publishAt > DateTime.UtcNow;
         await Db.ExecuteAsync("""
             UPDATE governance_announcements SET "Title" = $3, "Body" = $4, "Audience" = $5, "DepartmentIds" = $6, "PublishAt" = $7,
-                "ExpireAt" = $8, "RequiresAck" = $9, "NotifiedAt" = CASE WHEN $10 THEN NULL ELSE "NotifiedAt" END, "UpdatedAt" = now()
+                "ExpireAt" = $8, "RequiresAck" = $9, "NotifiedAt" = CASE WHEN $10 THEN NULL ELSE "NotifiedAt" END, "AllowComments" = $11, "UpdatedAt" = now()
             WHERE "TenantSlug" = $1 AND "Id" = $2
-            """, ct, Tenant, id, title, text, audience, depts, publishAt, body.ExpireAt?.ToUniversalTime(), body.RequiresAck, resetNotified);
+            """, ct, Tenant, id, title, text, audience, depts, publishAt, body.ExpireAt?.ToUniversalTime(), body.RequiresAck, resetNotified, body.AllowComments);
         await ComplianceAudit.WriteAsync(Db, Tenant, "Announcement", id.ToString(), "Updated",
             new { title, audience, publishAt, expireAt = body.ExpireAt?.ToUniversalTime(), body.RequiresAck }, Me.UserId, Me.Name, ct);
         var notified = await PublishDueAsync(Db, People, Tenant, ct);

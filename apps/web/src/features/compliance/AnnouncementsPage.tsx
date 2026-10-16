@@ -18,6 +18,7 @@ import { formatDateTime } from '@/lib/format'
 import { useAction } from '@/features/shared/kit'
 import { tx } from '@/lib/i18n'
 import { AckStatsView, DepartmentChecklist, RichText } from './shared'
+import { AnnouncementSocial } from './AnnouncementSocial'
 
 /** ISO zamanını datetime-local alanının beklediği yerel "YYYY-MM-DDTHH:mm" biçimine çevirir. */
 function toLocalInput(iso: string | null | undefined): string {
@@ -30,12 +31,12 @@ function toLocalInput(iso: string | null | undefined): string {
 
 function NewAnnouncementModal({ onClose, editing }: { onClose: () => void; editing?: ManagedAnnouncement }) {
   const [f, setF] = useState(() => editing
-    ? { title: editing.title, body: editing.body, audience: editing.audience, departmentIds: editing.departmentIds, publishAt: toLocalInput(editing.publishAt), expireAt: toLocalInput(editing.expireAt), requiresAck: editing.requiresAck }
-    : { title: '', body: '', audience: 'All' as 'All' | 'Departments', departmentIds: [] as string[], publishAt: '', expireAt: '', requiresAck: false })
+    ? { title: editing.title, body: editing.body, audience: editing.audience, departmentIds: editing.departmentIds, publishAt: toLocalInput(editing.publishAt), expireAt: toLocalInput(editing.expireAt), requiresAck: editing.requiresAck, allowComments: editing.allowComments }
+    : { title: '', body: '', audience: 'All' as 'All' | 'Departments', departmentIds: [] as string[], publishAt: '', expireAt: '', requiresAck: false, allowComments: true })
   const save = useAction(
     () => {
       const input = {
-        title: f.title, body: f.body, audience: f.audience, departmentIds: f.departmentIds, requiresAck: f.requiresAck,
+        title: f.title, body: f.body, audience: f.audience, departmentIds: f.departmentIds, requiresAck: f.requiresAck, allowComments: f.allowComments,
         publishAt: f.publishAt ? new Date(f.publishAt).toISOString() : null, expireAt: f.expireAt ? new Date(f.expireAt).toISOString() : null,
       }
       return editing ? complianceApi.updateAnnouncement(editing.id, input) : complianceApi.createAnnouncement(input)
@@ -62,6 +63,10 @@ function NewAnnouncementModal({ onClose, editing }: { onClose: () => void; editi
         <label className="flex items-center gap-2 text-[13px]">
           <Checkbox checked={f.requiresAck} onCheckedChange={(v) => setF({ ...f, requiresAck: v === true })} />
           {tx('Okundu onayı gereksin (okumayanlar listelenir)')}
+        </label>
+        <label className="flex items-center gap-2 text-[13px]">
+          <Checkbox checked={f.allowComments} onCheckedChange={(v) => setF({ ...f, allowComments: v === true })} />
+          {tx('Çalışanlar yorum yapabilsin')}
         </label>
       </div>
     </Modal>
@@ -99,6 +104,7 @@ function ManageTab() {
                   <span className="block text-[12px] text-muted-foreground">
                     {formatDateTime(a.publishAt)} · {a.audience === 'All' ? tx('Tüm çalışanlar') : tx('{0} departman', [a.departmentIds.length])}
                     {' · '}{a.stats.total === null ? tx('{0} okudu', [a.stats.read]) : tx('{0}/{1} okudu', [a.stats.read, a.stats.total])}
+                    {' · '}{tx('{0} tepki · {1} yorum', [a.reactionCount, a.commentCount])}
                   </span>
                 </span>
                 {a.requiresAck && <StatusBadge tone="warning">{tx('Onay gerekli')}</StatusBadge>}
@@ -137,6 +143,7 @@ function FeedTab() {
           <PanelBody>
             <RichText text={a.body} />
             {a.requiresAck && !a.read && <p className="mt-3 text-[12px] text-muted-foreground">{tx('Bu duyuru için okuduğunuzu onaylamanız isteniyor. Bu bir rıza beyanı değildir.')}</p>}
+            <AnnouncementSocial a={a} />
           </PanelBody>
         </Panel>
       ))}

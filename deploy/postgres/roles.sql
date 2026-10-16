@@ -529,6 +529,8 @@ DO $$ DECLARE g text[]; BEGIN
     ['governance_ai_settings', 'SELECT, INSERT, UPDATE, DELETE'],
     ['governance_ai_usage', 'SELECT, INSERT, UPDATE, DELETE'],
     ['governance_analysis_objections', 'SELECT, INSERT, UPDATE, DELETE'],
+    ['governance_announcement_comments', 'SELECT, INSERT, UPDATE, DELETE'],
+    ['governance_announcement_reactions', 'SELECT, INSERT, UPDATE, DELETE'],
     ['governance_announcements', 'SELECT, INSERT, UPDATE, DELETE'],
     ['governance_api_key_usage', 'SELECT, INSERT, UPDATE, DELETE'],
     ['governance_api_keys', 'SELECT, INSERT, UPDATE, DELETE'],

@@ -11595,5 +11595,20 @@
  "{0}, {1} günü eşleştirilir": "{0}, on {1}",
  "Ayrıl": "Leave",
  "Önceki eşleşmeler": "Previous matches",
- "Henüz eşleşmeniz yok. Bir sonraki turda size haber verilecek.": "No match yet. You'll be notified in the next round."
+ "Henüz eşleşmeniz yok. Bir sonraki turda size haber verilecek.": "No match yet. You'll be notified in the next round.",
+ "Beğen": "Like",
+ "Sevdim": "Love",
+ "Kutla": "Celebrate",
+ "Alkış": "Applause",
+ "Faydalı": "Insightful",
+ "Eğlenceli": "Funny",
+ "Yorum silindi": "Comment deleted",
+ "Yorum silinsin mi?": "Delete this comment?",
+ "Yorum yazın…": "Write a comment…",
+ "Bu duyuruda yorumlar kapalı.": "Comments are turned off for this announcement.",
+ "Tepki ver": "React",
+ "{0} yorum": "{0} comments",
+ "Yorum yap": "Comment",
+ "Çalışanlar yorum yapabilsin": "Allow employees to comment",
+ "{0} tepki · {1} yorum": "{0} reactions · {1} comments"
 }
