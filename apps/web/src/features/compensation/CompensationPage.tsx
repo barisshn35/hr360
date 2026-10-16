@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { LoaderCircle, Plus } from 'lucide-react'
+import { FileSpreadsheet, LoaderCircle, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,7 @@ import { useAuth } from '@/auth/useAuth'
 import { isHr } from '@/auth/roles'
 import { PayEquityPanel } from './PayEquityPanel'
 import { UnusedLeavePanel } from './UnusedLeavePanel'
+import { ImportSalariesModal } from './ImportSalariesModal'
 
 /** Bant ve ücret kaydı yazmak yalnızca İK'ya açık; "ücret görüntüleme" ek izni salt okumadır. */
 function useCanWriteCompensation() {
@@ -543,6 +544,7 @@ function HistoryTab() {
   const canWrite = useCanWriteCompensation()
   const [employeeId, setEmployeeId] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
   const records = useCompensationRecords(employeeId || undefined, Boolean(employeeId))
   const reduced = useReducedMotion()
 
@@ -568,7 +570,14 @@ function HistoryTab() {
             {tx('Ücret kaydı ekle')}
           </Button>
         )}
+        {canWrite && (
+          <Button variant="outline" className="cursor-pointer" onClick={() => setBulkOpen(true)}>
+            <FileSpreadsheet className="size-4" />
+            {tx('Toplu güncelle')}
+          </Button>
+        )}
       </div>
+      <ImportSalariesModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
 
       <Panel>
         <PanelHead title={tx('Ücret geçmişi')} note={tx('En yeni kayıt en üstte')} />
