@@ -104,7 +104,8 @@ deploy() {
   docker compose up -d postgres >/dev/null
   for _ in $(seq 1 60); do docker compose exec -T postgres pg_isready -U hr360admin >/dev/null 2>&1 && break; sleep 2; done
   apply_migrations || return 1
-  docker compose build >/dev/null || return 1
+  # Gecici ag/kaynak hatasi (npm ci, nuget) tum guncellemeyi geri aldirmasin: bir kez daha dene.
+  docker compose build >/dev/null || { echo "UYARI: imaj derlemesi basarisiz; bir kez daha deneniyor." >&2; docker compose build >/dev/null; } || return 1
   docker compose up -d --remove-orphans >/dev/null || return 1
 }
 
