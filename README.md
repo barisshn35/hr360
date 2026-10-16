@@ -68,14 +68,14 @@ Hesap açma ve parola sıfırlama süreli, tek kullanımlık davet linkiyle (kop
 
 | | Alan | Modüller |
 |:-:|---|---|
-| 👥 | **Çalışan ve organizasyon** | Çalışan kaydı ve self-servis profil, organizasyon şeması (2B ve 3B), departman ve ekipler, zimmet, işe giriş (onboarding) ve işten ayrılış (offboarding) |
+| 👥 | **Çalışan ve organizasyon** | Çalışan kaydı, fotoğrafı ve self-servis profil, organizasyon şeması (2B ve 3B), departman ve ekipler, Excel'den ya da uygulama içi tablodan toplu içe aktarma (çalışan, departman, ekip), zimmet, işe giriş (onboarding) ve işten ayrılış (offboarding) |
 | 🗓️ | **İzin, vardiya ve zaman** | İzin talebi ve bakiyeleri (saatlik izin, yasal hak, devir), vardiya planı ve takas, puantaj, fazla mesai, giriş-çıkış terminali (QR, kart, PIN; biyometri yok) |
 | 💰 | **Ücret ve bordro** | Türkiye bordrosu (brütten nete, SGK/GV/damga, kümülatif matrah), APHB, banka ve muhasebe dosyaları, e-bordro, kıdem/ihbar, avans, yan haklar, zam dönemi, ücret bantları |
 | 🧾 | **Masraf ve seyahat** | Masraf beyanı (TCMB kuru, km masrafı, limitler, yerel fiş okuma), seyahat talebi ve harcırah |
 | 🚀 | **Yetenek** | İşe alım (kariyer sayfası, aday hattı, mülakat, teklif), performans (hedef, değerlendirme, 9-kutu, kalibrasyon), eğitim ve sertifika, yetkinlik matrisi, mentorluk, iç ilanlar |
 | ✅ | **Onay ve belgeler** | Çok adımlı onay akışları, vekâlet, e-postadan tek tıkla karar, belge talebi ve doğrulama kodu, basit elektronik imza, duyurular ve doküman kütüphanesi |
 | ⚖️ | **Uyum** | KVKK ekranları (envanter, açık rıza, başvurular, saklama ve imha), değiştirilemez denetim kaydı, etik hattı, İSG, disiplin |
-| 💬 | **Çalışan deneyimi ve içgörü** | Takdir duvarı, anket ve eNPS, ekip sağlığı paneli, 1:1 defteri, analitik ve doğal dilde rapor, devir riski modeli (yalnızca öneri) |
+| 💬 | **Çalışan deneyimi ve içgörü** | Takdir duvarı, ayın çalışanı oylaması (departman bazında, katsayılı ve gizli oy, kazananlar sıralaması), anket ve eNPS, ekip sağlığı paneli, 1:1 defteri, analitik ve doğal dilde rapor, devir riski modeli (yalnızca öneri) |
 | 🔌 | **Entegrasyonlar** | Slack ve Microsoft Teams'ten onay, Google/Microsoft 365 takvim ve Zoom, SSO, SCIM 2.0 ve LDAP/AD, webhook ve açık REST API (Zapier, n8n), PWA ve anlık bildirim |
 
 Panel **Türkçe ve İngilizcedir**. "AI" etiketli özellikler yerel, kural tabanlı ve istatistiksel
@@ -195,7 +195,9 @@ yönetir, hiçbir şirkete üye değildir) ve her şirketin kendi **şirket yön
 `.env` dosyasındadır; kurulum özeti hangi değişkene bakacağınızı söyler.
 
 1. `https://ALAN_ADI` adresinde `platform.admin` ile giriş yapın (parola: `.env` içindeki
-   `PLATFORM_ADMIN_PASSWORD`). Yönetici hesaplarında iki adımlı doğrulamayı açmanız önerilir.
+   `PLATFORM_ADMIN_PASSWORD`). Platform yöneticisi hesabında iki adımlı doğrulamayı açmanız önerilir;
+   yeni şirketlerde iki adımlı doğrulama herkes için varsayılan olarak zorunludur (şirket yöneticisi
+   **Güvenlik** ekranından gevşetebilir).
 2. İlk şirketi açın: **Platform › Kiracılar** (`/panel/platform/kiracilar`) › **Yeni kiracı**.
    Şirket adı, kısa ad ve şirket yöneticisinin e-postası girilir; Keycloak'ta şirketin
    organizasyonu ve yönetici hesabı oluşturulur; şirket yöneticisinin **süreli parola linki** size bir

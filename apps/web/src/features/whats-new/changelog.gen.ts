@@ -6,6 +6,16 @@ export interface ChangelogEntry { id: string; date: string; title: string; items
 
 /** En yeni dalga başta. Metinler arayüz dilinde döner. */
 export const changelog = (): ChangelogEntry[] => [
+  { id: '14', date: '2026-10-16', title: tx('Ayın çalışanı, fotoğraflar ve toplu içe aktarma'), items: [
+    tx('Ayın çalışanı geldi: çalışanlar departmanlarında aday gösterip oy verir, kazanan bir sonraki oylamaya kadar herkesin ana sayfasında fotoğrafıyla yer alır.'),
+    tx('Oylama ana departman, her departman ya da iki aşamalı (önce alt departmanlar, ertesi gün ana departman) yapılabilir; İK takvimi, oy katsayılarını ve gizlilik kuralını ayarlar.'),
+    tx('Oylar varsayılan olarak gizlidir; kural oy verirken gösterilir ve açılmış bir oylamada değiştirilemez. Oylama yaklaşınca, açılınca ve kapanmadan önce e-posta gelir.'),
+    tx('Kimin kaç kez kazandığını gösteren şirket geneli ve departman içi sıralama eklendi.'),
+    tx('Çalışanlar profil fotoğrafı yükleyebilir (İK da yükleyebilir); fotoğraf yalnızca şirket içinde avatarlarda görünür.'),
+    tx('Çalışan, departman ve ekipler Excel\'den ya da uygulama içindeki tabloya yazarak/yapıştırarak toplu eklenebilir; çalışan dosyasında unvan da okunur.'),
+    tx('Yeni şirketlerde iki adımlı doğrulama herkes için varsayılan olarak zorunlu; şirket yöneticisi Güvenlik ekranından gevşetebilir.'),
+    tx('Aday önerirken özgeçmiş eklenebilir; çalışan kaydı olmayan hesapların profil sayfası düzeltildi; sunucudan kaldırma betiği (uninstall.sh) eklendi.'),
+  ] },
   { id: '13', date: '2026-10-14', title: tx('Son düzenleme: hata düzeltmeleri ve temizlik'), items: [
     tx('Yöneticiler yalnızca kendi bölümlerine ve bugünden sonraki günlere vardiya atayabilir; yanlış atama geri alınabilir.'),
     tx('Vardiya çizelgesi, ekipler ve takas listesi yalnızca kişinin kendi ekibini ve sorumlu olduğu bölümleri gösterir.'),

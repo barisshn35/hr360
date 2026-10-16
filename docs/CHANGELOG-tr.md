@@ -8,6 +8,16 @@ Değiştirdikten sonra arayüz verisini üretin ve çevirileri tamamlayın:
 cd apps/web && node scripts/changelog.mjs && node scripts/i18n-check.mjs --write && node scripts/i18n-check.mjs --missing
 ```
 
+## 14 · 2026-10-16 · Ayın çalışanı, fotoğraflar ve toplu içe aktarma
+- Ayın çalışanı geldi: çalışanlar departmanlarında aday gösterip oy verir, kazanan bir sonraki oylamaya kadar herkesin ana sayfasında fotoğrafıyla yer alır.
+- Oylama ana departman, her departman ya da iki aşamalı (önce alt departmanlar, ertesi gün ana departman) yapılabilir; İK takvimi, oy katsayılarını ve gizlilik kuralını ayarlar.
+- Oylar varsayılan olarak gizlidir; kural oy verirken gösterilir ve açılmış bir oylamada değiştirilemez. Oylama yaklaşınca, açılınca ve kapanmadan önce e-posta gelir.
+- Kimin kaç kez kazandığını gösteren şirket geneli ve departman içi sıralama eklendi.
+- Çalışanlar profil fotoğrafı yükleyebilir (İK da yükleyebilir); fotoğraf yalnızca şirket içinde avatarlarda görünür.
+- Çalışan, departman ve ekipler Excel'den ya da uygulama içindeki tabloya yazarak/yapıştırarak toplu eklenebilir; çalışan dosyasında unvan da okunur.
+- Yeni şirketlerde iki adımlı doğrulama herkes için varsayılan olarak zorunlu; şirket yöneticisi Güvenlik ekranından gevşetebilir.
+- Aday önerirken özgeçmiş eklenebilir; çalışan kaydı olmayan hesapların profil sayfası düzeltildi; sunucudan kaldırma betiği (uninstall.sh) eklendi.
+
 ## 13 · 2026-10-14 · Son düzenleme: hata düzeltmeleri ve temizlik
 - Yöneticiler yalnızca kendi bölümlerine ve bugünden sonraki günlere vardiya atayabilir; yanlış atama geri alınabilir.
 - Vardiya çizelgesi, ekipler ve takas listesi yalnızca kişinin kendi ekibini ve sorumlu olduğu bölümleri gösterir.
