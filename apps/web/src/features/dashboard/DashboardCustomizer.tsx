@@ -8,6 +8,7 @@ import { moveWidget, resolveLayout, type DashboardPref, type WidgetId } from './
 
 const LABELS = (): Record<WidgetId, string> => ({
   welcome: tx('Karşılama ve hızlı eylemler'),
+  team: tx('Ekibim bugün'),
   todos: tx('Yapılacaklarım'),
   eom: tx('Ayın çalışanı'),
   queue: tx('Sıradaki talepler'),
