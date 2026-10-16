@@ -29,6 +29,7 @@ import { formatDate, formatDateTime, formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { tx, appLocale } from '@/lib/i18n'
 import { GrantAccessModal, MyGrantsPanel } from './PlatformAccessPanels'
+import { SampleDataPanel } from '@/features/settings/SampleDataPanel'
 import { useMutation } from '@tanstack/react-query'
 import { passwordLinkApi } from '@/api/password-links'
 import { usePasswordLinkDialog } from '@/features/access/PasswordLinkCard'
@@ -417,6 +418,7 @@ export function TenantsPage() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [suspendFor, setSuspendFor] = useState<Tenant | null>(null)
   const [grantFor, setGrantFor] = useState<Tenant | null>(null)
+  const [sampleFor, setSampleFor] = useState<Tenant | null>(null)
   const [creating, setCreating] = useState(false)
 
   // Tüm kiracılar bir kez çekilir; durum filtresi istemcide uygulanır. Böylece üstteki
@@ -601,6 +603,11 @@ export function TenantsPage() {
             onSelect: (t) => setGrantFor(t),
           },
           {
+            label: tx('Örnek veriler'),
+            hidden: (t) => t.status !== 'Active',
+            onSelect: (t) => setSampleFor(t),
+          },
+          {
             label: tx('Askıya al'),
             destructive: true,
             hidden: (t) => t.status !== 'Active' && t.status !== 'Pending',
@@ -617,6 +624,11 @@ export function TenantsPage() {
       <TenantDetail tenantId={openId} onClose={() => setOpenId(null)} />
       <SuspendModal tenant={suspendFor} onClose={() => setSuspendFor(null)} />
       <GrantAccessModal key={grantFor?.id ?? 'none-grant'} tenant={grantFor} onClose={() => setGrantFor(null)} />
+      {sampleFor && (
+        <Modal open onClose={() => setSampleFor(null)} title={sampleFor.name} size="lg">
+          <SampleDataPanel slug={sampleFor.slug} />
+        </Modal>
+      )}
     </div>
   )
 }

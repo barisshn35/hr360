@@ -11702,5 +11702,17 @@
  "{0} yedeği geri yüklenir. Yedekten sonra girilen tüm veriler kalıcı olarak silinir; işlem sırasında uygulama erişilemez.": "Backup {0} will be restored. All data entered after the backup is permanently deleted; the app is unavailable during the restore.",
  "Yalnızca veritabanları": "Databases only",
  "Belgeler ve logolar (nesne deposu) olduğu gibi kalır.": "Documents and logos (object storage) stay as they are.",
- "Son güncellemeden önceki sürüm yeniden kurulur. Veriler korunur (veritabanı geri yüklenmez).": "The version before the last update is reinstalled. Data is kept (the database is not restored)."
+ "Son güncellemeden önceki sürüm yeniden kurulur. Veriler korunur (veritabanı geri yüklenmez).": "The version before the last update is reinstalled. Data is kept (the database is not restored).",
+ "Örnek veriler": "Sample data",
+ "Örnek veriler eklendi. Çalışanlar, departmanlar ve topluluk sayfalarına göz atabilirsiniz.": "Sample data added. Take a look at the employees, departments and community pages.",
+ "Örnek veriler kaldırıldı.": "Sample data removed.",
+ "Uygulamayı boş bir şirkette denemek için örnek çalışanlar, departmanlar, takdirler, fikirler ve bir etkinlik ekleyin; işiniz bitince tek tıkla kaldırın.": "To try the app in an empty company, add sample employees, departments, recognitions, ideas and an event; remove them with one click when you're done.",
+ "Şirkette {0} örnek çalışan var. Örnek kişilerin e-posta adresleri gerçek değildir; onlara e-posta gitmez ve giriş hesapları yoktur.": "The company has {0} sample employees. Their email addresses aren't real: no email is sent to them and they have no login accounts.",
+ "Örnek veriler kaldırılsın mı?": "Remove sample data?",
+ "Örnek çalışanlar, onların takdirleri, fikirleri, etkinlik katılımları ve örnek veriyle açılan departmanlar silinir. Sizin eklediğiniz kayıtlara dokunulmaz.": "Sample employees, their recognitions, ideas, event sign-ups and the departments created by the sample data are deleted. Records you added are not touched.",
+ "Örnek verileri kaldır": "Remove sample data",
+ "Örnek veriler eklensin mi?": "Add sample data?",
+ "4 departman ve 16 örnek çalışan eklenir. İstediğiniz zaman tek tıkla kaldırabilirsiniz.": "4 departments and 16 sample employees will be added. You can remove them with one click at any time.",
+ "Örnek verilerle doldur": "Fill with sample data",
+ "Örnek veri yalnızca henüz az çalışanı olan (en fazla 5) şirketlere eklenebilir; bu şirkette {0} çalışan var.": "Sample data can only be added to companies with few employees (at most 5); this company has {0}."
 }

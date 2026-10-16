@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { CompanyNamePanel, BrandingPanel } from './BrandingPanel'
 import { tx } from '@/lib/i18n'
 import { PasswordMethodPanel } from '@/features/access/PasswordLinksPanel'
+import { SampleDataPanel } from './SampleDataPanel'
 
 const THEMES: Array<{ value: Theme; label: string; icon: React.ElementType }> = [
   { value: 'light', label: tx('Açık'), icon: Sun },
@@ -174,6 +175,7 @@ export function SettingsPage() {
           <CompanyNamePanel tenant={tenant} />
           <BrandingPanel tenant={tenant} />
           <PasswordMethodPanel canEdit />
+          <SampleDataPanel />
         </>
       )}
 

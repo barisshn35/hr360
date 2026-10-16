@@ -51,7 +51,7 @@ fi
 read -r -a COMPOSE <<< "${COMPOSE_ARGS:-}"
 dc() { docker compose ${COMPOSE[@]+"${COMPOSE[@]}"} "$@"; }
 
-DEFAULT_SERVICES="employee-service workflow-service leave-service onboarding-service timeshift-service
+DEFAULT_SERVICES="employee-service organization-service workflow-service leave-service onboarding-service timeshift-service
 engagement-service governance-service expense-service notification-service tenant-service ml-inference"
 read -r -d '' -a SVCS <<< "${SERVICES:-$DEFAULT_SERVICES}" || true
 [ "${#SVCS[@]}" -gt 0 ] || die "servis listesi bos"

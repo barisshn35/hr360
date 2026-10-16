@@ -29,6 +29,10 @@ namespace NotificationService.Email;
 /// </summary>
 public class EmailSenderWorker : BackgroundService
 {
+    /// <summary>Ayrılmış ".invalid" üst alanındaki adresler (RFC 2606) asla gönderilmez.</summary>
+    public static bool IsUndeliverable(string? email) =>
+        email is not null && email.Trim().TrimEnd('.').EndsWith(".invalid", StringComparison.OrdinalIgnoreCase);
+
     private const int BatchSize = 20;
     private const int MaxAttempts = 3;
     // EMAIL_POLL_SECONDS: testte kısaltılır (varsayılan 30 sn).
@@ -192,6 +196,13 @@ public class EmailSenderWorker : BackgroundService
         var send = new List<Notification>();
         foreach (var n in pending)
         {
+            // ".invalid" alanı hiçbir zaman teslim edilemez (RFC 2606); örnek veri kişileri bu alandadır.
+            if (IsUndeliverable(n.RecipientEmail))
+            {
+                n.Status = NotificationStatus.Suppressed;
+                n.FailureReason = "Teslim edilemez adres (.invalid; örnek veri)";
+                continue;
+            }
             prefs.TryGetValue((n.TenantSlug, n.RecipientEmployeeId), out var p);
             var (decision, until) = Preferences.DeliveryRules.DecideEmail(n.TemplateCode, !string.IsNullOrEmpty(n.ActionUrl), p, now);
             switch (decision)

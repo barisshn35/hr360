@@ -24,6 +24,7 @@ builder.Services.AddDbContext<TenantDbContext>(options =>
 builder.Services.AddHttpClient<KeycloakAdminClient>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient<EmployeeDirectoryClient>();
+builder.Services.AddHttpClient<SampleDataService>();
 builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<PlatformSettingsService>();
 builder.Services.AddScoped<PasswordLinkService>();

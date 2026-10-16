@@ -277,6 +277,9 @@ services:
       KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
       KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
       TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ORGANIZATION:-hr360admin};Password=${HR360_DB_PASSWORD_ORGANIZATION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
+      # Örnek veri iç ucu (yalnızca tenant-service): /api/internal/organization/sample.
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
+      INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
       ASPNETCORE_ENVIRONMENT: "Production"
     mem_limit: "512m"
 
@@ -612,6 +615,9 @@ services:
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
       INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
       EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
+      # Örnek veri (yenilik haritası #35) iç uçları
+      ORGANIZATION_SERVICE_URL: "http://organization-service:8080"
+      ENGAGEMENT_SERVICE_URL: "http://engagement-service:8080"
       MINIO_ENDPOINT_URL: "http://minio:9000"
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
