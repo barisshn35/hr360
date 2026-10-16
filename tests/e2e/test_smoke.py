@@ -22,6 +22,12 @@ ROUTES = [
     "/panel/veri-koruma", "/panel/veri-koruma?sekme=uyarilar", "/panel/veri-koruma?sekme=iz-kodu", "/panel/veri-koruma?sekme=ayarlar", "/panel/erisim-gozden-gecirme",
     "/panel/aday-oner", "/panel/ise-alim/oneriler", "/panel/ise-alim/analiz", "/panel/performans/kalibrasyon", "/panel/performans/okr",
     "/panel/performans/360", "/panel/performans/360?sekme=yonetim", "/panel/kariyer-yollari", "/panel/egitim-takibi",
+    # Sürüm 1.1 (yenilik haritası)
+    "/panel/yapilacaklarim", "/panel/fikir-kutusu", "/panel/ayin-calisani", "/panel/ayin-calisani/yonetim",
+    "/panel/etkinlikler", "/panel/etkinlikler?sekme=gecmis", "/panel/etkinlikler?sekme=gonulluluk",
+    "/panel/oduller", "/panel/oduller?sekme=hareketler", "/panel/oduller?sekme=yonetim", "/panel/kartlar", "/panel/kahve",
+    "/panel/ilk-90-gun", "/panel/check-in", "/panel/norm-kadro", "/panel/ekran-icgoruleri", "/panel/platform/bakim",
+    "/panel/profil?sekme=rozetler",
 ]
 
 

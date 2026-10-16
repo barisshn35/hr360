@@ -218,6 +218,16 @@ function guarded(permission: Permission, element: ReactNode, requireRoles?: Role
   )
 }
 
+/**
+ * İK ekranı; ayrıca ilgili "ext-*" ek iznini taşıyanlara açık (servisteki IsHr ile aynı küme), böylece
+ * bağlantıyı gören herkes sayfayı açabilir, diğerleri yetkisiz sayfasını görür.
+ */
+function ExtGate({ ext, element }: { ext: string; element: ReactNode }) {
+  const { roles } = useAuth()
+  if ((roles as string[]).includes(ext)) return <>{element}</>
+  return guarded('employee:manage', element, ['hr-admin', 'tenant-admin', 'platform-admin'])
+}
+
 export function App() {
   return (
     <ErrorBoundary>
@@ -473,7 +483,8 @@ export function App() {
                     <Route path="kartlar" element={<TenantGate><CardsPage /></TenantGate>} />
                     <Route path="kahve" element={<TenantGate><CoffeePage /></TenantGate>} />
                     <Route path="ayin-calisani" element={<TenantGate><EomPage /></TenantGate>} />
-                    <Route path="ayin-calisani/yonetim" element={<TenantGate><EomAdminPage /></TenantGate>} />
+                    {/* Ayarları yalnızca İK görür (EomController settings uçları İK'ya açık). */}
+                    <Route path="ayin-calisani/yonetim" element={<ExtGate ext="ext-engagement-manage" element={<TenantGate><EomAdminPage /></TenantGate>} />} />
                     <Route path="ayin-calisani/sonuc/:periodId" element={<TenantGate><EomResultsPage /></TenantGate>} />
                     <Route path="kutlamalar" element={<TenantGate><CelebrationsPage /></TenantGate>} />
                     <Route path="anketler" element={<TenantGate><SurveysPage /></TenantGate>} />
