@@ -126,6 +126,53 @@ Panel Türkçe ve İngilizce kullanılabilir (üst çubukta **EN / TR**); ayrın
   kaydı; anketlerde en az 5 yanıt eşiği, eNPS eğilimi ve yerel (sunucu dışına çıkmayan) duygu analizi; vardiya
   tercihleri ve takas (11 saat dinlenme, haftalık 45 saat); giriş-çıkıştan geç kalma/fazla mesai raporu (bilgi amaçlı).
 
+### Topluluk
+
+- **Yapılacaklarım:** onay, imza, savunma, eğitim, anket, aydınlatma metni, eksik belge, uyum formu
+  ve ayın çalışanı oylaması gibi kişiden beklenen işler tek listede, son tarihe göre sıralı.
+- **Fikir kutusu:** öneri (isteğe bağlı adsız: ad İK dahil kimseye gösterilmez ve kaydedilmez),
+  destek ve yorum; İK durumu ve yanıtı yazar, fikir sahibine bildirim gider.
+- **Etkinlikler ve gönüllülük:** İK etkinlik açar (kontenjan, son katılım, çevrim içi bağlantı);
+  kontenjan dolunca bekleme listesi, yer açılınca sıradaki otomatik alınır. Gönüllülük etkinliğinde
+  katılım işaretlenince saat kişiye yazılır; yıllık özet sayfadadır.
+- **Takdir puanları ve ödül kataloğu (isteğe bağlı):** İK açar, kişi başı aylık bütçeyi ve takdir
+  başına üst sınırı belirler. Takdirle gelen puan katalogdaki ödülle takas edilir; İK teslim eder ya
+  da gerekçeyle reddeder (puan ve stok iade edilir).
+- **Grup kartı:** herkes bir çalışma arkadaşı için kart açabilir, diğerleri not bırakır; kart teslim
+  zamanına kadar alıcıdan gizlidir. Kutlamalar sayfasından da başlatılır.
+- **Kahve eşleştirme (isteğe bağlı):** katılanlar seçilen gün ve sıklıkta (haftalık, iki haftalık,
+  aylık) eşleşir; son eşleşmeler tekrarlanmaz, istenirse farklı departmanlar tercih edilir. İK
+  yalnızca sayıları görür, kimin kiminle eşleştiğini görmez.
+- **Rozetler:** kıdem, takdir, ayın çalışanı, fikir, gönüllülük, etkinlik, kahve, kart ve sertifika
+  rozetleri profilde; ilerlemeyi yalnızca kişi görür.
+- **Duyurulara tepki ve yorum:** kişi başı tek tepki; İK duyuru bazında yorumları kapatabilir.
+
+### Örnek veriler
+
+Yeni bir şirketi denemek için **Ayarlar › Örnek veriler**: 4 departman, 16 örnek çalışan, takdirler,
+fikirler ve bir etkinlik eklenir; tek tıkla kaldırılır (yalnızca örnek kayıtlar ve örnek veriyle açılan
+departmanlar silinir). Yalnızca en fazla 5 çalışanı olan şirkette açılır. Örnek kişilerin adresleri
+ayrılmış `.invalid` alanındadır: e-posta gönderilmez, giriş hesabı yoktur. Platform yöneticisi aynı
+işlemi Kiracılar listesinden herhangi bir şirket için yapabilir.
+
+### Platform bakımı
+
+**Platform › Bakım** (yalnızca platform yöneticisi): sürüm güncelleme ve geri alma, anlık yedek,
+yedek doğrulama (geçici veritabanına geri yükleme testi), gece yedeği zamanlama ve yedekten geri
+yükleme. İşleri sunucudaki bakım çalıştırıcısı yürütür (kurulum bir kez kurar; elle kurmak için
+`scripts/ops-runner.sh install`): yalnızca izinli komutlar, doğrulanmış değerlerle çalışır; çıktı
+ekranda görünür, her istek denetim kaydına yazılır. Geri yükleme ve geri alma yazılı onay ister.
+
+### Android uygulaması
+
+Tek APK bütün kurulumlarda çalışır: ilk açılışta şirketin HR360 adresi girilir, sonra kurulumun
+kendi arayüzü açılır. Uygulama içinde yalnızca bu adres açılır; diğer bağlantılar telefonun
+tarayıcısına gider. İndirilen dosyalar (bordro, rapor, takvim) telefonda uygun uygulamayla açılır.
+Uygulama verisi Android yedeğine alınmaz. **Ayarlar › Android uygulaması** bölümünden indirilir
+(`/indir/HR360.apk`). Derleme: `scripts/android-build.sh` (Docker içinde; imza anahtarı repoda değil,
+`~/.hr360-android/` altında ilk derlemede oluşur ve **yedeklenmelidir**: kaybolursa kurulu uygulamalar
+güncellenemez). Anlık bildirim Android uygulamasında yoktur (tarayıcı/PWA'da vardır).
+
 ### Mobil uygulama (PWA)
 
 Uygulama telefona kurulur (Hesap menüsü › Uygulama olarak yükle). **Profilim › Güvenlik ›

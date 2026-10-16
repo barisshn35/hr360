@@ -8,6 +8,23 @@ Değiştirdikten sonra arayüz verisini üretin ve çevirileri tamamlayın:
 cd apps/web && node scripts/changelog.mjs && node scripts/i18n-check.mjs --write && node scripts/i18n-check.mjs --missing
 ```
 
+## 15 · 2026-10-16 · Topluluk, günlük işler ve bakım
+- Yapılacaklarım: onay, imza, eğitim, anket, eksik belge ve oylama gibi sizden beklenen her şey tek listede, son tarihe göre sıralı.
+- İzin takvimi: ekibin kim ne zaman izinde olduğunu ayın takviminde görün; köprü günleri önerilir, takvimden doğrudan izin isteyebilirsiniz.
+- Yöneticiler için "Ekibim bugün" kartı: izindekiler, yaklaşan 1:1'ler, ekipteki kutlamalar, bekleyen onaylar ve gecikmiş eğitimler.
+- Fikir kutusu: öneri paylaşın (isterseniz adsız), destekleyin, yorum yapın; İK durumunu ve yanıtını yazar.
+- Etkinlikler ve gönüllülük: kontenjan ve bekleme listesi, takvime ekleme, gönüllülük saatleri ve yıllık özet.
+- Takdir puanları ve ödül kataloğu (isteğe bağlı): takdirle puan gönderin, puanları ödüllerle takas edin.
+- Grup kartı: doğum günü ya da veda için herkesin imzaladığı kart; teslim edilene kadar alıcıdan gizli.
+- Kahve eşleştirme (isteğe bağlı): katılanlar düzenli olarak farklı departmanlardan biriyle eşleşir.
+- Rozet koleksiyonu ve kilometre taşları profilde; duyurulara tepki ve yorum eklenebilir.
+- İlk 90 gün uyum formları, haftalık check-in, adayın mülakat saatini kendisinin seçmesi, norm kadro ve boş kadrodan ilan.
+- Eksik belge takibi, kullanılmamış izin raporu, toplu ücret güncelleme, yıllık toplam kazanç beyanı ve hazır kural tarifleri.
+- Ofis planında geçen haftayı kopyalama; "kim nerede" listesinde izin türü artık gizli.
+- Platform yöneticisi güncelleme, yedek, doğrulama ve geri yüklemeyi Platform > Bakım ekranından yapar.
+- Boş bir şirket tek tıkla örnek verilerle doldurulup sonra temizlenebilir; Android uygulaması Ayarlar'dan indirilebilir.
+- Ana renk değiştirildiğinde logo da yeni renge uyar; yeni sürüm yayımlanınca sayfayı yenileme önerisi gösterilir.
+
 ## 14 · 2026-10-16 · Ayın çalışanı, fotoğraflar ve toplu içe aktarma
 - Ayın çalışanı geldi: çalışanlar departmanlarında aday gösterip oy verir, kazanan bir sonraki oylamaya kadar herkesin ana sayfasında fotoğrafıyla yer alır.
 - Oylama ana departman, her departman ya da iki aşamalı (önce alt departmanlar, ertesi gün ana departman) yapılabilir; İK takvimi, oy katsayılarını ve gizlilik kuralını ayarlar.

@@ -75,8 +75,8 @@ Hesap açma ve parola sıfırlama süreli, tek kullanımlık davet linkiyle (kop
 | 🚀 | **Yetenek** | İşe alım (kariyer sayfası, aday hattı, mülakat, teklif), performans (hedef, değerlendirme, 9-kutu, kalibrasyon), eğitim ve sertifika, yetkinlik matrisi, mentorluk, iç ilanlar |
 | ✅ | **Onay ve belgeler** | Çok adımlı onay akışları, vekâlet, e-postadan tek tıkla karar, belge talebi ve doğrulama kodu, basit elektronik imza, duyurular ve doküman kütüphanesi |
 | ⚖️ | **Uyum** | KVKK ekranları (envanter, açık rıza, başvurular, saklama ve imha), değiştirilemez denetim kaydı, etik hattı, İSG, disiplin |
-| 💬 | **Çalışan deneyimi ve içgörü** | Takdir duvarı, ayın çalışanı oylaması (departman bazında, katsayılı ve gizli oy, kazananlar sıralaması), anket ve eNPS, ekip sağlığı paneli, 1:1 defteri, analitik ve doğal dilde rapor, devir riski modeli (yalnızca öneri) |
-| 🔌 | **Entegrasyonlar** | Slack ve Microsoft Teams'ten onay, Google/Microsoft 365 takvim ve Zoom, SSO, SCIM 2.0 ve LDAP/AD, webhook ve açık REST API (Zapier, n8n), PWA ve anlık bildirim |
+| 💬 | **Çalışan deneyimi ve içgörü** | Takdir duvarı, takdir puanları ve ödül kataloğu, ayın çalışanı oylaması (departman bazında, katsayılı ve gizli oy, kazananlar sıralaması), fikir kutusu, etkinlikler ve gönüllülük, grup kartı, kahve eşleştirme, rozet koleksiyonu, duyurulara tepki ve yorum, Yapılacaklarım listesi, ilk 90 gün ve haftalık check-in, anket ve eNPS, ekip sağlığı paneli, 1:1 defteri, analitik ve doğal dilde rapor, devir riski modeli (yalnızca öneri) |
+| 🔌 | **Entegrasyonlar** | Slack ve Microsoft Teams'ten onay, Google/Microsoft 365 takvim ve Zoom, SSO, SCIM 2.0 ve LDAP/AD, webhook ve açık REST API (Zapier, n8n), PWA, Android uygulaması ve anlık bildirim |
 
 Panel **Türkçe ve İngilizcedir**. "AI" etiketli özellikler yerel, kural tabanlı ve istatistiksel
 yöntemlerle çalışır; büyük dil modeli (LLM) yalnızca isterseniz ve şirket yöneticisi açarsa kullanılır.
@@ -238,6 +238,12 @@ parolalar bir yerde göründüyse yenileyin: `python3 scripts/rotate-passwords.p
 <details>
 <summary><b>Güncelleme</b></summary>
 
+Kurulumdan sonra güncelleme **Platform › Bakım** ekranından yapılır: "Güncellemeleri denetle" yeni
+sürüm etiketlerini getirir, "Güncelle" önce yedek alır ve aşağıdaki adımları sırayla yürütür; "Önceki
+sürüme dön" yazılı onay ister. Ekran işleri sunucudaki bakım çalıştırıcısına (`scripts/ops-runner.sh`,
+kurulum bir kez kurar) bırakır; konteynerlere Docker erişimi verilmez, her istek denetim kaydına yazılır.
+Komut satırı karşılıkları:
+
 ```bash
 scripts/update.sh --ref v1.0.0     # belirli sürüme
 scripts/update.sh                  # izlenen dalın en yeni hâline
@@ -255,6 +261,9 @@ mevcut kurulumda yeniden çalıştırmak da güncelleme yapar (sırlar korunur).
 
 <details>
 <summary><b>Yedekleme ve geri yükleme</b></summary>
+
+Yedek alma, doğrulama, gece yedeği zamanlama ve geri yükleme **Platform › Bakım** ekranından yapılır
+(geri yükleme "GERİ YÜKLE" yazılı onayı ister). Komut satırı karşılıkları:
 
 ```bash
 scripts/backup.sh                                   # anlık yedek → backups/hr360-YYYYmmdd-HHMMSS.tar.gz.enc
@@ -385,6 +394,9 @@ tanımlandıklarında kimlik bilgileri kiracı bazında şifreli saklanır. Kuru
 - **Tek sunucu:** her servisin tek kopyası çalışır; Kafka, PostgreSQL ve Keycloak tek düğümdür,
   yük dengeleme ve yedek sunucu yoktur. Bkz. [docs/mimari](docs/mimari/README.md#7-bilinen-sınırlar).
 - **Basit elektronik imza** 5070 sayılı Kanun kapsamında nitelikli (güvenli) e-imza değildir.
+- **Android uygulaması** mağaza dışından (APK) kurulur; anlık bildirim yalnızca tarayıcı ve PWA'da
+  çalışır. Google hesabıyla giriş, Google'ın gömülü tarayıcı kısıtı nedeniyle uygulama içinde açılmaz
+  (parola, LDAP/AD ve Keycloak girişi çalışır). iOS uygulaması henüz yok.
 
 ## 📚 Belgeler
 

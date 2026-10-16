@@ -6,6 +6,23 @@ export interface ChangelogEntry { id: string; date: string; title: string; items
 
 /** En yeni dalga başta. Metinler arayüz dilinde döner. */
 export const changelog = (): ChangelogEntry[] => [
+  { id: '15', date: '2026-10-16', title: tx('Topluluk, günlük işler ve bakım'), items: [
+    tx('Yapılacaklarım: onay, imza, eğitim, anket, eksik belge ve oylama gibi sizden beklenen her şey tek listede, son tarihe göre sıralı.'),
+    tx('İzin takvimi: ekibin kim ne zaman izinde olduğunu ayın takviminde görün; köprü günleri önerilir, takvimden doğrudan izin isteyebilirsiniz.'),
+    tx('Yöneticiler için "Ekibim bugün" kartı: izindekiler, yaklaşan 1:1\'ler, ekipteki kutlamalar, bekleyen onaylar ve gecikmiş eğitimler.'),
+    tx('Fikir kutusu: öneri paylaşın (isterseniz adsız), destekleyin, yorum yapın; İK durumunu ve yanıtını yazar.'),
+    tx('Etkinlikler ve gönüllülük: kontenjan ve bekleme listesi, takvime ekleme, gönüllülük saatleri ve yıllık özet.'),
+    tx('Takdir puanları ve ödül kataloğu (isteğe bağlı): takdirle puan gönderin, puanları ödüllerle takas edin.'),
+    tx('Grup kartı: doğum günü ya da veda için herkesin imzaladığı kart; teslim edilene kadar alıcıdan gizli.'),
+    tx('Kahve eşleştirme (isteğe bağlı): katılanlar düzenli olarak farklı departmanlardan biriyle eşleşir.'),
+    tx('Rozet koleksiyonu ve kilometre taşları profilde; duyurulara tepki ve yorum eklenebilir.'),
+    tx('İlk 90 gün uyum formları, haftalık check-in, adayın mülakat saatini kendisinin seçmesi, norm kadro ve boş kadrodan ilan.'),
+    tx('Eksik belge takibi, kullanılmamış izin raporu, toplu ücret güncelleme, yıllık toplam kazanç beyanı ve hazır kural tarifleri.'),
+    tx('Ofis planında geçen haftayı kopyalama; "kim nerede" listesinde izin türü artık gizli.'),
+    tx('Platform yöneticisi güncelleme, yedek, doğrulama ve geri yüklemeyi Platform > Bakım ekranından yapar.'),
+    tx('Boş bir şirket tek tıkla örnek verilerle doldurulup sonra temizlenebilir; Android uygulaması Ayarlar\'dan indirilebilir.'),
+    tx('Ana renk değiştirildiğinde logo da yeni renge uyar; yeni sürüm yayımlanınca sayfayı yenileme önerisi gösterilir.'),
+  ] },
   { id: '14', date: '2026-10-16', title: tx('Ayın çalışanı, fotoğraflar ve toplu içe aktarma'), items: [
     tx('Ayın çalışanı geldi: çalışanlar departmanlarında aday gösterip oy verir, kazanan bir sonraki oylamaya kadar herkesin ana sayfasında fotoğrafıyla yer alır.'),
     tx('Oylama ana departman, her departman ya da iki aşamalı (önce alt departmanlar, ertesi gün ana departman) yapılabilir; İK takvimi, oy katsayılarını ve gizlilik kuralını ayarlar.'),
