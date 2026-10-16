@@ -703,6 +703,23 @@ public class KeycloakAdminClient
         await PutUserAsync(userId, user, ct);
     }
 
+    /// <summary>Bekleyen doğrulayıcı kurulum zorunluluğunu kaldırır (politika gevşetildiğinde).</summary>
+    public async Task<bool> RemoveOtpSetupAsync(string userId, CancellationToken ct)
+    {
+        var user = await GetUserRepresentationAsync(userId, ct);
+        if (user?["requiredActions"] is not System.Text.Json.Nodes.JsonArray actions) return false;
+        if (!actions.Any(a => a?.GetValue<string>() == "CONFIGURE_TOTP")) return false;
+        var keep = new System.Text.Json.Nodes.JsonArray();
+        foreach (var a in actions)
+        {
+            var v = a?.GetValue<string>();
+            if (v != "CONFIGURE_TOTP") keep.Add(v);
+        }
+        user["requiredActions"] = keep;
+        await PutUserAsync(userId, user, ct);
+        return true;
+    }
+
     // ------------------------------------------------------- oturumlar (G22)
 
     public sealed record SessionInfo(string Id, string? IpAddress, DateTimeOffset Start, DateTimeOffset LastAccess, IReadOnlyList<string> Clients);

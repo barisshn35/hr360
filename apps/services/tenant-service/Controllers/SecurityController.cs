@@ -166,7 +166,7 @@ public class SecurityController : ControllerBase
     /// <summary>
     /// Guvenlik dalgasi 2A: iki adimli dogrulama politikasi (off | privileged | all). Hemen
     /// uygulanir ve tenant-service duzenli olarak yeniden uygular (sonradan role atananlar,
-    /// dogrulayicisini silenler).
+    /// dogrulayicisini silenler). Gevsetilirse kapsam disinda kalanlarin bekleyen kurulumu kalkar.
     /// </summary>
     [HttpPut("mfa/policy")]
     public async Task<IActionResult> SetMfaPolicy(MfaPolicyInput body, [FromServices] MfaPolicyService mfa, CancellationToken ct)
@@ -179,7 +179,8 @@ public class SecurityController : ControllerBase
         tenant.MfaPolicy = body.Policy == MfaPolicyRules.Off ? null : body.Policy;
         await _db.SaveChangesAsync(ct);
         var required = await mfa.ApplyTenantAsync(t.Value.Slug, ct);
-        return Ok(new { policy = MfaPolicyRules.Normalize(tenant.MfaPolicy), required });
+        var relaxed = await mfa.RelaxTenantAsync(t.Value.Slug, ct);
+        return Ok(new { policy = MfaPolicyRules.Normalize(tenant.MfaPolicy), required, relaxed });
     }
 
     /// <summary>

@@ -32,6 +32,13 @@ public class MfaPolicyRulesTests
     public void All_requires_everyone() => Assert.True(MfaPolicyRules.Requires("all", Array.Empty<string>()));
 
     [Fact]
+    public void New_tenants_require_mfa_for_everyone()
+    {
+        Assert.True(MfaPolicyRules.IsValid(MfaPolicyRules.NewTenantDefault));
+        Assert.True(MfaPolicyRules.Requires(MfaPolicyRules.NewTenantDefault, Array.Empty<string>()));
+    }
+
+    [Fact]
     public void Passkey_or_otp_counts_as_second_factor()
     {
         Assert.True(MfaPolicyRules.HasSecondFactor(new[] { "password", "otp" }));

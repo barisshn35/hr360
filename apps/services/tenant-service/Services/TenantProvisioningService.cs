@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TenantService.Data;
 using TenantService.Models;
+using TenantService.Security;
 
 namespace TenantService.Services;
 
@@ -55,6 +56,7 @@ public class TenantProvisioningService
             EmailDomain = emailDomain,
             TaxNumber = taxNumber,
             Status = TenantStatus.Pending,
+            MfaPolicy = MfaPolicyRules.NewTenantDefault,
         };
         _db.Tenants.Add(tenant);
         await _db.SaveChangesAsync(ct);
@@ -88,6 +90,10 @@ public class TenantProvisioningService
             // --- 4. tenant-admin rolu ---
             await _keycloak.AssignRealmRoleAsync(userId, "tenant-admin", ct);
             await LogAsync(tenant.Id, ProvisioningStep.AdminRoleAssigned, true, "tenant-admin", ct);
+
+            // Iki adimli dogrulama yeni sirketlerde varsayilan olarak zorunlu: kurucu ilk girisinde
+            // parolasini belirledikten hemen sonra dogrulayici kurar (duzenli tur 10 dk sonra gelirdi).
+            await _keycloak.RequireOtpSetupAsync(userId, ct);
 
             // --- 4b. Uygulama-ici Company kaydi (organization-service) ---
             //

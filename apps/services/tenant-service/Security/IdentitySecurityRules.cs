@@ -9,7 +9,7 @@ namespace TenantService.Security;
 /// Guvenlik dalgasi 2A: iki adimli dogrulama politikasi kurallari (saf, birim testli).
 ///
 /// Politika sirket basinadir (platform_tenants.MfaPolicy):
-///   off        - zorunluluk yok (varsayilan),
+///   off        - zorunluluk yok (null da "off" sayilir; demo sirketi ve eski kayitlar),
 ///   privileged - IK (hr-admin), sirket yoneticisi (tenant-admin) ve yonetici (manager) rolleri,
 ///   all        - tum sirket kullanicilari.
 /// Platform yoneticisi (platform-admin) kiraciya bagli olmadigi icin ayri ayardir:
@@ -26,6 +26,9 @@ public static class MfaPolicyRules
     public const string Off = "off";
     public const string Privileged = "privileged";
     public const string All = "all";
+
+    /// <summary>Kayitla acilan yeni sirketlerin politikasi: herkes icin zorunlu; yonetici Guvenlik ekranindan gevsetebilir.</summary>
+    public const string NewTenantDefault = All;
 
     /// <summary>Iki adimli dogrulamanin zorunlu oldugu roller ("privileged" politikasi).</summary>
     public static readonly IReadOnlyList<string> PrivilegedRoles = new[] { "tenant-admin", "hr-admin", "manager" };

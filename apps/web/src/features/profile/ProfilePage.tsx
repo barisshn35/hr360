@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
+import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
 import { Tabs, useTabParam } from '@/components/ui/Tabs'
 import { useToast } from '@/components/ui/Toast'
 import { apiFetch } from '@/api/client'
@@ -130,7 +130,7 @@ function InfoTab({ p }: { p: MyProfile }) {
   )
 }
 
-function PrivacyTab({ employeeId }: { employeeId: string }) {
+function PrivacyTab({ employeeId }: { employeeId?: string }) {
   const consents = useQuery({ queryKey: ['privacy', 'consents', 'me'], queryFn: ({ signal }) => governanceApi.myConsents(signal) })
   const requests = useQuery({ queryKey: ['privacy', 'requests'], queryFn: ({ signal }) => governanceApi.dataRequests(signal) })
   const record = useAction(({ type, granted }: { type: string; granted: boolean }) => governanceApi.recordConsent(type, granted), { success: tx('Tercihiniz kaydedildi'), invalidate: [['privacy']] })
@@ -150,7 +150,7 @@ function PrivacyTab({ employeeId }: { employeeId: string }) {
       <Panel>
         <PanelHead title={tx('Aydınlatma ve açık rıza')} note={tx('Rızalarınızı istediğiniz zaman geri alabilirsiniz (KVKK m.5, m.11).')} />
         <PanelBody className="space-y-3">
-          {consents.isPending ? <RowsSkeleton rows={3} /> : consents.data?.map((c) => (
+          {consents.isPending ? <RowsSkeleton rows={3} /> : consents.isError ? <p className="text-[13px] text-muted-foreground">{errMsg(consents.error)}</p> : !consents.data?.length ? <p className="text-[13px] text-muted-foreground">{tx('Bu hesap için bilgilendirme metni yok.')}</p> : consents.data.map((c) => (
             <div key={c.type} className="rounded-xl border border-border p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -178,7 +178,9 @@ function PrivacyTab({ employeeId }: { employeeId: string }) {
         <Panel>
           <PanelHead title={tx('Verilerim')} note={tx('HR360\'ta sizinle ilgili tutulan tüm kişisel verilerin dökümü.')} />
           <PanelBody>
-            <Button onClick={() => governanceApi.exportPersonalData(employeeId).catch((e) => toast.stop(errMsg(e)))}><Download className="size-4" />{' '}{tx('Verilerimi indir (JSON)')}</Button>
+            {employeeId
+              ? <Button onClick={() => governanceApi.exportPersonalData(employeeId).catch((e) => toast.stop(errMsg(e)))}><Download className="size-4" />{' '}{tx('Verilerimi indir (JSON)')}</Button>
+              : <p className="text-[12.5px] text-muted-foreground">{tx('Veri dışa aktarma çalışan kaydı ister; hesabınız bir çalışan kaydına bağlanınca açılır.')}</p>}
           </PanelBody>
         </Panel>
         <Panel>
@@ -281,18 +283,39 @@ function SecurityTab() {
   )
 }
 
+/**
+ * Çalışan kaydına bağlı olmayan hesaplar (ör. şirketi kaydeden kurucu, yalnızca yönetici hesabı): kişisel
+ * bilgiler ve takvim çalışan kaydı ister, ama aydınlatma metni, bildirim, güvenlik ve erişilebilirlik
+ * ayarları hesaba bağlıdır. Giriş bandındaki "Oku ve yanıtla" buraya geldiğinde metin okunabilmeli.
+ */
+function AccountOnlyProfile({ tab, setTab }: { tab: TabKey; setTab: (t: TabKey) => void }) {
+  const current: TabKey = tab === 'bilgiler' || tab === 'takvim' ? 'gizlilik' : tab
+  return (
+    <>
+      <div className="mb-5"><InfoNote>{tx('Hesabınız bir çalışan kaydına bağlı değil (ör. şirketi kaydeden yönetici hesabı). Kişisel bilgiler ve takvim, İK sizi çalışan olarak eklediğinde açılır; aşağıdaki ayarlar hesabınıza aittir.')}</InfoNote></div>
+      <div className="mb-5">
+        <Tabs label={tx('Profil bölümleri')} value={current} onChange={setTab} tabs={[{ key: 'gizlilik', label: tx('Gizlilik (KVKK)') }, { key: 'bildirimler', label: tx('Bildirimler') }, { key: 'guvenlik', label: tx('Güvenlik') }, { key: 'erisilebilirlik', label: tx('Erişilebilirlik') }]} />
+      </div>
+      {current === 'gizlilik' && <PrivacyTab />}
+      {current === 'bildirimler' && <NotificationPrefsPanel />}
+      {current === 'erisilebilirlik' && <AccessibilityPanel />}
+      {current === 'guvenlik' && <div className="space-y-5"><SecurityTab /><MySecurityPanel /><DevicePanel /><MyChatAccounts /></div>}
+    </>
+  )
+}
+
 export function ProfilePage() {
   const [tab, setTab] = useTabParam<TabKey>('sekme', 'bilgiler')
-  const { employeeId, notLinked } = useMyEmployeeId()
+  const me = useMyEmployeeId()
+  const employeeId = me.employeeId
   const q = useQuery({ queryKey: ['profile', 'me'], queryFn: ({ signal }) => engagementApi.myProfile(signal), retry: false, enabled: !!employeeId })
   const p = q.data
   return (
     <>
       <PageHeader title={tx('Profilim')} description={tx('Kişisel bilgilerinizi, gizlilik tercihlerinizi ve takvim aboneliğinizi tek yerden yönetin.')} eyebrow={[tx('Hesabım')]} />
-      {notLinked ? (
-        <EmptyState title={tx('Çalışan kaydınız yok')} detail={tx('Hesabınız bir çalışan kaydına bağlı değil (ör. yönetici hesabı). İK sizi çalışan olarak eklediğinde profil burada açılır.')} />
-      ) : q.isPending ? <RowsSkeleton /> : q.isError || !p ? (
-        <EmptyState title={tx('Çalışan kaydınız yok')} detail={q.error instanceof Error ? q.error.message : tx('Hesabınız bir çalışan kaydına bağlı değil (ör. platform yöneticisi). İK sizi çalışan olarak eklediğinde profil burada açılır.')} />
+      {me.isPending || (employeeId && q.isPending) ? <RowsSkeleton /> : !employeeId || q.isError || !p ? (
+        // Çalışan kaydı yok (404) ya da kimlik çözülemedi (ör. platform yöneticisi): hesap ayarları yine açık.
+        <AccountOnlyProfile tab={tab} setTab={setTab} />
       ) : (
         <>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface mb-6 flex flex-wrap items-center gap-4 rounded-3xl border border-border p-5">

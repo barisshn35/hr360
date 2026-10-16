@@ -71,6 +71,35 @@ public sealed class MfaPolicyService
         return changed;
     }
 
+    /// <summary>
+    /// Politika gevsetildiginde (all -> privileged/off ya da privileged -> off) artik kapsam disinda
+    /// kalan ve dogrulayicisini henuz kurmamis kullanicilarin bekleyen kurulum zorunlulugunu kaldirir;
+    /// yoksa kapatilan kural bir sonraki giriste yine de kurulum isterdi. Kurulmus dogrulayicilara
+    /// dokunulmaz. Kaldirilan kullanici sayisini doner.
+    /// </summary>
+    public async Task<int> RelaxTenantAsync(string tenantSlug, CancellationToken ct)
+    {
+        var t = await _db.Tenants.AsNoTracking().Where(x => x.Slug == tenantSlug)
+            .Select(x => new { x.KeycloakOrgId, x.MfaPolicy }).FirstOrDefaultAsync(ct);
+        if (t?.KeycloakOrgId is null || MfaPolicyRules.Normalize(t.MfaPolicy) == MfaPolicyRules.All) return 0;
+        var privileged = await PrivilegedUsersAsync(ct);
+        var platformAdmins = PlatformAdminRequired
+            ? (await _kc.ListRoleUserIdsAsync("platform-admin", ct)).ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+        var relaxed = 0;
+        foreach (var id in await _kc.ListOrganizationMemberIdsAsync(t.KeycloakOrgId, ct))
+        {
+            var required = platformAdmins.Contains(id) ||
+                MfaPolicyRules.Requires(t.MfaPolicy, privileged.Contains(id) ? MfaPolicyRules.PrivilegedRoles : Array.Empty<string>());
+            if (required) continue;
+            var st = await _kc.GetUserMfaStateAsync(id, ct);
+            if (st is null || MfaPolicyRules.HasSecondFactor(st.CredentialTypes)) continue;
+            if (await _kc.RemoveOtpSetupAsync(id, ct)) relaxed++;
+        }
+        if (relaxed > 0) _log.LogInformation("İki adımlı doğrulama politikası gevşetildi ({Tenant}): {Count} kullanıcının bekleyen kurulumu kaldırıldı", tenantSlug, relaxed);
+        return relaxed;
+    }
+
     /// <summary>MFA_REQUIRE_PLATFORM_ADMIN=true ise platform yoneticilerine zorunluluk.</summary>
     public async Task<int> ApplyPlatformAdminsAsync(CancellationToken ct)
     {

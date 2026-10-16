@@ -102,10 +102,13 @@ export function SecurityPage() {
                 <div className="h-2.5 overflow-hidden rounded-full bg-muted"><motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} className="h-full rounded-full bg-[hsl(var(--success))]" /></div>
                 <p className="text-[12.5px] text-muted-foreground">{tx('İki adımlı doğrulama (doğrulayıcı uygulama ya da passkey) açık hesaplar: %{0}', [pct])}</p>
                 <SelectField label={tx('Zorunluluk')} value={m.policy ?? 'off'} disabled={setPolicy.isPending}
-                  hint={tx('Seçilen rollerde doğrulayıcı uygulaması ya da passkey olmayan kullanıcı bir sonraki girişinde kurulum yapmadan devam edemez. Kural düzenli olarak yeniden uygulanır (sonradan role atananlar dahil).')}
+                  hint={tx('Yeni şirketlerde herkes için zorunlu gelir. Kapsamdaki kullanıcı doğrulayıcı uygulaması ya da passkey kurmadan giriş yapamaz; kural düzenli olarak yeniden uygulanır (sonradan role atananlar dahil).')}
                   onChange={async (v) => {
                     const p = v as MfaPolicy
-                    if (p === 'off' || await confirm({ title: tx('İki adımlı doğrulama zorunlu kılınsın mı?'), note: p === 'all' ? tx('Tüm şirket kullanıcıları için zorunlu olur.') : tx('İK, şirket yöneticisi ve yönetici rollerindeki kullanıcılar için zorunlu olur.'), action: tx('Zorunlu kıl') })) setPolicy.mutate(p)
+                    const ok = p === 'off'
+                      ? await confirm({ title: tx('İki adımlı doğrulama zorunluluğu kaldırılsın mı?'), note: tx('Hesaplar yalnızca parolayla korunur. Henüz doğrulayıcı kurmamış kullanıcılardan kurulum istenmez; kurulmuş doğrulayıcılar çalışmaya devam eder.'), action: tx('Zorunluluğu kaldır') })
+                      : await confirm({ title: tx('İki adımlı doğrulama zorunlu kılınsın mı?'), note: p === 'all' ? tx('Tüm şirket kullanıcıları için zorunlu olur.') : tx('İK, şirket yöneticisi ve yönetici rollerindeki kullanıcılar için zorunlu olur.'), action: tx('Zorunlu kıl') })
+                    if (ok) setPolicy.mutate(p)
                   }}
                   options={[
                     { value: 'off', label: tx('Zorunlu değil') },
