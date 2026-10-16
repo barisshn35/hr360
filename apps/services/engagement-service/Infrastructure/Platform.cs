@@ -117,6 +117,13 @@ public sealed class PeopleDirectory
             : _cache.GetOrSetAsync("people", tenant, includeTerminated ? "all" : "active", TimeSpan.FromSeconds(30), Load, ct);
     }
 
+    /// <summary>
+    /// Önbelleksiz liste: yetki kapsamı gibi anlık doğru olması gereken kararlar için (yeni işe giren
+    /// ya da departmanı değişen kişi, önbellek süresi dolmadan yöneticisinin kapsamına girmeli).
+    /// </summary>
+    public Task<List<Person>> ListFreshAsync(string tenant, CancellationToken ct) =>
+        _sql.QueryAsync(Base + " AND e.\"Status\" <> 'Terminated' ORDER BY 2", Map, ct, tenant);
+
     public async Task<Person?> FindAsync(string tenant, Guid id, CancellationToken ct)
         => (await _sql.QueryAsync(Base + " AND e.\"Id\" = $2", Map, ct, tenant, id)).FirstOrDefault();
 
@@ -129,7 +136,8 @@ public sealed class PeopleDirectory
     /// </summary>
     public async Task<List<Person>> TeamOfAsync(string tenant, Guid managerEmployeeId, CancellationToken ct)
     {
-        var all = await ListAsync(tenant, ct);
+        // Yetki kapsamı: önbellekten değil, güncel veriden.
+        var all = await ListFreshAsync(tenant, ct);
         var teamMemberIds = (await _sql.QueryAsync(
             """
             SELECT m."EmployeeId" FROM organization_team_members m

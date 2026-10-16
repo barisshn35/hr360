@@ -427,7 +427,8 @@ public class OffboardingController : AppController
         if (Me.IsHr) return null;
         var me = await MyPersonAsync(ct);
         if (me is null) return new HashSet<Guid>();
-        return (await People.ListAsync(Tenant, ct))
+        // Yetki kapsamı önbellekten okunmaz: yeni giren çalışan hemen yöneticisinin kapsamında olmalı.
+        return (await People.ListFreshAsync(Tenant, ct))
             .Where(p => p.Id != me.Id && p.DepartmentHeadId == me.Id).Select(p => p.Id).ToHashSet();
     }
 
