@@ -79,7 +79,7 @@ function Beam({
         animate={{ y: '2400px' }}
         transition={{ duration, repeat: Infinity, repeatType: 'loop', ease: 'linear', delay, repeatDelay }}
         style={{ left: `${x}%` }}
-        className={cn('absolute top-0 h-14 w-px rounded-full bg-gradient-to-t from-primary via-[hsl(170_85%_60%)] to-transparent', className)}
+        className={cn('absolute top-0 h-14 w-px rounded-full bg-gradient-to-t from-primary via-[hsl(var(--brand-glow))] to-transparent', className)}
       />
       <AnimatePresence>{hit && <Explosion key={`${hit.x}-${key}`} style={{ left: hit.x, top: hit.y }} />}</AnimatePresence>
     </>
@@ -108,7 +108,7 @@ function Explosion({ style }: { style: React.CSSProperties }) {
           initial={{ x: 0, y: 0, opacity: 1 }}
           animate={{ x: s.dx, y: s.dy, opacity: 0 }}
           transition={{ duration: s.d, ease: 'easeOut' }}
-          className="absolute size-1 rounded-full bg-gradient-to-b from-primary to-[hsl(170_85%_60%)]"
+          className="absolute size-1 rounded-full bg-gradient-to-b from-primary to-[hsl(var(--brand-glow))]"
         />
       ))}
     </div>

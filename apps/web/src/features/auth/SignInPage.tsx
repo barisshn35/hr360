@@ -97,11 +97,11 @@ export function SignInPage() {
       <div className="relative z-10 flex w-full max-w-[460px] flex-1 flex-col items-center pt-[14vh] pb-10">
         {/* Marka işareti ve yörüngesi */}
         <motion.div {...up(0)} className="relative flex size-36 items-center justify-center">
-          <span className="relative z-10 flex size-16 items-center justify-center rounded-[22px] bg-gradient-to-br from-primary to-[hsl(170_80%_30%)] shadow-[0_0_60px_-8px_hsl(var(--primary))]">
+          <span className="relative z-10 flex size-16 items-center justify-center rounded-[22px] bg-gradient-to-br from-primary to-[hsl(var(--brand-deep))] shadow-[0_0_60px_-8px_hsl(var(--primary))]">
             <img src="/icon-white.svg" alt="" aria-hidden="true" className="size-9" />
           </span>
           <OrbitingCircles radius={56} duration={12} className="size-2.5 bg-primary shadow-[0_0_12px_hsl(var(--primary))]" />
-          <OrbitingCircles radius={56} duration={12} angle={180} path={false} className="size-1.5 bg-[hsl(170_85%_60%)]" />
+          <OrbitingCircles radius={56} duration={12} angle={180} path={false} className="size-1.5 bg-[hsl(var(--brand-glow))]" />
         </motion.div>
 
         <motion.div

@@ -20,4 +20,12 @@ describe('brandPalette', () => {
     expect(l).toBeGreaterThanOrEqual(25)
     expect(l).toBeLessThanOrEqual(30)
   })
+  it('logo degradesi ve parlak vurgu şirket renginin tonunu izler (sabit yeşil kalmaz)', () => {
+    const p = brandPalette('#cc0000')
+    const [dh] = parts(p['--tenant-brand-deep'])
+    const [gh, , gl] = parts(p['--tenant-brand-glow'])
+    expect(dh).toBe(10)
+    expect(gh).toBe(10)
+    expect(gl).toBe(60)
+  })
 })

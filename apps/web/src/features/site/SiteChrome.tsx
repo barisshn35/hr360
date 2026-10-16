@@ -76,7 +76,7 @@ export function PublicLayout({
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-4 px-5">
           <Link to="/giris" className="flex shrink-0 items-center gap-2.5 text-[16px] font-semibold tracking-tight" aria-label={tx('HR360 giriş sayfası')}>
-            <span className="flex size-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-primary to-[hsl(170_80%_30%)] shadow-[0_0_24px_-6px_hsl(var(--primary))]">
+            <span className="flex size-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-primary to-[hsl(var(--brand-deep))] shadow-[0_0_24px_-6px_hsl(var(--primary))]">
               <img src="/icon-white.svg" alt="" aria-hidden="true" className="size-5" />
             </span>
             HR360

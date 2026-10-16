@@ -11,7 +11,7 @@ export function ShinyText({ children, className }: { children: React.ReactNode; 
     <span
       className={cn(
         'animate-shine bg-[length:250%_100%] bg-clip-text text-transparent',
-        'bg-[linear-gradient(110deg,hsl(var(--primary))_35%,hsl(160_90%_85%)_50%,hsl(var(--primary))_65%)]',
+        'bg-[linear-gradient(110deg,hsl(var(--primary))_35%,hsl(var(--brand-glow))_50%,hsl(var(--primary))_65%)]',
         className,
       )}
     >

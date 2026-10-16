@@ -43,6 +43,8 @@ const VARS = [
   '--tenant-primary-foreground',
   '--tenant-primary-dark',
   '--tenant-primary-dark-foreground',
+  '--tenant-brand-deep',
+  '--tenant-brand-glow',
 ] as const
 
 function hslToRgb(h: number, s: number, l: number): [number, number, number] {
@@ -108,6 +110,10 @@ export function brandPalette(primaryColorHex: string): Record<(typeof VARS)[numb
     '--tenant-primary-foreground': foregroundFor(h, s, lightL),
     '--tenant-primary-dark': `${h} ${s}% ${darkL}%`,
     '--tenant-primary-dark-foreground': foregroundFor(h, s, darkL),
+    // Varsayılan zümrüt degradesi gibi: ton biraz kaydırılmış koyu uç ve parlak vurgu (logo kutusu,
+    // ışık efektleri). Sabit yeşil kalırsa şirket rengiyle çakışıyordu.
+    '--tenant-brand-deep': `${(h + 10) % 360} ${Math.min(s, 80)}% ${Math.max(18, Math.min(lightL, 40))}%`,
+    '--tenant-brand-glow': `${(h + 10) % 360} ${Math.min(s, 85)}% 60%`,
   }
 }
 

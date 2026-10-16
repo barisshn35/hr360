@@ -17,7 +17,7 @@ import { SiteFooter } from './SiteChrome'
 
 export type ThanksState = { company?: string; emailSent?: boolean }
 
-const COLORS = ['hsl(var(--primary))', 'hsl(170 85% 55%)', 'hsl(152 70% 60%)', 'hsl(45 95% 60%)', 'hsl(190 85% 60%)']
+const COLORS = ['hsl(var(--primary))', 'hsl(var(--brand-glow))', 'hsl(152 70% 60%)', 'hsl(45 95% 60%)', 'hsl(190 85% 60%)']
 
 /** Kutlama: merkezden saçılan, yerçekimiyle düşen konfeti parçaları (tek seferlik). */
 function Burst() {

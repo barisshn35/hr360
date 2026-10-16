@@ -17,13 +17,13 @@ export function AppShellSkeleton({ label = tx('Yükleniyor') }: { label?: string
       <AmbientBackground meteors={false} />
       <div className="relative flex size-56 items-center justify-center">
         <span className="absolute size-24 rounded-full bg-primary/20 blur-2xl" />
-        <span className="relative flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[hsl(170_80%_32%)] shadow-[0_0_40px_-6px_hsl(var(--primary))]">
+        <span className="relative flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[hsl(var(--brand-deep))] shadow-[0_0_40px_-6px_hsl(var(--primary))]">
           <img src="/icon-white.svg" alt="" aria-hidden="true" className="size-8" />
         </span>
         <OrbitingCircles radius={62} duration={8} className="size-2.5 bg-primary shadow-[0_0_12px_hsl(var(--primary))]" />
         <OrbitingCircles radius={62} duration={8} angle={180} path={false} className="size-1.5 bg-primary/60" />
-        <OrbitingCircles radius={98} duration={14} reverse className="size-2 bg-[hsl(170_85%_60%)]" />
-        <OrbitingCircles radius={98} duration={14} angle={120} reverse path={false} className="size-1.5 bg-[hsl(170_85%_60%)]/60" />
+        <OrbitingCircles radius={98} duration={14} reverse className="size-2 bg-[hsl(var(--brand-glow))]" />
+        <OrbitingCircles radius={98} duration={14} angle={120} reverse path={false} className="size-1.5 bg-[hsl(var(--brand-glow))]/60" />
       </div>
       <motion.p
         initial={reduced ? false : { opacity: 0, y: 6 }}

@@ -24,7 +24,7 @@ export function BorderBeam({
   anchor = 90,
   borderWidth = 1.5,
   colorFrom = 'hsl(var(--primary))',
-  colorTo = 'hsl(160 90% 75%)',
+  colorTo = 'hsl(var(--brand-glow))',
   delay = 0,
 }: BorderBeamProps) {
   return (

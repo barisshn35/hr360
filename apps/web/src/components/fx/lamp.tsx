@@ -45,7 +45,7 @@ export function Lamp({ className }: { className?: string }) {
           {...grow('6rem', '14rem')}
           className="absolute top-0 z-30 h-28 -translate-y-1/3 rounded-full bg-foreground/20 blur-2xl"
         />
-        <motion.div {...grow('12rem', '32rem')} className="absolute top-0 z-50 h-px bg-[hsl(160_90%_70%)]" />
+        <motion.div {...grow('12rem', '32rem')} className="absolute top-0 z-50 h-px bg-[hsl(var(--brand-glow))]" />
       </div>
     </div>
   )

@@ -44,6 +44,10 @@
      beyaz yazıyla ≥ 4,5:1); koyu tema markanın kendisini kullanır. */
   --primary: var(--tenant-primary, 160 86% 26%);
   --primary-foreground: var(--tenant-primary-foreground, 0 0% 100%);
+  /* Marka degradesinin koyu ucu ve parlak vurgu (logo kutusu, ışık efektleri). Şirket rengi
+     tanımlıysa ondan türetilir (lib/tenant-brand.ts); iki temada aynıdır. */
+  --brand-deep: var(--tenant-brand-deep, 170 80% 32%);
+  --brand-glow: var(--tenant-brand-glow, 170 85% 60%);
 
   --secondary: 240 5% 96%;
   --secondary-foreground: 240 6% 10%;

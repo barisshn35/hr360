@@ -369,7 +369,7 @@ function TenantDashboard() {
               {/* Modül yörüngesi */}
               <div aria-hidden="true" className="relative hidden size-[300px] items-center justify-center self-center lg:flex">
                 <span className="absolute size-28 rounded-full bg-primary/15 blur-3xl" />
-                <span className="animate-float relative flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-[hsl(170_80%_30%)] shadow-[0_0_50px_-6px_hsl(var(--primary))]">
+                <span className="animate-float relative flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-[hsl(var(--brand-deep))] shadow-[0_0_50px_-6px_hsl(var(--primary))]">
                   <img src="/icon-white.svg" alt="" className="size-11" />
                 </span>
                 {orbit.slice(0, 3).map((m, i) => (

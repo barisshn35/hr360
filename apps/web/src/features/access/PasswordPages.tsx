@@ -40,7 +40,7 @@ function PublicShell({ children }: { children: ReactNode }) {
         className="relative z-10 w-full max-w-[440px]"
       >
         <div className="mb-6 flex justify-center">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[hsl(170_80%_30%)] shadow-[0_0_32px_-6px_hsl(var(--primary))]">
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[hsl(var(--brand-deep))] shadow-[0_0_32px_-6px_hsl(var(--primary))]">
             <img src="/icon-white.svg" alt="" aria-hidden="true" className="size-7" />
           </span>
         </div>
