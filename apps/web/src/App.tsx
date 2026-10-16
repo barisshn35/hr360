@@ -135,6 +135,7 @@ const ProductInsightsPage = page(() => import('@/features/insights/ProductInsigh
 const TodosPage = page(() => import('@/features/todos/TodosPage'), 'TodosPage')
 const IdeasPage = page(() => import('@/features/community/IdeasPage'), 'IdeasPage')
 const EventsPage = page(() => import('@/features/community/EventsPage'), 'EventsPage')
+const RewardsPage = page(() => import('@/features/community/RewardsPage'), 'RewardsPage')
 const EomPage = page(() => import('@/features/community/eom/EomPage'), 'EomPage')
 const EomAdminPage = page(() => import('@/features/community/eom/EomAdminPage'), 'EomAdminPage')
 const EomResultsPage = page(() => import('@/features/community/eom/EomResultsPage'), 'EomResultsPage')
@@ -464,6 +465,7 @@ export function App() {
                     <Route path="yapilacaklarim" element={<TenantGate><TodosPage /></TenantGate>} />
                     <Route path="fikir-kutusu" element={<TenantGate><IdeasPage /></TenantGate>} />
                     <Route path="etkinlikler" element={<TenantGate><EventsPage /></TenantGate>} />
+                    <Route path="oduller" element={<TenantGate><RewardsPage /></TenantGate>} />
                     <Route path="ayin-calisani" element={<TenantGate><EomPage /></TenantGate>} />
                     <Route path="ayin-calisani/yonetim" element={<TenantGate><EomAdminPage /></TenantGate>} />
                     <Route path="ayin-calisani/sonuc/:periodId" element={<TenantGate><EomResultsPage /></TenantGate>} />

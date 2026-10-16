@@ -40,7 +40,7 @@ export type NavItemData = {
   children?: NavItemData[]
 }
 
-export type NavFeature = 'eom'
+export type NavFeature = 'eom' | 'points'
 
 export type NavGroupData = {
   id: string
@@ -173,6 +173,7 @@ export const navGroups: NavGroupData[] = [
     icon: HeartHandshake,
     items: [
       { id: 'kudos', title: tx('Takdir duvarı'), description: tx('Rozetli teşekkürler'), icon: Award, path: '/panel/takdir', tenantOnly: true },
+      { id: 'rewards', title: tx('Puanlar ve ödüller'), description: tx('Takdir puanını ödüle çevir'), icon: Gift, path: '/panel/oduller', tenantOnly: true, feature: 'points' },
       { id: 'ideas', title: tx('Fikir kutusu'), description: tx('Öneri paylaş, destekle, yanıt al'), icon: Lightbulb, path: '/panel/fikir-kutusu', tenantOnly: true },
       { id: 'events', title: tx('Etkinlikler'), description: tx('Katıl, takvime ekle, gönüllü ol'), icon: CalendarHeart, path: '/panel/etkinlikler', tenantOnly: true },
       { id: 'eom', title: tx('Ayın çalışanı'), description: tx('Departman oylaması ve kazananlar'), icon: Crown, path: '/panel/ayin-calisani', tenantOnly: true, feature: 'eom' },

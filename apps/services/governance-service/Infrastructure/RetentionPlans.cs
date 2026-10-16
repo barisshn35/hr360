@@ -179,6 +179,8 @@ public static class RetentionPlans
         Del("DELETE FROM engagement_event_rsvps", "Etkinlik katılımları ve gönüllülük saatleri", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         Upd("UPDATE engagement_events SET", "Etkinliği açan kişinin adı", "\"CreatedByName\" = NULL, \"CreatedByUserId\" = ''",
             "\"TenantSlug\" = $1 AND \"CreatedByUserId\" = ANY($3)"),
+        Del("DELETE FROM engagement_points_ledger", "Takdir puanı hareketleri", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
+        Del("DELETE FROM engagement_reward_redemptions", "Ödül takas talepleri", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         Del("DELETE FROM employee_photos", "Çalışan fotoğrafı", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         // Çalışan kaydı en sonda: KeycloakUserId ($3) yukarıdaki adımlar için önceden okundu.
         Upd("UPDATE employee_employees SET", "Çalışan kaydı (ad, e-posta, telefon, hesap bağlantısı, fotoğraf)",

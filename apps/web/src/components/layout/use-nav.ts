@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useAuth } from '@/auth/useAuth'
 import { useTenantScope } from '@/lib/tenant-scope'
 import { useEomWinners } from '@/api/eom'
+import { useRecognitionSettings } from '@/api/recognition'
 import { filterByPermission, navGroups } from './nav-config'
 
 /**
@@ -13,5 +14,6 @@ export function useNavGroups() {
   const { hasTenant } = useTenantScope()
   const isHr = (roles as string[]).some((r) => r === 'hr-admin' || r === 'tenant-admin' || r === 'ext-engagement-manage')
   const eom = useEomWinners(hasTenant && !isHr).data?.enabled === true
-  return useMemo(() => filterByPermission(navGroups, can, roles, hasTenant, { eom: isHr || eom }), [can, roles, hasTenant, isHr, eom])
+  const points = useRecognitionSettings(hasTenant && !isHr).data?.enabled === true
+  return useMemo(() => filterByPermission(navGroups, can, roles, hasTenant, { eom: isHr || eom, points: isHr || points }), [can, roles, hasTenant, isHr, eom, points])
 }

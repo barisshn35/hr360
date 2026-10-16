@@ -20,6 +20,8 @@ export interface Kudos {
   badge: string
   badgeLabel: string
   message: string
+  /** Takdirle gönderilen puan (puanlar kapalıysa 0). */
+  points: number
   createdAt: string
   likeCount: number
   likedByMe: boolean
@@ -468,7 +470,7 @@ export const engagementApi = {
   kudos: (params: { limit?: number; employeeId?: string } = {}, signal?: AbortSignal) =>
     apiFetch<Kudos[]>(`${BASE}/kudos${qs(params)}`, { signal }),
   kudosLeaderboard: (days = 30, signal?: AbortSignal) => apiFetch<KudosLeaderboard>(`${BASE}/kudos/leaderboard${qs({ days })}`, { signal }),
-  sendKudos: (body: { toEmployeeId: string; badge: string; message: string }) =>
+  sendKudos: (body: { toEmployeeId: string; badge: string; message: string; points?: number }) =>
     apiFetch<{ id: string }>(`${BASE}/kudos`, { method: 'POST', body }),
   likeKudos: (id: string) => apiFetch<{ likeCount: number; likedByMe: boolean }>(`${BASE}/kudos/${id}/like`, { method: 'POST' }),
   deleteKudos: (id: string) => apiFetch<void>(`${BASE}/kudos/${id}`, { method: 'DELETE' }),

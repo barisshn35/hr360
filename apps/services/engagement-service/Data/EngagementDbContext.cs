@@ -44,6 +44,10 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
     public DbSet<WeeklyCheckin> WeeklyCheckins => Set<WeeklyCheckin>();
     public DbSet<CompanyEvent> Events => Set<CompanyEvent>();
     public DbSet<EventRsvp> EventRsvps => Set<EventRsvp>();
+    public DbSet<RecognitionSettings> RecognitionSettings => Set<RecognitionSettings>();
+    public DbSet<PointsEntry> PointsLedger => Set<PointsEntry>();
+    public DbSet<Reward> Rewards => Set<Reward>();
+    public DbSet<RewardRedemption> RewardRedemptions => Set<RewardRedemption>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -90,6 +94,10 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
         b.Entity<CompanyEvent>().ToTable("engagement_events").ConfigureTenantColumn();
         b.Entity<CompanyEvent>().Property(x => x.VolunteerHours).HasPrecision(5, 1);
         b.Entity<EventRsvp>().ToTable("engagement_event_rsvps").ConfigureTenantColumn();
+        b.Entity<RecognitionSettings>().ToTable("engagement_recognition_settings").ConfigureTenantColumn();
+        b.Entity<PointsEntry>().ToTable("engagement_points_ledger").ConfigureTenantColumn();
+        b.Entity<Reward>().ToTable("engagement_rewards").ConfigureTenantColumn();
+        b.Entity<RewardRedemption>().ToTable("engagement_reward_redemptions").ConfigureTenantColumn();
 
         b.ApplyTenantFilters(this);
     }

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
-import { Award, Heart, PartyPopper, Send, Trash2, Trophy } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Award, Coins, Gift, Heart, PartyPopper, Send, Trash2, Trophy } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,7 @@ import { TextAreaField } from '@/components/ui/Field'
 import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/States'
 import { engagementApi, type Kudos } from '@/api/engagement'
 import { useMyEmployeeId } from '@/api/queries'
+import { recognitionApi } from '@/api/recognition'
 import { formatRelativeToNow } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Initials, PersonSelect, TenantGate, useAction } from '@/features/shared/kit'
@@ -33,13 +35,18 @@ function SendKudosModal({ open, onClose }: { open: boolean; onClose: () => void 
   const [to, setTo] = useState('')
   const [badge, setBadge] = useState('thanks')
   const [message, setMessage] = useState('')
-  const send = useAction(() => engagementApi.sendKudos({ toEmployeeId: to, badge, message: message.trim() }), {
+  const [points, setPoints] = useState(0)
+  const wallet = useQuery({ queryKey: ['recognition', 'me'], queryFn: ({ signal }) => recognitionApi.me(signal), enabled: open, retry: false })
+  const pts = wallet.data?.enabled ? wallet.data : null
+  const choices = pts ? [0, 5, 10, 25, 50, 100].filter((n) => n <= Math.min(pts.maxPerKudos, pts.remaining)) : []
+  const send = useAction(() => engagementApi.sendKudos({ toEmployeeId: to, badge, message: message.trim(), points }), {
     success: tx('Takdiriniz gönderildi 🎉'),
-    invalidate: [['kudos']],
+    invalidate: [['kudos'], ['recognition']],
     onDone: () => {
       onClose()
       setTo('')
       setMessage('')
+      setPoints(0)
     },
   })
   return (
@@ -78,6 +85,22 @@ function SendKudosModal({ open, onClose }: { open: boolean; onClose: () => void 
             ))}
           </div>
         </div>
+        {pts && (
+          <div>
+            <p className="mb-2 flex items-center justify-between text-[13px] font-medium">
+              <span>{tx('Puan ekle (isteğe bağlı)')}</span>
+              <span className="text-[12px] font-normal text-muted-foreground">{tx('Bu ay kalan: {0}', [pts.remaining])}</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {choices.map((n) => (
+                <button key={n} type="button" onClick={() => setPoints(n)} aria-pressed={points === n}
+                  className={cn('cursor-pointer rounded-full border px-3 py-1 text-[12.5px] tabular-nums', points === n ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground')}>
+                  {n === 0 ? tx('Puansız') : `+${n}`}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <TextAreaField id="kudos-msg" label={tx('Mesajınız')} rows={3} maxLength={500} value={message} onChange={(e) => setMessage(e.target.value)} hint={`${message.length}/500`} />
         <PiiHint text={message} />
       </div>
@@ -117,9 +140,12 @@ function KudosCard({ k, index }: { k: Kudos; index: number }) {
       </div>
       <p className="relative mt-3 text-[13.5px] leading-relaxed">{k.message}</p>
       <div className="relative mt-3 flex items-center justify-between">
-        <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11.5px] text-muted-foreground">{k.badgeLabel}</span>
+        <span className="flex items-center gap-1.5">
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11.5px] text-muted-foreground">{k.badgeLabel}</span>
+          {k.points > 0 && <span className="flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-[11.5px] font-medium text-amber-600 tabular-nums dark:text-amber-300"><Coins className="size-3" />+{k.points}</span>}
+        </span>
         <div className="flex items-center gap-1">
-          {k.mine && (
+          {k.mine && !k.points && (
             <button type="button" aria-label={tx('Sil')} onClick={askDelete} className="cursor-pointer rounded-lg p-1.5 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive">
               <Trash2 className="size-3.5" />
             </button>
@@ -135,6 +161,24 @@ function KudosCard({ k, index }: { k: Kudos; index: number }) {
         </div>
       </div>
     </motion.article>
+  )
+}
+
+/** Puanlar açıksa bakiye ve bu ay kalan bütçe. */
+function WalletCard() {
+  const q = useQuery({ queryKey: ['recognition', 'me'], queryFn: ({ signal }) => recognitionApi.me(signal), retry: false })
+  if (!q.data?.enabled) return null
+  return (
+    <Panel>
+      <PanelBody className="flex items-center gap-3">
+        <span className="grid size-10 place-items-center rounded-xl bg-amber-400/15 text-amber-500"><Coins className="size-5" /></span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[20px] leading-tight font-semibold tabular-nums">{q.data.balance}</p>
+          <p className="text-[12px] text-muted-foreground">{tx('puanınız · bu ay verebileceğiniz: {0}', [q.data.remaining])}</p>
+        </div>
+        <Button asChild size="sm" variant="outline"><Link to="/panel/oduller"><Gift className="size-4" />{tx('Ödüller')}</Link></Button>
+      </PanelBody>
+    </Panel>
   )
 }
 
@@ -172,6 +216,7 @@ export function KudosPage() {
           )}
         </div>
         <aside className="space-y-5">
+          <WalletCard />
           <Panel>
             <PanelHead title={<span className="flex items-center gap-2"><Trophy className="size-4 text-amber-400" />{' '}{tx('Son 30 gün')}</span>} note={board.data ? tx('{0} takdir · {1} kişi verdi', [board.data.total, board.data.givers]) : undefined} />
             <PanelBody className="space-y-2.5">

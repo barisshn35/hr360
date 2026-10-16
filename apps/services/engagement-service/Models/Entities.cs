@@ -15,6 +15,8 @@ public class Kudos : ITenantOwned
     public string ToName { get; set; } = "";
     public string Badge { get; set; } = "";
     public string Message { get; set; } = "";
+    /// <summary>Takdirle verilen puan (takdir puanları açıksa; yoksa 0).</summary>
+    public int Points { get; set; }
     public List<string> LikedBy { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

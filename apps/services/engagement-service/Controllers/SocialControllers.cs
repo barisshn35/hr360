@@ -41,7 +41,7 @@ public class KudosController : AppController
         var items = await q.OrderByDescending(k => k.CreatedAt).Take(Math.Clamp(limit, 1, 200)).ToListAsync(ct);
         return Ok(items.Select(k => new
         {
-            k.Id, k.FromName, k.FromEmployeeId, k.ToEmployeeId, k.ToName, k.Badge,
+            k.Id, k.FromName, k.FromEmployeeId, k.ToEmployeeId, k.ToName, k.Badge, k.Points,
             badgeLabel = Badges.GetValueOrDefault(k.Badge, k.Badge), k.Message, k.CreatedAt,
             likeCount = k.LikedBy.Count, likedByMe = k.LikedBy.Contains(me), mine = k.FromUserId == me,
         }));
@@ -63,7 +63,7 @@ public class KudosController : AppController
         return Ok(new { total = rows.Count, givers = rows.Select(r => r.FromUserId).Distinct().Count(), top, badges });
     }
 
-    public record CreateKudos(Guid ToEmployeeId, string Badge, string Message);
+    public record CreateKudos(Guid ToEmployeeId, string Badge, string Message, int Points = 0);
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateKudos body, CancellationToken ct)
@@ -94,11 +94,28 @@ public class KudosController : AppController
         var k = new Kudos
         {
             FromUserId = from.UserId, FromEmployeeId = from.EmployeeId, FromName = from.Name,
-            ToEmployeeId = to.Id, ToName = to.Name, Badge = body.Badge, Message = body.Message.Trim(),
+            ToEmployeeId = to.Id, ToName = to.Name, Badge = body.Badge, Message = body.Message.Trim(), Points = body.Points,
         };
-        db.Kudos.Add(k);
-        await db.SaveChangesAsync(ct);
-        await notify.InAppAsync(tenant, to.Id, $"{k.FromName} size takdir gönderdi: {Badges[k.Badge]}",
+        if (body.Points == 0)
+        {
+            db.Kudos.Add(k);
+            await db.SaveChangesAsync(ct);
+        }
+        else
+        {
+            // Puanlı takdir: bütçe denetimi ve deftere yazım tek işlemde, verenin kilidi altında.
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            if (from.EmployeeId is { } giver) await RecognitionPoints.LockAsync(db, tenant, giver, ct);
+            var settings = await RecognitionPoints.SettingsAsync(db, ct);
+            var given = from.EmployeeId is { } g ? await RecognitionPoints.GivenThisMonthAsync(db, g, ct) : 0;
+            if (RecognitionPoints.ValidateGive(settings, body.Points, given, from.EmployeeId is not null) is { } err) return (err, null);
+            db.Kudos.Add(k);
+            db.PointsLedger.Add(new PointsEntry { EmployeeId = to.Id, Delta = body.Points, Reason = "Kudos", RefId = k.Id, Note = from.Name });
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        await notify.InAppAsync(tenant, to.Id,
+            body.Points > 0 ? $"{k.FromName} size takdir ve {body.Points} puan gönderdi: {Badges[k.Badge]}" : $"{k.FromName} size takdir gönderdi: {Badges[k.Badge]}",
             k.Message, "engagement.kudos", ct);
         return (null, k);
     }
@@ -121,7 +138,11 @@ public class KudosController : AppController
         var k = await _db.Kudos.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (k is null) return NotFound();
         if (k.FromUserId != Me.UserId && !Me.IsHr) return Forbid();
+        // Puanlı takdiri alıcı harcamış olabilir; yalnızca İK kaldırır ve puan defterden geri alınır.
+        if (k.Points > 0 && !Me.IsHr) return BadRequest(new { message = "Puanlı takdiri yalnızca İK kaldırabilir.", code = "points_locked" });
         _db.Kudos.Remove(k);
+        if (k.Points > 0)
+            _db.PointsLedger.Add(new PointsEntry { EmployeeId = k.ToEmployeeId, Delta = -k.Points, Reason = "KudosReversed", RefId = k.Id, Note = "Takdir kaldırıldı" });
         await _db.SaveChangesAsync(ct);
         return NoContent();
     }
