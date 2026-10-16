@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Yalnızca uygulamanın indirme önbelleği paylaşılır (rapor, bordro, .ics açmak için). -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="downloads" path="downloads/" />
+</paths>

@@ -1,0 +1,14 @@
+# HR360 Android derleme ortamı: JDK 21 + Node 22 + Android SDK (platform 35, build-tools 35).
+# Kullanım: scripts/android-build.sh (imajı kurar, APK'yı üretir). Sürümler sabit: tekrarlanabilir derleme.
+FROM eclipse-temurin:21-jdk-jammy
+ARG CMDLINE_TOOLS=11076708
+ENV ANDROID_HOME=/opt/android-sdk ANDROID_SDK_ROOT=/opt/android-sdk
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates gnupg && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y --no-install-recommends nodejs && \
+    rm -rf /var/lib/apt/lists/*
+RUN mkdir -p $ANDROID_HOME/cmdline-tools && cd /tmp && \
+    curl -fsSLo tools.zip https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_TOOLS}_latest.zip && \
+    unzip -q tools.zip -d $ANDROID_HOME/cmdline-tools && mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest && rm tools.zip
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/35.0.0
+RUN yes | sdkmanager --licenses >/dev/null && sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0" "build-tools;34.0.0" >/dev/null
+WORKDIR /src

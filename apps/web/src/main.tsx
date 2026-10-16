@@ -1,12 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { loadLocale } from './lib/i18n'
+import { installNativeShell } from './lib/nativeShell'
 import './styles/index.css'
 // Hareket katmanı ayrı dosyada: index.css devir paketinden geldiği gibi kalıyor.
 import './styles/motion.css'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('#root öğesi bulunamadı.')
+
+// Android kabuğunda (WebView) indirmeler yerel köprüyle kaydedilir; tarayıcıda etkisizdir.
+installNativeShell()
 
 /**
  * PWA: üretim derlemesinde servis çalışanını kaydet. Uygulama kabuğu çevrimdışı da açılır.

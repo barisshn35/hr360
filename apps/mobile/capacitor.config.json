@@ -1,0 +1,13 @@
+{
+  "appId": "tr.com.staffware.hr360",
+  "appName": "HR360",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -921,6 +921,8 @@ services:
       - ./deploy/nginx/acme:/var/www/certbot:ro
       # Uygulama/Keycloak yanit vermezken gosterilen statik bakim sayfasi (502/503/504).
       - ./deploy/nginx/errors:/etc/nginx/errors:ro
+      # Android uygulamasi indirmesi (/indir/HR360.apk; scripts/android-build.sh yazar).
+      - ./deploy/downloads:/usr/share/nginx/downloads:ro
     # nginx sertifika dosyasi degisince kendiliginden okumaz; certbot yenilediginde
     # yeni sertifika en gec 6 saat icinde devreye girsin diye periyodik reload.
     command: ["/bin/sh", "-c", "(while :; do sleep 21600; nginx -s reload; done) & exec nginx -g 'daemon off;'"]

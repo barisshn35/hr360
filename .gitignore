@@ -71,3 +71,6 @@ playwright-report/
 
 # install.sh --mail-mode=self / scripts/smtp.sh dns ciktisi (ortama ozel DNS kayitlari)
 deploy/mailer/dns-kayitlari.txt
+
+# Android uygulamasi (scripts/android-build.sh uretir)
+deploy/downloads/*.apk

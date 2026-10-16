@@ -11714,5 +11714,11 @@
  "Örnek veriler eklensin mi?": "Add sample data?",
  "4 departman ve 16 örnek çalışan eklenir. İstediğiniz zaman tek tıkla kaldırabilirsiniz.": "4 departments and 16 sample employees will be added. You can remove them with one click at any time.",
  "Örnek verilerle doldur": "Fill with sample data",
- "Örnek veri yalnızca henüz az çalışanı olan (en fazla 5) şirketlere eklenebilir; bu şirkette {0} çalışan var.": "Sample data can only be added to companies with few employees (at most 5); this company has {0}."
+ "Örnek veri yalnızca henüz az çalışanı olan (en fazla 5) şirketlere eklenebilir; bu şirkette {0} çalışan var.": "Sample data can only be added to companies with few employees (at most 5); this company has {0}.",
+ "Bağlı sunucu: {0}": "Connected server: {0}",
+ "Sunucu adresini değiştir": "Change server address",
+ "Android uygulaması": "Android app",
+ "Telefonunuza kurun; ilk açılışta bu adresi girin: {0}": "Install it on your phone and enter this address on first launch: {0}",
+ "APK dosyasını indir": "Download APK",
+ "Uygulama mağaza dışından kurulduğu için Android bir kez \"bilinmeyen uygulamaları yükleme\" izni ister. İndirdiğiniz dosyayı yalnızca bu adresten alın.": "Because the app is installed outside the store, Android asks once for permission to install unknown apps. Only download the file from this address."
 }

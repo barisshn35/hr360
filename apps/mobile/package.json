@@ -1,0 +1,16 @@
+{
+  "name": "hr360-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "HR360 Android kabuğu: kurulumun kendi arayüzünü açar (yenilik haritası #6)",
+  "scripts": {
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.0",
+    "@capacitor/core": "^7.4.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.0"
+  }
+}

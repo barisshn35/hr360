@@ -14,6 +14,8 @@ import { CompanyNamePanel, BrandingPanel } from './BrandingPanel'
 import { tx } from '@/lib/i18n'
 import { PasswordMethodPanel } from '@/features/access/PasswordLinksPanel'
 import { SampleDataPanel } from './SampleDataPanel'
+import { nativeShell } from '@/lib/nativeShell'
+import { AndroidAppPanel } from './AndroidAppPanel'
 
 const THEMES: Array<{ value: Theme; label: string; icon: React.ElementType }> = [
   { value: 'light', label: tx('Açık'), icon: Sun },
@@ -177,6 +179,17 @@ export function SettingsPage() {
           <PasswordMethodPanel canEdit />
           <SampleDataPanel />
         </>
+      )}
+
+      {!nativeShell() && <AndroidAppPanel />}
+
+      {nativeShell() && (
+        <Panel>
+          <PanelHead title={tx('Uygulama')} note={tx('Bağlı sunucu: {0}', [nativeShell()!.getServer() || '—'])} />
+          <PanelBody>
+            <Button variant="outline" onClick={() => nativeShell()!.resetServer()}>{tx('Sunucu adresini değiştir')}</Button>
+          </PanelBody>
+        </Panel>
       )}
 
       <Panel>

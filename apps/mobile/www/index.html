@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'" />
+  <title>HR360</title>
+  <link rel="stylesheet" href="connect.css" />
+</head>
+<body>
+  <main>
+    <img src="icon.svg" alt="" width="64" height="64" />
+    <h1>HR360</h1>
+    <p id="lead">Şirketinizin HR360 adresini girin.</p>
+    <form id="f" novalidate>
+      <label for="url">Sunucu adresi</label>
+      <input id="url" type="url" inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false" placeholder="https://ik.sirketiniz.com" required />
+      <p id="err" role="alert" hidden></p>
+      <button type="submit">Bağlan</button>
+    </form>
+    <p class="hint">Adresi İK ya da bilgi işlem biriminizden öğrenebilirsiniz. Yalnızca güvenli (https) adresler kabul edilir.</p>
+  </main>
+  <script src="connect.js"></script>
+</body>
+</html>
