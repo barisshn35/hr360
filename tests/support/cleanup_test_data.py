@@ -33,10 +33,8 @@ import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-AYSE = "0e879b9e-d72b-489f-aa5b-8291e0bcbefb"
-MEHMET = "3ab24e3e-cb06-40ab-934c-9ff7eab91fb6"
-ZEYNEP = "7e5bd452-c36f-4555-9b23-06df398e73b6"
-ELIF = "b57689c0-9f43-41ee-8e30-4928d3d32df1"
+sys.path.insert(0, os.path.dirname(__file__))
+from demo_ids import AYSE, ELIF, MEHMET, ZEYNEP  # noqa: E402  (kurulumdan kuruluma değişir)
 
 # ---------------------------------------------------------------------------------------------
 # Silinecek kümeler önce geçici tablolara alınır (bağlantılar silmeden ÖNCE çözülür), sonra

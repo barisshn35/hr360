@@ -16,7 +16,7 @@ sys.path.insert(0, __import__("os").path.dirname(__file__))
 from common import ensure_transfers, AYSE, BASE, FAIL, api, check, mock, wait_for  # noqa: E402
 
 G = "/api/governance"
-MEHMET = "3ab24e3e-cb06-40ab-934c-9ff7eab91fb6"
+from demo_ids import MEHMET  # noqa: E402
 FAIL.clear()
 ensure_transfers("google", "microsoft", "zoom")
 mock("/_reset", "POST")

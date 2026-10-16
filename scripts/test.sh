@@ -105,11 +105,13 @@ integration() {
     sleep 2
   done
   sleep 10
-  for t in test_chat test_calendar test_ai_llm test_cache test_report_lang test_email_lang test_kvkk \
-           test_payroll_time test_push test_workflow_docs test_kvkk_ops test_payroll_eco test_hr_compliance test_recruitment_plus test_learning_perf test_ops_plus \
-           test_platform_reports test_notify_prefs test_identity_sign test_paging test_model_card test_chat_plus test_telemetry test_identity_security \
-           test_time_leave test_kvkk_ml10 test_recruitment_w11 test_offer_esign test_performance_w11 test_learning_w11 test_webhooks_apikeys test_account_provisioning test_ui_prefs \
-           test_org_scenarios test_password_links test_public_site; do
+  # HR360_INTEGRATION_TESTS="test_kvkk test_chat" ile yalnizca secilen betikler calisir.
+  local all="test_chat test_calendar test_ai_llm test_cache test_report_lang test_email_lang test_kvkk
+           test_payroll_time test_push test_workflow_docs test_kvkk_ops test_payroll_eco test_hr_compliance test_recruitment_plus test_learning_perf test_ops_plus
+           test_platform_reports test_notify_prefs test_identity_sign test_paging test_model_card test_chat_plus test_telemetry test_identity_security
+           test_time_leave test_kvkk_ml10 test_recruitment_w11 test_offer_esign test_performance_w11 test_learning_w11 test_webhooks_apikeys test_account_provisioning test_ui_prefs
+           test_org_scenarios test_password_links test_public_site"
+  for t in ${HR360_INTEGRATION_TESTS:-$all}; do
     step "Entegrasyon: $t"
     run python3 "tests/integration/$t.py"
   done

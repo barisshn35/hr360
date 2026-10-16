@@ -10,11 +10,11 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "support"))
 import hr360_login as _login  # noqa: E402
+from demo_ids import AYSE  # noqa: E402,F401  (kurulumdan kuruluma değişir)
 
 BASE = _login.BASE_URL
 G = "/api/governance"
 FAIL = []
-AYSE = "0e879b9e-d72b-489f-aa5b-8291e0bcbefb"
 
 
 def tok(w):

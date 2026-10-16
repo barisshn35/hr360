@@ -20,9 +20,8 @@ from common import form_token, AYSE, FAIL, api, check, http  # noqa: E402
 
 G = "/api/governance"
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
-MEHMET = "3ab24e3e-cb06-40ab-934c-9ff7eab91fb6"
-ZEYNEP = "7e5bd452-c36f-4555-9b23-06df398e73b6"
-ENG = "9d282a19-fe76-40c7-af56-757075718286"  # Mühendislik (ayse + başı mehmet)
+from demo_ids import MEHMET  # noqa: E402
+from demo_ids import ENG, ZEYNEP  # noqa: E402  (ENG: Mühendislik, ayse + başı mehmet)
 OTHER_DEPT = "00000000-0000-4000-8000-00000000d0d0"
 TOKEN = "tstkelime%05d" % random.randint(0, 99999)
 FAIL.clear()

@@ -23,8 +23,8 @@ from common import ensure_transfers, AYSE, FAIL, api, check, http, mock, mock_ca
 
 G = "/api/governance"
 SIGNING = "slack-signing-secret"
-MEHMET = "3ab24e3e-cb06-40ab-934c-9ff7eab91fb6"
-ENG = "9d282a19-fe76-40c7-af56-757075718286"
+from demo_ids import MEHMET  # noqa: E402
+from demo_ids import ENG  # noqa: E402
 RUN = uuid.uuid4().hex[:6]
 TAG = f"TEST5E-{RUN}"
 TODAY = (dt.datetime.utcnow() + dt.timedelta(hours=3)).date()

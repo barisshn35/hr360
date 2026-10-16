@@ -25,7 +25,7 @@ G = "/api/governance"
 DISCLAIMER_TR = "Basit elektronik imza — 5070 sayılı Kanun kapsamında nitelikli (güvenli) elektronik imza değildir."
 DISCLAIMER_EN = "Simple electronic signature — not a qualified (secure) electronic signature under Turkish Law No. 5070."
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
-MEHMET = "3ab24e3e-cb06-40ab-934c-9ff7eab91fb6"
+from demo_ids import MEHMET  # noqa: E402
 FAIL.clear()
 T0 = dt.datetime.now(dt.timezone.utc) - dt.timedelta(seconds=5)
 GHOST = str(uuid.uuid4())  # saklama testi için geçici, ayrılmış çalışan

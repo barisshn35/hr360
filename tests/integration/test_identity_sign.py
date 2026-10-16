@@ -28,7 +28,7 @@ from common import AYSE, FAIL, api, check, http, tok  # noqa: E402
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 FAIL.clear()
 RUN = uuid.uuid4().hex[:6].lower()
-MEHMET = "3ab24e3e-cb06-40ab-934c-9ff7eab91fb6"
+from demo_ids import MEHMET  # noqa: E402
 T = "/api/tenant"
 SCIM = f"{T}/scim/v2"
 DIR = f"{T}/my-tenant/directory"
