@@ -39,7 +39,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 | engagement-service | `hr360_engagement` | 43 | 21 | 20 | 1 |
 | governance-service | `hr360_governance` | 175 | 72 | 56 | 46 |
 | compensation-service | `hr360_compensation` | 34 | 19 | 13 | 1 |
-| expense-service | `hr360_expense` | 20 | 9 | 5 | 3 |
+| expense-service | `hr360_expense` | 21 | 10 | 5 | 3 |
 | notification-service | `hr360_notification` | 11 | 7 | 2 | 0 |
 | tenant-service | `hr360_tenant` | 15 | 11 | 2 | 1 |
 
@@ -150,7 +150,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 
 - Başka servisin tablosuna yazma: `governance_signature_otps` (DELETE) — tetikleyici: expense_documents DELETE
 - Başka servisin tablosuna yazma: `governance_signatures` (DELETE) — tetikleyici: expense_documents DELETE
-- Başka servisin tablosuna yazma: `notification_messages` (INSERT) — apps/services/expense-service/Controllers/DocumentSignaturesController.cs:88
+- Başka servisin tablosuna yazma: `notification_messages` (INSERT) — apps/services/expense-service/Controllers/DocumentComplianceController.cs:133; apps/services/expense-service/Controllers/DocumentSignaturesController.cs:88
 - apps/services/expense-service/Security/KeyRotationJob.cs:112: tablo adı çalışma anında birleştiriliyor (`UPDATE {c.Table} SET {col} = @new WHERE {id} = @id AND {col} = @old`)
 - apps/services/expense-service/Security/KeyRotationJob.cs:97: tablo adı çalışma anında birleştiriliyor (`SELECT {id}, {col} FROM {c.Table} WHERE {col} IS NOT NULL{filter}{(last is null ? "" : $" `)
 - Not: expense_documents üzerindeki DELETE tetikleyicisi governance_signature_otps için DELETE, SELECT istiyor

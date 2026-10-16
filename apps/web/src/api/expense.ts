@@ -173,6 +173,18 @@ export interface HrDocument {
   contentType: string | null
   uploadedAt: string
   uploadedByEmployeeId: string | null
+  /** Geçerlilik bitişi (süreli belgeler). */
+  validUntil?: string | null
+}
+
+/** Eksik belge takibi. */
+export type ComplianceState = 'Missing' | 'Expired' | 'ExpiringSoon'
+export interface ComplianceIssue { type: DocumentType; state: ComplianceState; validUntil: string | null }
+export interface DocumentRequirement { id?: string; type: DocumentType; departmentId: string | null; validityMonths: number | null }
+export interface ComplianceOverview {
+  requirementCount: number
+  summary: { employees: number; compliant: number; missing: number; expired: number; expiringSoon: number }
+  rows: { employeeId: string; name: string; department: string | null; issues: ComplianceIssue[] }[]
 }
 
 export interface CreateClaimInput {
@@ -195,6 +207,7 @@ export interface CreateDocumentInput {
   type: DocumentType
   fileName: string
   storageKey?: string
+  validUntil?: string
 }
 
 /* ------------------------------------------------------------------ servis */
@@ -240,6 +253,13 @@ export const expenseApi = {
 
   createDocument: (input: CreateDocumentInput) =>
     apiFetch<HrDocument>(`${BASE}/documents`, { method: 'POST', body: input }),
+
+  complianceRequirements: (signal?: AbortSignal) => apiFetch<DocumentRequirement[]>(`${BASE}/documents/compliance/requirements`, { signal }),
+  saveComplianceRequirements: (list: DocumentRequirement[]) =>
+    apiFetch<DocumentRequirement[]>(`${BASE}/documents/compliance/requirements`, { method: 'PUT', body: list.map(({ type, departmentId, validityMonths }) => ({ type, departmentId, validityMonths })) }),
+  complianceOverview: (departmentId?: string, signal?: AbortSignal) => apiFetch<ComplianceOverview>(`${BASE}/documents/compliance${qs({ departmentId })}`, { signal }),
+  myCompliance: (signal?: AbortSignal) => apiFetch<ComplianceIssue[]>(`${BASE}/documents/compliance/me`, { signal }),
+  remindCompliance: (employeeIds: string[]) => apiFetch<{ sent: number }>(`${BASE}/documents/compliance/remind`, { method: 'POST', body: { employeeIds } }),
 
   deleteDocument: (id: string) =>
     apiFetch<void>(`${BASE}/documents/${id}`, { method: 'DELETE' }),

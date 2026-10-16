@@ -8,12 +8,13 @@ import { f360Api } from '@/api/performanceGrowth'
 import { kvkk10Api } from '@/api/wave10'
 import { onboardingApi } from '@/api/onboarding'
 import { eomApi } from '@/api/eom'
+import { documentTypeLabels, expenseApi } from '@/api/expense'
 import { useMyEmployeeId } from '@/api/queries'
 import { workflowTypeLabels, type Workflow } from '@/api/types'
 import { useAuth } from '@/auth/useAuth'
 import { tx } from '@/lib/i18n'
 
-export type TodoKind = 'approval' | 'signature' | 'defence' | 'training' | 'onboarding' | 'survey' | 'consent' | 'announcement' | 'feedback360' | 'vote'
+export type TodoKind = 'document' | 'approval' | 'signature' | 'defence' | 'training' | 'onboarding' | 'survey' | 'consent' | 'announcement' | 'feedback360' | 'vote'
 
 export interface Todo {
   id: string
@@ -26,7 +27,7 @@ export interface Todo {
 }
 
 export const todoKindLabels = (): Record<TodoKind, string> => ({
-  approval: tx('Onay'), signature: tx('İmza'), defence: tx('Savunma'), training: tx('Eğitim'), onboarding: tx('İşe giriş görevi'),
+  document: tx('Eksik belge'), approval: tx('Onay'), signature: tx('İmza'), defence: tx('Savunma'), training: tx('Eğitim'), onboarding: tx('İşe giriş görevi'),
   survey: tx('Anket'), consent: tx('Bilgilendirme metni'), announcement: tx('Duyuru'), feedback360: tx('360 geri bildirim'), vote: tx('Ayın çalışanı'),
 })
 
@@ -85,6 +86,11 @@ export function useMyTodos() {
         queryFn: ({ signal }: { signal: AbortSignal }) => f360Api.mine(signal).then((list): Todo[] => list
           .filter((i) => !i.submitted)
           .map((i) => ({ id: `f3:${i.id}`, kind: 'feedback360', title: i.subjectName ? tx('{0} için geri bildirim', [i.subjectName]) : i.title, detail: i.title, due: i.dueDate ?? null, href: '/panel/performans/360' }))) },
+      { queryKey: ['todos', 'documents'], enabled: on, ...opt,
+        queryFn: ({ signal }: { signal: AbortSignal }) => expenseApi.myCompliance(signal).then((list): Todo[] => list
+          .map((i) => ({ id: `doc:${i.type}`, kind: 'document', title: documentTypeLabels[i.type],
+            detail: i.state === 'Missing' ? tx('Özlük dosyanızda eksik; İK\'ya iletin') : i.state === 'Expired' ? tx('Süresi doldu; yenisini İK\'ya iletin') : tx('Süresi yakında doluyor'),
+            due: i.validUntil, href: '/panel/profil' }))) },
       { queryKey: ['todos', 'eom'], enabled: on, ...opt,
         queryFn: ({ signal }: { signal: AbortSignal }) => eomApi.me(signal).then((d): Todo[] => (d.units ?? [])
           .filter((u) => u.action && !u.myChoice)

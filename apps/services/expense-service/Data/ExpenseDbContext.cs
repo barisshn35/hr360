@@ -24,6 +24,7 @@ public class ExpenseDbContext : DbContext, ITenantAwareContext
     public DbSet<ExpenseClaim> Claims => Set<ExpenseClaim>();
     public DbSet<ExpenseItem> Items => Set<ExpenseItem>();
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentRequirement> DocumentRequirements => Set<DocumentRequirement>();
     public DbSet<DocumentSignature> DocumentSignatures => Set<DocumentSignature>();
     public DbSet<SignatureEvidence> SignatureEvidence => Set<SignatureEvidence>();
     public DbSet<HrCase> Cases => Set<HrCase>();
@@ -52,6 +53,9 @@ public class ExpenseDbContext : DbContext, ITenantAwareContext
         modelBuilder.Entity<Document>().ToTable("expense_documents");
         modelBuilder.Entity<Document>().Property(d => d.Type).HasConversion<string>();
         modelBuilder.Entity<Document>().HasIndex(d => d.EmployeeId);
+        modelBuilder.Entity<DocumentRequirement>().ConfigureTenantColumn();
+        modelBuilder.Entity<DocumentRequirement>().ToTable("expense_document_requirements");
+        modelBuilder.Entity<DocumentRequirement>().Property(d => d.Type).HasConversion<string>();
 
         // Y28 basit e-imza (tablolar scripts/sql/2026-10-09_identity_sign.sql).
         modelBuilder.Entity<DocumentSignature>().ConfigureTenantColumn();

@@ -717,6 +717,7 @@ DO $$ DECLARE g text[]; BEGIN
     ['employee_assignments', 'SELECT'],
     ['employee_employees', 'SELECT'],
     ['expense_claims', 'SELECT, INSERT, UPDATE, DELETE'],
+    ['expense_document_requirements', 'SELECT, INSERT, UPDATE, DELETE'],
     ['expense_document_signatures', 'SELECT, INSERT, UPDATE, DELETE'],
     ['expense_documents', 'SELECT, INSERT, UPDATE, DELETE'],
     ['expense_fx_rates', 'SELECT, INSERT, UPDATE, DELETE'],

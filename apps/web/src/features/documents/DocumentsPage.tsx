@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DocumentCompliancePanel } from './DocumentCompliancePanel'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { LoaderCircle, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -28,6 +29,7 @@ function NewDocumentModal({ open, onClose }: { open: boolean; onClose: () => voi
   const [type, setType] = useState<DocumentType | ''>('')
   const [name, setName] = useState('')
   const [storageKey, setStorageKey] = useState('')
+  const [validUntil, setValidUntil] = useState('')
   const [error, setError] = useState<string | undefined>()
 
   const mutation = useMutation({
@@ -37,6 +39,7 @@ function NewDocumentModal({ open, onClose }: { open: boolean; onClose: () => voi
         type: type as DocumentType,
         fileName: name.trim(),
         storageKey: storageKey.trim() || undefined,
+        validUntil: validUntil || undefined,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['expense'] })
@@ -45,6 +48,7 @@ function NewDocumentModal({ open, onClose }: { open: boolean; onClose: () => voi
       setType('')
       setName('')
       setStorageKey('')
+      setValidUntil('')
     },
     onError: (e: unknown) => toast.stop(e instanceof Error ? e.message : tx('Doküman kaydedilemedi.')),
   })
@@ -123,6 +127,14 @@ function NewDocumentModal({ open, onClose }: { open: boolean; onClose: () => voi
           hint={tx('İsteğe bağlı; dosya deposundaki karşılığı')}
           value={storageKey}
           onChange={(e) => setStorageKey(e.target.value)}
+        />
+        <TextField
+          id="doc-valid-until"
+          type="date"
+          label={tx('Geçerlilik bitişi (isteğe bağlı)')}
+          hint={tx('Sağlık raporu, kimlik gibi süreli belgelerde; eksik belge takibi süresi dolanı uyarır.')}
+          value={validUntil}
+          onChange={(e) => setValidUntil(e.target.value)}
         />
       </form>
     </Modal>
@@ -266,6 +278,8 @@ export function DocumentsPage() {
       />
 
       <MySignaturesPanel compact />
+
+      <DocumentCompliancePanel />
 
       <div className="max-w-sm">
         <EmployeePicker

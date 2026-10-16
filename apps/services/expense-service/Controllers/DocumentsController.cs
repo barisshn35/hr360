@@ -56,6 +56,7 @@ public class DocumentsController : ControllerBase
             StorageKey = request.StorageKey?.Trim() ?? "",
             SizeBytes = Math.Max(0, request.SizeBytes ?? 0),
             ContentType = request.ContentType,
+            ValidUntil = request.ValidUntil,
             UploadedByEmployeeId = me
         };
         _db.Documents.Add(doc);
@@ -94,4 +95,4 @@ public class DocumentsController : ControllerBase
 
 public record CreateDocumentRequest(
     Guid EmployeeId, DocumentType Type, string FileName, string? StorageKey,
-    long? SizeBytes, string? ContentType);
+    long? SizeBytes, string? ContentType, DateOnly? ValidUntil = null);
