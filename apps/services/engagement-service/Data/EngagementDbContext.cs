@@ -50,6 +50,8 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
     public DbSet<RewardRedemption> RewardRedemptions => Set<RewardRedemption>();
     public DbSet<GroupCard> Cards => Set<GroupCard>();
     public DbSet<CardSignature> CardSignatures => Set<CardSignature>();
+    public DbSet<CoffeeSettings> CoffeeSettings => Set<CoffeeSettings>();
+    public DbSet<CoffeeParticipant> CoffeeParticipants => Set<CoffeeParticipant>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -102,6 +104,8 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
         b.Entity<RewardRedemption>().ToTable("engagement_reward_redemptions").ConfigureTenantColumn();
         b.Entity<GroupCard>().ToTable("engagement_cards").ConfigureTenantColumn();
         b.Entity<CardSignature>().ToTable("engagement_card_signatures").ConfigureTenantColumn();
+        b.Entity<CoffeeSettings>().ToTable("engagement_coffee_settings").ConfigureTenantColumn();
+        b.Entity<CoffeeParticipant>().ToTable("engagement_coffee_participants").ConfigureTenantColumn();
 
         b.ApplyTenantFilters(this);
     }

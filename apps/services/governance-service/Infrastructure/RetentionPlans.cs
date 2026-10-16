@@ -185,6 +185,10 @@ public static class RetentionPlans
         Del("DELETE FROM engagement_cards", "Kişiye açılmış grup kartları (imzalarıyla)", "\"TenantSlug\" = $1 AND \"RecipientEmployeeId\" = ANY($2)"),
         Upd("UPDATE engagement_cards SET", "Grup kartını açan kişi", "\"CreatedByEmployeeId\" = NULL, \"CreatedByName\" = NULL, \"CreatedByUserId\" = ''",
             "\"TenantSlug\" = $1 AND (\"CreatedByEmployeeId\" = ANY($2) OR \"CreatedByUserId\" = ANY($3))"),
+        Del("DELETE FROM engagement_coffee_participants", "Kahve eşleştirme katılımı", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
+        Upd("UPDATE engagement_coffee_matches SET", "Kahve eşleşmeleri (kişi gruptan çıkarılır)",
+            "\"MemberIds\" = ARRAY(SELECT x FROM unnest(\"MemberIds\") AS x WHERE x <> ALL($2))",
+            "\"TenantSlug\" = $1 AND \"MemberIds\" && $2"),
         Del("DELETE FROM employee_photos", "Çalışan fotoğrafı", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         // Çalışan kaydı en sonda: KeycloakUserId ($3) yukarıdaki adımlar için önceden okundu.
         Upd("UPDATE employee_employees SET", "Çalışan kaydı (ad, e-posta, telefon, hesap bağlantısı, fotoğraf)",

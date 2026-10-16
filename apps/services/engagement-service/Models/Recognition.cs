@@ -95,3 +95,28 @@ public class CardSignature : ITenantOwned
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
+
+/* ======================================================================
+ * Kahve eşleştirme (yenilik haritası #27). Turlar ve eşleşmeler SQL ile
+ * yazılır (bkz. CoffeeWorker); ayar ve katılım EF ile (denetim kaydı).
+ * ==================================================================== */
+
+public class CoffeeSettings : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string TenantSlug { get; set; } = "";
+    public bool Enabled { get; set; }
+    public string Cadence { get; set; } = "Biweekly";
+    /// <summary>ISO haftanın günü: 1 = Pazartesi … 7 = Pazar.</summary>
+    public int DayOfWeek { get; set; } = 1;
+    public bool CrossDepartment { get; set; } = true;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class CoffeeParticipant : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string TenantSlug { get; set; } = "";
+    public Guid EmployeeId { get; set; }
+    public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+}
