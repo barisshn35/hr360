@@ -191,6 +191,64 @@ public class CompensationController : ControllerBase
         return Ok(rows);
     }
 
+    public sealed class UnusedLeaveRow
+    {
+        public Guid EmployeeId { get; set; }
+        public string Name { get; set; } = "";
+        public string? Department { get; set; }
+        public decimal Remaining { get; set; }
+        public decimal Pending { get; set; }
+    }
+
+    /// <summary>
+    /// Kullanılmayan yıllık izin karşılığı (yenilik haritası #16): yılın yıllık izin bakiyesinde kalan gün
+    /// (hak + devreden − devredilen − kullanılan; bekleyen talepler ayrıca gösterilir) × günlük brüt ücret
+    /// (güncel aylık brüt / 30). Muhasebenin yıl sonu karşılık hesabı içindir; görüntüleme ücret erişim
+    /// kaydına yazılır.
+    /// </summary>
+    [HttpGet("reports/unused-leave")]
+    public async Task<IActionResult> UnusedLeave([FromQuery] int? year, CancellationToken ct)
+    {
+        var tenant = _tenant.TenantSlug;
+        if (string.IsNullOrEmpty(tenant)) return BadRequest(new { message = "Rapor bir şirket oturumunda alınır" });
+        var y = year ?? DateTime.UtcNow.Year;
+        var rows = await _db.Database.SqlQueryRaw<UnusedLeaveRow>("""
+            SELECT e."Id" AS "EmployeeId", e."FirstName" || ' ' || e."LastName" AS "Name", d."Name" AS "Department",
+                   b."EntitledDays" + b."CarriedOverDays" - b."CarriedOutDays" - b."UsedDays" AS "Remaining", b."PendingDays" AS "Pending"
+            FROM leave_balances b
+            JOIN employee_employees e ON e."Id" = b."EmployeeId" AND e."Status" <> 'Terminated'
+            LEFT JOIN LATERAL (SELECT x."DepartmentId" FROM employee_assignments x
+                WHERE x."EmployeeId" = e."Id" AND x."EffectiveFrom" <= current_date AND (x."EffectiveTo" IS NULL OR x."EffectiveTo" >= current_date)
+                ORDER BY x."EffectiveFrom" DESC LIMIT 1) a ON true
+            LEFT JOIN organization_departments d ON d."Id" = a."DepartmentId"
+            WHERE b."TenantSlug" = {0} AND b."Year" = {1} AND b."Type" = 'Annual'
+            ORDER BY 2
+            """, tenant, y).ToListAsync(ct);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+        var salaries = (await _db.Records.AsNoTracking()
+            .Where(r => r.EffectiveFrom <= today && (r.EffectiveTo == null || r.EffectiveTo >= today)).ToListAsync(ct))
+            .GroupBy(r => r.EmployeeId).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.EffectiveFrom).First());
+        var items = rows.Where(r => r.Remaining > 0).Select(r =>
+        {
+            var s = salaries.GetValueOrDefault(r.EmployeeId);
+            var daily = s is null ? (decimal?)null : Math.Round(s.BaseSalary / 30m, 2);
+            return new
+            {
+                r.EmployeeId, r.Name, r.Department, remainingDays = r.Remaining, pendingDays = r.Pending,
+                dailyGross = daily, currency = s?.Currency, amount = daily is null ? (decimal?)null : Math.Round(daily.Value * r.Remaining, 2),
+            };
+        }).ToList();
+        await LogViewAsync("unused-leave", "unusedLeaveLiability");
+        return Ok(new
+        {
+            year = y,
+            items,
+            totals = items.Where(i => i.amount is not null).GroupBy(i => i.currency!)
+                .Select(g => new { currency = g.Key, days = g.Sum(i => i.remainingDays), amount = g.Sum(i => i.amount!.Value) }),
+            missingSalary = items.Count(i => i.amount is null),
+        });
+    }
+
     /// <summary>Yeni ucret kaydi; onceki acik kaydi otomatik kapatir.</summary>
     [HttpPost("records")]
     [Authorize(Policy = "RequireCompensationWrite")]

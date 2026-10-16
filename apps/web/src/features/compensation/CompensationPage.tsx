@@ -29,6 +29,7 @@ import { useEmployeeName } from '@/lib/useEmployeeName'
 import { useAuth } from '@/auth/useAuth'
 import { isHr } from '@/auth/roles'
 import { PayEquityPanel } from './PayEquityPanel'
+import { UnusedLeavePanel } from './UnusedLeavePanel'
 
 /** Bant ve ücret kaydı yazmak yalnızca İK'ya açık; "ücret görüntüleme" ek izni salt okumadır. */
 function useCanWriteCompensation() {
@@ -38,7 +39,7 @@ function useCanWriteCompensation() {
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
 
-type TabKey = 'bantlar' | 'gecmis' | 'simulasyon' | 'adalet'
+type TabKey = 'bantlar' | 'gecmis' | 'simulasyon' | 'adalet' | 'izin'
 
 /* ------------------------------------------------------------------ bantlar */
 
@@ -958,6 +959,7 @@ export function CompensationPage() {
     { key: 'simulasyon', label: tx('Zam simülasyonu') },
     // Ücret adaleti yalnızca İK / şirket yöneticisi ("ücret görüntüleme" ek izni kapsamaz).
     ...(canAnalyze ? [{ key: 'adalet' as TabKey, label: tx('Ücret adaleti') }] : []),
+    ...(canAnalyze ? [{ key: 'izin' as TabKey, label: tx('İzin karşılığı') }] : []),
   ]
 
   return (
@@ -973,6 +975,7 @@ export function CompensationPage() {
       {tab === 'gecmis' && <HistoryTab />}
       {tab === 'simulasyon' && <SimulationTab year={year} />}
       {tab === 'adalet' && canAnalyze && <PayEquityPanel />}
+      {tab === 'izin' && canAnalyze && <UnusedLeavePanel />}
     </div>
   )
 }
