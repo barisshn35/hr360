@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEmployees } from '@/api/queries'
-import { LoaderCircle, Upload, FileSpreadsheet, CheckCircle2, XCircle } from 'lucide-react'
+import { LoaderCircle, FileSpreadsheet, CheckCircle2, XCircle, Table2 } from 'lucide-react'
 import { headerField, readSpreadsheet, SpreadsheetError } from '@/lib/spreadsheet'
 import { employeeApi } from '@/api/employees'
 import type { Employee } from '@/api/types'
@@ -12,6 +12,14 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/Toast'
 import { tx } from '@/lib/i18n'
 import { CopyButton } from '@/components/ui/copy-button'
+import { ImportSource, sheetColumns, type ImportMode } from '@/components/import/ImportSource'
+import { compactSheet, emptySheet, sheetToRecords } from '@/components/import/SheetEditor'
+
+const TEMPLATE = {
+  fileName: 'hr360-calisan-sablonu.csv',
+  headers: ['Ad', 'Soyad', 'E-posta', 'Telefon', 'İşe giriş tarihi', 'Departman', 'Unvan'],
+  example: [['Ayşe', 'Yılmaz', 'ayse.yilmaz@ornek.com', '05551234567', '01.09.2026', 'Mühendislik', 'Yazılım Mühendisi']],
+}
 
 interface DepartmentOption {
   id: string
@@ -170,6 +178,19 @@ export function ImportEmployeesModal({
   const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [results, setResults] = useState<ImportResult[] | null>(null)
+  const [mode, setMode] = useState<ImportMode>('file')
+  const [sheet, setSheet] = useState(() => emptySheet(TEMPLATE.headers.length))
+  const sheetCols = sheetColumns(TEMPLATE.headers, {
+    Ad: { width: 110 },
+    Soyad: { width: 110 },
+    'E-posta': { placeholder: 'ad.soyad@sirket.com', width: 200 },
+    Telefon: { placeholder: '05xx xxx xx xx', width: 130 },
+    'İşe giriş tarihi': { placeholder: 'gg.aa.yyyy', width: 130 },
+    Departman: { width: 180, options: departments.map((d) => d.label) },
+    Unvan: { placeholder: tx('ör. Muhasebe Uzmanı'), width: 180 },
+  })
+  const sheetFilled = sheetToRecords(sheetCols, sheet).length
+  const editing = mode === 'sheet' && !fileName
 
   function reset() {
     setRows([])
@@ -181,22 +202,30 @@ export function ImportEmployeesModal({
   function handleClose() {
     if (importing) return
     reset()
+    setSheet(emptySheet(TEMPLATE.headers.length))
+    setMode('file')
     onClose()
   }
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) void readFile(file)
+  async function readFile(file: File) {
+    await load(file.name, () => readSpreadsheet(file))
   }
 
-  async function readFile(file: File) {
-    setFileName(file.name)
+  /** Tablodaki kayıtları ön izlemeye alır; tablo korunur, "Tabloyu düzenle" ile geri dönülür. */
+  async function readSheet() {
+    const records = sheetToRecords(sheetCols, sheet)
+    setSheet(compactSheet(sheet, TEMPLATE.headers.length))
+    await load(tx('Tablodan girilen {0} kayıt', [records.length]), async () => records)
+  }
+
+  async function load(name: string, read: () => Promise<Record<string, unknown>[]>) {
+    setFileName(name)
     setResults(null)
     setParsing(true)
     try {
       const list = employees.data ?? (await employees.refetch()).data ?? []
       const existing = new Map(list.filter((x) => x.email).map((x) => [x.email.trim().toLowerCase(), x]))
-      setRows(parseWorkbook(await readSpreadsheet(file), departments, existing))
+      setRows(parseWorkbook(await read(), departments, existing))
     } catch (err) {
       toast.stop(err instanceof SpreadsheetError ? err.message : tx('Dosya okunamadı. Geçerli bir .xlsx ya da .csv dosyası seçin.'))
       setRows([])
@@ -293,13 +322,18 @@ export function ImportEmployeesModal({
       onClose={handleClose}
       title={tx('Excel\'den çalışan içe aktar')}
       note={tx('Sütunlar: Ad, Soyad, E-posta, Telefon (isteğe bağlı), İşe giriş tarihi, Departman (isteğe bağlı), Unvan (isteğe bağlı). E-postası kayıtlı çalışanların unvanı ve departmanı güncellenir.')}
-      size="lg"
+      size={mode === 'sheet' && !fileName ? 'sheet' : 'lg'}
       footer={
         <>
           <Button variant="outline" className="cursor-pointer" onClick={handleClose} disabled={importing}>
             {results ? tx('Kapat') : tx('Vazgeç')}
           </Button>
-          {!results && (
+          {editing && (
+            <Button className="cursor-pointer" onClick={() => void readSheet()} disabled={sheetFilled === 0}>
+              {sheetFilled === 0 ? tx('Tabloya kayıt girin') : tx('{0} kaydı kontrol et', [sheetFilled])}
+            </Button>
+          )}
+          {!results && !editing && (
             <Button
               className="cursor-pointer"
               onClick={handleImport}
@@ -318,34 +352,13 @@ export function ImportEmployeesModal({
     >
       <div className="space-y-4">
         {!fileName && (
-          <label
-            htmlFor="employee-import-file"
-            className="border-border flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed px-6 py-10 text-center hover:bg-white/5"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault()
-              const file = e.dataTransfer.files?.[0]
-              if (file) void readFile(file)
-            }}
-          >
-            <Upload className="text-muted-foreground size-6" />
-            <span className="text-sm font-medium">{tx('Excel (.xlsx) ya da CSV (.csv) dosyası seçin')}</span>
-            <span className="text-muted-foreground text-xs">
-              {tx('veya sürükleyip bırakın — ilk satır başlık olmalı')}
-            </span>
-            <input
-              id="employee-import-file"
-              type="file"
-              accept=".xlsx,.csv"
-              className="hidden"
-              onChange={handleFile}
-            />
-          </label>
+          <ImportSource mode={mode} onModeChange={setMode} onFile={(f) => void readFile(f)} template={TEMPLATE}
+            columns={sheetCols} sheet={sheet} onSheetChange={setSheet} />
         )}
 
         {fileName && (
           <div className="border-border flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-            <FileSpreadsheet className="size-4 shrink-0" />
+            {mode === 'sheet' ? <Table2 className="size-4 shrink-0" /> : <FileSpreadsheet className="size-4 shrink-0" />}
             <span className="truncate">{fileName}</span>
             {!results && !importing && (
               <button
@@ -353,7 +366,7 @@ export function ImportEmployeesModal({
                 className="text-muted-foreground hover:text-foreground ml-auto cursor-pointer text-xs underline"
                 onClick={reset}
               >
-                {tx('Değiştir')}
+                {mode === 'sheet' ? tx('Tabloyu düzenle') : tx('Değiştir')}
               </button>
             )}
           </div>

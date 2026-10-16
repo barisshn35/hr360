@@ -32,14 +32,15 @@ export function Modal({
   note?: string
   children: ReactNode
   footer?: ReactNode
-  size?: 'md' | 'lg' | 'xl'
+  /** sheet: tablo girişi gibi geniş içerik için ekran genişliğine yakın. */
+  size?: 'md' | 'lg' | 'xl' | 'sheet'
 }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
         className={cn(
           'max-h-[calc(100dvh-2rem)] gap-0 overflow-hidden p-0',
-          size === 'xl' ? 'sm:max-w-4xl' : size === 'lg' ? 'sm:max-w-2xl' : 'sm:max-w-lg',
+          size === 'sheet' ? 'sm:max-w-[min(72rem,calc(100vw-2rem))]' : size === 'xl' ? 'sm:max-w-4xl' : size === 'lg' ? 'sm:max-w-2xl' : 'sm:max-w-lg',
         )}
       >
         <DialogHeader className="border-b border-border bg-gradient-to-b from-primary/[0.05] to-transparent px-5 py-4 text-left">

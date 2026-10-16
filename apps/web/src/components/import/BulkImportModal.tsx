@@ -1,11 +1,15 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { CheckCircle2, Download, FileSpreadsheet, LoaderCircle, Upload, XCircle } from 'lucide-react'
+import { CheckCircle2, FileSpreadsheet, LoaderCircle, Table2, XCircle } from 'lucide-react'
 import { headerField, readSpreadsheet, SpreadsheetError } from '@/lib/spreadsheet'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/Toast'
 import { tx } from '@/lib/i18n'
+import { ImportSource, sheetColumns, type ImportMode, type ImportTemplate } from './ImportSource'
+import { compactSheet, emptySheet, sheetToRecords, type SheetColumn } from './SheetEditor'
+
+export type { ImportTemplate }
 
 /** Ön izlemedeki bir satır: dosyadaki satır numarası, tablo hücreleri ve (varsa) neden atlanacağı. */
 export interface ImportRow<T> {
@@ -15,12 +19,6 @@ export interface ImportRow<T> {
   error?: string
 }
 
-export interface ImportTemplate {
-  fileName: string
-  headers: string[]
-  example: string[][]
-}
-
 /**
  * Tarayıcıda çalışan toplu içe aktarma kabuğu (çalışan içe aktarmasıyla aynı yaklaşım): dosya okunur,
  * satırlar ön izlemede doğrulanır, geçerli satırlar sırayla ürünün kendi API'leriyle oluşturulur.
@@ -28,7 +26,7 @@ export interface ImportTemplate {
  * üst departman) bu sayede çözülebilir.
  */
 export function BulkImportModal<T>({
-  open, onClose, title, note, template, columns, parse, run, entityLabel, onDone,
+  open, onClose, title, note, template, columns, parse, run, entityLabel, onDone, sheetHints,
 }: {
   open: boolean
   onClose: () => void
@@ -43,9 +41,13 @@ export function BulkImportModal<T>({
   /** Sonuç mesajlarında kullanılır, ör. "departman". */
   entityLabel: string
   onDone?: () => void
+  /** Tabloya giriş için başlık adıyla ipuçları: örnek değer, öneri listesi, sütun genişliği. */
+  sheetHints?: Record<string, Omit<SheetColumn, 'header'>>
 }) {
   const toast = useToast()
-  const inputId = useId()
+  const [mode, setMode] = useState<ImportMode>('file')
+  const sheetCols = sheetColumns(template.headers, sheetHints)
+  const [sheet, setSheet] = useState(() => emptySheet(template.headers.length))
   const [rows, setRows] = useState<ImportRow<T>[]>([])
   const [fileName, setFileName] = useState('')
   const [parsing, setParsing] = useState(false)
@@ -61,8 +63,25 @@ export function BulkImportModal<T>({
   }
   function close() {
     if (importing) return
-    reset(); onClose()
+    reset(); setSheet(emptySheet(template.headers.length)); setMode('file'); onClose()
   }
+
+  /** Tablodaki kayıtları ön izlemeye alır; tablo korunur, "Tabloyu düzenle" ile geri dönülür. */
+  async function readSheet() {
+    const records = sheetToRecords(sheetCols, sheet)
+    setSheet(compactSheet(sheet, template.headers.length))
+    setFileName(tx('Tablodan girilen {0} kayıt', [records.length])); setResults(null); setParsing(true)
+    try {
+      setRows(await parse(records))
+    } catch (err) {
+      toast.stop(err instanceof Error ? err.message : tx('Bilinmeyen hata'))
+      setRows([])
+    } finally {
+      setParsing(false)
+    }
+  }
+  const sheetFilled = sheetToRecords(sheetCols, sheet).length
+  const editing = mode === 'sheet' && !fileName
 
   async function readFile(file: File) {
     setFileName(file.name); setResults(null); setParsing(true)
@@ -74,16 +93,6 @@ export function BulkImportModal<T>({
     } finally {
       setParsing(false)
     }
-  }
-
-  function downloadTemplate() {
-    // Noktalı virgül ve UTF-8 BOM: Türkçe Excel dosyayı doğru sütunlara ve karakterlerle açar.
-    const esc = (v: string) => (/[;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
-    const csv = [template.headers, ...template.example].map((r) => r.map(esc).join(';')).join('\r\n')
-    const url = URL.createObjectURL(new Blob(['﻿' + csv + '\r\n'], { type: 'text/csv;charset=utf-8' }))
-    const a = document.createElement('a')
-    a.href = url; a.download = template.fileName; a.click()
-    URL.revokeObjectURL(url)
   }
 
   async function start() {
@@ -105,10 +114,15 @@ export function BulkImportModal<T>({
   }
 
   return (
-    <Modal open={open} onClose={close} title={title} note={note} size="lg"
+    <Modal open={open} onClose={close} title={title} note={note} size={mode === 'sheet' && !fileName ? 'sheet' : 'lg'}
       footer={<>
         <Button variant="outline" onClick={close} disabled={importing}>{results ? tx('Kapat') : tx('Vazgeç')}</Button>
-        {!results && (
+        {editing && (
+          <Button onClick={() => void readSheet()} disabled={sheetFilled === 0}>
+            {sheetFilled === 0 ? tx('Tabloya kayıt girin') : tx('{0} kaydı kontrol et', [sheetFilled])}
+          </Button>
+        )}
+        {!results && !editing && (
           <Button onClick={start} disabled={importing || valid.length === 0}>
             {importing && <LoaderCircle className="size-4 animate-spin" />}
             {importing ? tx('İçe aktarılıyor ({0}/{1})', [progress, valid.length])
@@ -118,29 +132,18 @@ export function BulkImportModal<T>({
       </>}>
       <div className="space-y-4">
         {!fileName && (
-          <>
-            <label htmlFor={inputId}
-              className="group flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-primary/5"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) void readFile(f) }}>
-              <motion.span animate={{ y: [0, -4, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}>
-                <Upload className="size-6 text-muted-foreground group-hover:text-primary" />
-              </motion.span>
-              <span className="text-sm font-medium">{tx('Excel (.xlsx) ya da CSV (.csv) dosyası seçin')}</span>
-              <span className="text-xs text-muted-foreground">{tx('veya sürükleyip bırakın — ilk satır başlık olmalı')}</span>
-              <input id={inputId} type="file" accept=".xlsx,.csv" className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) void readFile(f) }} />
-            </label>
-            <Button variant="outline" size="sm" onClick={downloadTemplate}><Download className="size-4" />{' '}{tx('Örnek şablonu indir')}</Button>
-          </>
+          <ImportSource mode={mode} onModeChange={setMode} onFile={(f) => void readFile(f)} template={template}
+            columns={sheetCols} sheet={sheet} onSheetChange={setSheet} />
         )}
 
         {fileName && (
           <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
-            <FileSpreadsheet className="size-4 shrink-0" />
+            {mode === 'sheet' ? <Table2 className="size-4 shrink-0" /> : <FileSpreadsheet className="size-4 shrink-0" />}
             <span className="truncate">{fileName}</span>
             {!results && !importing && (
-              <button type="button" className="ml-auto cursor-pointer text-xs text-muted-foreground underline hover:text-foreground" onClick={reset}>{tx('Değiştir')}</button>
+              <button type="button" className="ml-auto cursor-pointer text-xs text-muted-foreground underline hover:text-foreground" onClick={reset}>
+                {mode === 'sheet' ? tx('Tabloyu düzenle') : tx('Değiştir')}
+              </button>
             )}
           </div>
         )}

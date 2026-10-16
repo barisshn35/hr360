@@ -107,6 +107,13 @@ export function ImportTeamsModal({ open, onClose, departments }: { open: boolean
       parse={parse}
       run={run}
       entityLabel={tx('ekip')}
+      sheetHints={{
+        'Ekip adı': { placeholder: tx('ör. Mobil'), width: 150 },
+        'Departman': { placeholder: tx('ör. Yazılım Geliştirme'), width: 190, options: departments.map((d) => (departments.filter((x) => x.name === d.name).length > 1 ? d.path : d.name)) },
+        'Ekip lideri e-posta': { placeholder: 'lider@sirket.com', width: 200 },
+        'Üyeler': { placeholder: tx('e-postalar, virgülle'), width: 280 },
+        'Açıklama': { width: 180 },
+      }}
       onDone={() => void qc.invalidateQueries({ queryKey: ['perf', 'teams'] })}
     />
   )

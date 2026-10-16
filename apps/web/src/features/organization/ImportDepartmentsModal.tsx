@@ -60,6 +60,11 @@ export function ImportDepartmentsModal({ open, onClose, companyId, departments }
       parse={parse}
       run={run}
       entityLabel={tx('departman')}
+      sheetHints={{
+        'Departman adı': { placeholder: tx('ör. Yazılım Geliştirme'), width: 200 },
+        'Üst departman': { placeholder: tx('boş = en üst'), width: 200, options: departments.filter((d) => d.companyId === companyId).map((d) => d.name) },
+        'Departman başı e-posta': { placeholder: 'ad.soyad@sirket.com', width: 220 },
+      }}
       onDone={() => { void qc.invalidateQueries({ queryKey: ['departments'] }); void qc.invalidateQueries({ queryKey: ['companies'] }) }}
     />
   )
