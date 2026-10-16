@@ -193,6 +193,7 @@ public static class RetentionPlans
         Upd("UPDATE governance_announcement_comments SET", "Duyuru yorumları (yazar adı)",
             "\"AuthorEmployeeId\" = NULL, \"AuthorName\" = 'Anonim', \"AuthorUserId\" = ''",
             "\"TenantSlug\" = $1 AND (\"AuthorEmployeeId\" = ANY($2) OR \"AuthorUserId\" = ANY($3))"),
+        Del("DELETE FROM engagement_badge_awards", "Rozet kazanımları", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         Del("DELETE FROM employee_photos", "Çalışan fotoğrafı", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         // Çalışan kaydı en sonda: KeycloakUserId ($3) yukarıdaki adımlar için önceden okundu.
         Upd("UPDATE employee_employees SET", "Çalışan kaydı (ad, e-posta, telefon, hesap bağlantısı, fotoğraf)",

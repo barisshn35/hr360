@@ -31,8 +31,9 @@ import { ExtraInfoPanel } from '@/features/governance/CustomFields'
 import { tx } from '@/lib/i18n'
 import { PiiHint } from '@/components/PiiHint'
 import { useConfirm } from '@/components/ui/Confirm'
+import { BadgeCollection, BadgeStrip } from '@/components/people/Badges'
 
-type TabKey = 'bilgiler' | 'bildirimler' | 'gizlilik' | 'takvim' | 'guvenlik' | 'erisilebilirlik'
+type TabKey = 'bilgiler' | 'rozetler' | 'bildirimler' | 'gizlilik' | 'takvim' | 'guvenlik' | 'erisilebilirlik'
 
 const SKILL_HINTS = [tx('İletişim'), tx('Excel'), tx('Proje yönetimi'), tx('SQL'), tx('React'), tx('.NET'), tx('Satış'), tx('Liderlik'), tx('İngilizce')]
 
@@ -290,7 +291,7 @@ function SecurityTab() {
  * ayarları hesaba bağlıdır. Giriş bandındaki "Oku ve yanıtla" buraya geldiğinde metin okunabilmeli.
  */
 function AccountOnlyProfile({ tab, setTab }: { tab: TabKey; setTab: (t: TabKey) => void }) {
-  const current: TabKey = tab === 'bilgiler' || tab === 'takvim' ? 'gizlilik' : tab
+  const current: TabKey = tab === 'bilgiler' || tab === 'takvim' || tab === 'rozetler' ? 'gizlilik' : tab
   return (
     <>
       <div className="mb-5"><InfoNote>{tx('Hesabınız bir çalışan kaydına bağlı değil (ör. şirketi kaydeden yönetici hesabı). Kişisel bilgiler ve takvim, İK sizi çalışan olarak eklediğinde açılır; aşağıdaki ayarlar hesabınıza aittir.')}</InfoNote></div>
@@ -325,14 +326,16 @@ export function ProfilePage() {
               <h2 className="text-[20px] font-semibold tracking-tight">{p.name}</h2>
               <p className="text-[13.5px] text-muted-foreground">{p.position ?? tx('Pozisyon atanmamış')} · {p.department ?? tx('Departman yok')}</p>
               <p className="mt-0.5 text-[12.5px] text-muted-foreground">{tx('{0} · işe giriş {1}', [p.email, formatDate(p.hireDate)])}</p>
+              <div className="mt-2"><BadgeStrip /></div>
             </div>
             <div className="flex flex-wrap gap-1.5">{p.skills.slice(0, 6).map((s) => <span key={s} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[12px] text-primary">{s}</span>)}</div>
           </motion.div>
           <div className="mb-5">
-            <Tabs label={tx('Profil bölümleri')} value={tab} onChange={setTab} tabs={[{ key: 'bilgiler', label: tx('Bilgilerim') }, { key: 'bildirimler', label: tx('Bildirimler') }, { key: 'gizlilik', label: tx('Gizlilik (KVKK)') }, { key: 'takvim', label: tx('Takvim') }, { key: 'guvenlik', label: tx('Güvenlik') }, { key: 'erisilebilirlik', label: tx('Erişilebilirlik') }]} />
+            <Tabs label={tx('Profil bölümleri')} value={tab} onChange={setTab} tabs={[{ key: 'bilgiler', label: tx('Bilgilerim') }, { key: 'rozetler', label: tx('Rozetlerim') }, { key: 'bildirimler', label: tx('Bildirimler') }, { key: 'gizlilik', label: tx('Gizlilik (KVKK)') }, { key: 'takvim', label: tx('Takvim') }, { key: 'guvenlik', label: tx('Güvenlik') }, { key: 'erisilebilirlik', label: tx('Erişilebilirlik') }]} />
           </div>
           {tab === 'bilgiler' && <InfoTab key={p.updatedAt ?? 'new'} p={p} />}
           {tab === 'bilgiler' && <div className="mt-5"><ExtraInfoPanel /></div>}
+          {tab === 'rozetler' && <BadgeCollection />}
           {tab === 'bildirimler' && <NotificationPrefsPanel />}
           {tab === 'erisilebilirlik' && <AccessibilityPanel />}
           {tab === 'gizlilik' && <PrivacyTab employeeId={p.employeeId} />}

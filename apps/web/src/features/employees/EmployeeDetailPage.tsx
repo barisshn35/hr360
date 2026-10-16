@@ -4,6 +4,7 @@ import { ArrowLeft, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { PhotoUploader } from '@/components/people/PhotoUploader'
 import { EmployeeAvatar } from '@/components/people/EmployeeAvatar'
+import { BadgeStrip } from '@/components/people/Badges'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
 import { CenteredSpinner, EmptyState, ErrorState } from '@/components/ui/States'
@@ -98,6 +99,7 @@ export function EmployeeDetailPage() {
           )
         }
       />
+          <div className="-mt-2"><BadgeStrip employeeId={data.id} /></div>
         </div>
       </div>
 
