@@ -423,6 +423,10 @@ services:
       EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
       # Offboarding: ayrilan calisanin hesabini tenant-service ic ucuyla kapatir (G15).
       TENANT_SERVICE_URL: "http://tenant-service:8080"
+      # Ayin calisani e-postalarindaki "Oylamaya git" baglantisi.
+      PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}"
+      # Ayin calisani zamanlayicisi (sn): donem acma/kapama ve hatirlatmalar en gec bu kadar gecikir.
+      EOM_TICK_SECONDS: "${EOM_TICK_SECONDS:-300}"
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
       INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
       # KVKK m.12: profildeki TCKN ve IBAN bu anahtarla veritabaninda sifrelenir.

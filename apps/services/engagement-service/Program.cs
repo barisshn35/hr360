@@ -33,6 +33,8 @@ builder.Services.AddSingleton<EngagementService.Infrastructure.Sql>();
 builder.Services.AddSingleton<EngagementService.Infrastructure.AppCache>();
 builder.Services.AddSingleton<EngagementService.Infrastructure.PeopleDirectory>();
 builder.Services.AddSingleton<EngagementService.Infrastructure.Notifier>();
+builder.Services.AddSingleton<EngagementService.Infrastructure.Eom.EomStore>();
+builder.Services.AddHostedService<EngagementService.Infrastructure.Eom.EomWorker>();
 // Anahtar yenileme: etkin olmayan anahtarla şifreli değerleri yeniden yazar (scripts/crypto-keys.sh).
 // Bu servisin sahibi olduğu tüm şifreli sütunlar burada listelenir; yenisini eklerken buraya ve
 // scripts/crypto-keys.sh içindeki listeye ekleyin.

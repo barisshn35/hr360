@@ -159,6 +159,15 @@ public static class RetentionPlans
             "\"PersonName\" = 'Anonim', \"Contact\" = NULL, \"Details\" = NULL",
             "\"TenantSlug\" = $1 AND (\"EmployeeId\" = ANY($2) OR \"UserId\" = ANY($3)) AND (\"PersonName\" <> 'Anonim' OR \"Contact\" IS NOT NULL OR \"Details\" IS NOT NULL)"),
         Del("DELETE FROM governance_data_request_packages", "Erişim başvurusu veri paketleri", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
+        // Ayın çalışanı: oy veren / aday gösteren kimliği ve gerekçe silinir; sayım (oy, katsayı) sonuç kanıtı olarak kalır.
+        Upd("UPDATE engagement_eom_votes SET", "Ayın çalışanı oyları (oy veren kimliği, gerekçe)",
+            "\"VoterEmployeeId\" = NULL, \"Comment\" = NULL, \"VoterKey\" = md5(random()::text || \"Id\"::text)",
+            "\"TenantSlug\" = $1 AND \"VoterEmployeeId\" = ANY($2)"),
+        Upd("UPDATE engagement_eom_votes SET", "Ayın çalışanı: kişiye yazılmış gerekçeler", "\"Comment\" = NULL",
+            "\"TenantSlug\" = $1 AND \"NomineeEmployeeId\" = ANY($2) AND \"Comment\" IS NOT NULL"),
+        Upd("UPDATE engagement_eom_nominations SET", "Ayın çalışanı aday göstermeleri (aday gösteren kimliği)",
+            "\"NominatorEmployeeId\" = NULL, \"NominatorKey\" = md5(random()::text || \"Id\"::text)",
+            "\"TenantSlug\" = $1 AND \"NominatorEmployeeId\" = ANY($2)"),
         Del("DELETE FROM employee_photos", "Çalışan fotoğrafı", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         // Çalışan kaydı en sonda: KeycloakUserId ($3) yukarıdaki adımlar için önceden okundu.
         Upd("UPDATE employee_employees SET", "Çalışan kaydı (ad, e-posta, telefon, hesap bağlantısı, fotoğraf)",
@@ -193,6 +202,7 @@ public static class RetentionPlans
     public static readonly (string Table, string Reason)[] CoverageExempt =
     {
         ("compensation_*", "Ücret/bordro: 10 yıl yasal saklama (Bordro pusulaları politikası)"),
+        ("engagement_eom_units", "Ayın çalışanı birim üyeliği ve kazanan: yalnızca çalışan kimliği; kayıt anonimleşince ad görünmez, sonuç kanıtı kalır"),
         ("expense_claims", "Masraf: VUK saklama yükümlülüğü"),
         ("expense_documents", "Belge kaydı ve dosya anahtarı: VUK / imza kanıtı"),
         ("expense_document_signatures", "E-imza kanıtı (belge özeti)"),

@@ -163,6 +163,43 @@ public sealed class Notifier
             _log.LogWarning(ex, "Uygulama içi bildirim yazılamadı ({Code})", code);
         }
     }
+
+    /// <summary>
+    /// Alıcının kayıtlı diline (Profil › TR/EN; notification_preferences) göre bildirim. "Email" kanalında
+    /// adres çalışan kaydından alınır, notification-service gönderir. Bağlantı mutlak olmalı.
+    /// </summary>
+    public async Task<bool> LocalizedAsync(string tenant, Guid recipientEmployeeId, string subjectTr, string subjectEn, string bodyTr, string bodyEn,
+        string code, CancellationToken ct, string channel = "InApp", string? actionUrl = null, string? actionLabelTr = null, string? actionLabelEn = null)
+    {
+        try
+        {
+            bool en;
+            try
+            {
+                en = await _sql.ScalarAsync("SELECT \"Language\" FROM notification_preferences WHERE \"TenantSlug\" = $1 AND \"EmployeeId\" = $2",
+                    ct, tenant, recipientEmployeeId) as string == "en";
+            }
+            catch (PostgresException) { en = false; }
+            string? email = null;
+            if (channel == "Email")
+            {
+                email = await _sql.ScalarAsync("SELECT \"Email\" FROM employee_employees WHERE \"TenantSlug\" = $1 AND \"Id\" = $2", ct, tenant, recipientEmployeeId) as string;
+                if (string.IsNullOrWhiteSpace(email)) return false;
+            }
+            await _sql.ExecuteAsync(
+                """
+                INSERT INTO notification_messages ("Id","TenantSlug","RecipientEmployeeId","RecipientEmail","Channel","TemplateCode","Subject","Body","Status","AttemptCount","CreatedAt","Language","ActionUrl","ActionLabel")
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Pending',0,now(),$9,$10,$11)
+                """, ct, Guid.NewGuid(), tenant, recipientEmployeeId, email, channel, code, en ? subjectEn : subjectTr, en ? bodyEn : bodyTr,
+                en ? "en" : "tr", actionUrl, actionUrl is null ? null : en ? actionLabelEn : actionLabelTr);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _log.LogWarning(ex, "Bildirim yazılamadı ({Code})", code);
+            return false;
+        }
+    }
 }
 
 /// <summary>Tüm denetleyiciler için ortak yardımcılar.</summary>

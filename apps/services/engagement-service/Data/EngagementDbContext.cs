@@ -38,6 +38,7 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
     public DbSet<SurveyResponse> SurveyResponses => Set<SurveyResponse>();
     public DbSet<OffboardingCase> OffboardingCases => Set<OffboardingCase>();
     public DbSet<OrgScenario> OrgScenarios => Set<OrgScenario>();
+    public DbSet<EomSettings> EomSettings => Set<EomSettings>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -72,6 +73,11 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
 
         b.Entity<OrgScenario>().ToTable("engagement_org_scenarios").ConfigureTenantColumn();
         b.Entity<OrgScenario>().Property(x => x.Moves).HasColumnType("jsonb");
+
+        b.Entity<EomSettings>().ToTable("engagement_eom_settings").ConfigureTenantColumn();
+        b.Entity<EomSettings>().Property(x => x.WeightEmployee).HasPrecision(4, 2);
+        b.Entity<EomSettings>().Property(x => x.WeightManager).HasPrecision(4, 2);
+        b.Entity<EomSettings>().Property(x => x.WeightHr).HasPrecision(4, 2);
 
         b.ApplyTenantFilters(this);
     }
