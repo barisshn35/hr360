@@ -29,7 +29,7 @@ const download = downloadWorkbook
  * ImportEmployeesModal'daki takma adlarla eşleşir; dil ne olursa olsun Türkçe kalır.
  */
 function downloadImportTemplate() {
-  const lines = ['Ad;Soyad;E-posta;Telefon;İşe giriş tarihi;Departman', 'Ayşe;Yılmaz;ayse.yilmaz@ornek.com;05551234567;01.09.2026;Mühendislik']
+  const lines = ['Ad;Soyad;E-posta;Telefon;İşe giriş tarihi;Departman;Unvan', 'Ayşe;Yılmaz;ayse.yilmaz@ornek.com;05551234567;01.09.2026;Mühendislik;Yazılım Mühendisi']
   const blob = new Blob(['\ufeff' + lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

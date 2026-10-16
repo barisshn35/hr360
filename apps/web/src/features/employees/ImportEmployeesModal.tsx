@@ -4,6 +4,7 @@ import { useEmployees } from '@/api/queries'
 import { LoaderCircle, Upload, FileSpreadsheet, CheckCircle2, XCircle } from 'lucide-react'
 import { headerField, readSpreadsheet, SpreadsheetError } from '@/lib/spreadsheet'
 import { employeeApi } from '@/api/employees'
+import type { Employee } from '@/api/types'
 import { tenantApi } from '@/api/tenant'
 import { qk } from '@/api/queries'
 import { Modal } from '@/components/ui/Modal'
@@ -25,6 +26,9 @@ interface ParsedRow {
   phone: string
   hireDate: string // yyyy-MM-dd
   departmentLabel: string
+  positionTitle: string
+  /** E-postası kayıtlı çalışan: yeni kayıt yerine unvanı/departmanı güncellenir. */
+  existing?: Employee
   error?: string
 }
 
@@ -34,6 +38,8 @@ type ImportResult = {
   message?: string
   /** Üretilen parola linki (yalnızca bu ekranda gösterilir). */
   link?: string | null
+  /** Kayıtlı çalışan güncellendi (yeni kayıt değil). */
+  updated?: boolean
 }
 
 // Excel şablonundaki başlıklar için kabul edilen varyasyonlar (küçük harfe
@@ -51,7 +57,15 @@ const HEADER_ALIASES: Record<string, keyof Omit<ParsedRow, 'rowNumber' | 'error'
   'işegiris': 'hireDate',
   giriştarihi: 'hireDate',
   departman: 'departmentLabel',
+  unvan: 'positionTitle',
+  'ünvan': 'positionTitle',
+  pozisyon: 'positionTitle',
+  'görev': 'positionTitle',
+  title: 'positionTitle',
 }
+
+/** Çalışanın bugün geçerli ataması. */
+const currentAssignment = (e: Employee) => e.assignments?.find((a) => !a.effectiveTo)
 
 /** Takvimde gerçekten var olan bir gün mü (32.13.2026 ya da 30.02.2026 değil)? */
 function isRealDate(y: number, m: number, d: number): boolean {
@@ -78,7 +92,7 @@ function excelDateToIso(value: unknown): string {
   return ''
 }
 
-function parseWorkbook(raw: Record<string, unknown>[], departments: DepartmentOption[], existingEmails: Set<string>): ParsedRow[] {
+function parseWorkbook(raw: Record<string, unknown>[], departments: DepartmentOption[], existing: Map<string, Employee>): ParsedRow[] {
   // Dosya içinde aynı e-posta ikinci kez geçerse o satır da hatalı sayılır.
   const seen = new Set<string>()
   const deptByLabel = new Map(departments.map((d) => [d.label.trim().toLowerCase(), d.id]))
@@ -96,12 +110,26 @@ function parseWorkbook(raw: Record<string, unknown>[], departments: DepartmentOp
     const phone = String(mapped.phone ?? '').trim()
     const hireDate = mapped.hireDate ? excelDateToIso(mapped.hireDate) : ''
     const departmentLabel = String(mapped.departmentLabel ?? '').trim()
+    const positionTitle = String(mapped.positionTitle ?? '').trim()
 
     let error: string | undefined
     const emailKey = email.toLowerCase()
+    const known = existing.get(emailKey)
+    if (known) {
+      // Kayıtlı çalışan: dosyadaki unvan/departman mevcut atamaya işlenir (ör. unvanları toplu doldurmak).
+      const cur = currentAssignment(known)
+      const deptId = departmentLabel ? deptByLabel.get(departmentLabel.toLowerCase()) : cur?.departmentId
+      if (seen.has(emailKey)) error = tx('E-posta dosyada birden fazla kez geçiyor')
+      else if (departmentLabel && !deptId) error = tx('Departman bulunamadı: "{0}"', [departmentLabel])
+      else if (!positionTitle && !departmentLabel) error = tx('Bu e-postayla kayıtlı çalışan var')
+      else if (!deptId) error = tx('Kayıtlı çalışanın departmanı yok; unvan için Departman sütununu doldurun')
+      else if (cur && cur.departmentId === deptId && (cur.positionTitle ?? '') === (positionTitle || (cur.positionTitle ?? '')))
+        error = tx('Kayıt zaten güncel')
+      if (email) seen.add(emailKey)
+      return { rowNumber: idx + 2, firstName, lastName, email, phone, hireDate, departmentLabel, positionTitle, existing: known, error }
+    }
     if (!firstName || !lastName) error = tx('Ad/Soyad eksik')
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) error = tx('E-posta geçersiz')
-    else if (existingEmails.has(emailKey)) error = tx('Bu e-postayla kayıtlı çalışan var')
     else if (seen.has(emailKey)) error = tx('E-posta dosyada birden fazla kez geçiyor')
     else if (!hireDate) error = tx('İşe giriş tarihi okunamadı ya da geçersiz')
     else if (departmentLabel && !deptByLabel.has(departmentLabel.toLowerCase()))
@@ -116,6 +144,7 @@ function parseWorkbook(raw: Record<string, unknown>[], departments: DepartmentOp
       phone,
       hireDate,
       departmentLabel,
+      positionTitle,
       error,
     }
   })
@@ -166,7 +195,7 @@ export function ImportEmployeesModal({
     setParsing(true)
     try {
       const list = employees.data ?? (await employees.refetch()).data ?? []
-      const existing = new Set(list.map((x) => (x.email ?? '').trim().toLowerCase()).filter(Boolean))
+      const existing = new Map(list.filter((x) => x.email).map((x) => [x.email.trim().toLowerCase(), x]))
       setRows(parseWorkbook(await readSpreadsheet(file), departments, existing))
     } catch (err) {
       toast.stop(err instanceof SpreadsheetError ? err.message : tx('Dosya okunamadı. Geçerli bir .xlsx ya da .csv dosyası seçin.'))
@@ -186,6 +215,23 @@ export function ImportEmployeesModal({
     const outcomes: ImportResult[] = []
 
     for (const row of validRows) {
+      if (row.existing) {
+        try {
+          const cur = currentAssignment(row.existing)
+          const deptId = row.departmentLabel ? deptByLabel.get(row.departmentLabel.toLowerCase())! : cur!.departmentId
+          // Aynı başlangıç tarihli atama sunucuda yerinde güncellenir; geçmişe yeni satır açılmaz.
+          await employeeApi.addAssignment(row.existing.id, {
+            departmentId: deptId,
+            positionTitle: row.positionTitle || cur?.positionTitle || undefined,
+            effectiveFrom: cur?.effectiveFrom ?? row.existing.hireDate,
+          })
+          outcomes.push({ row, status: 'ok', updated: true })
+        } catch (e: unknown) {
+          outcomes.push({ row, status: 'failed', message: e instanceof Error ? e.message : tx('Bilinmeyen hata') })
+        }
+        setProgress(outcomes.length)
+        continue
+      }
       try {
         const employee = await employeeApi.create({
           firstName: row.firstName,
@@ -202,7 +248,7 @@ export function ImportEmployeesModal({
           try {
             await employeeApi.addAssignment(employee.id, {
               departmentId: deptId,
-              positionTitle: undefined,
+              positionTitle: row.positionTitle || undefined,
               effectiveFrom: row.hireDate,
             })
           } catch {
@@ -235,7 +281,9 @@ export function ImportEmployeesModal({
 
     const okCount = outcomes.filter((o) => o.status === 'ok').length
     const failCount = outcomes.length - okCount
-    if (failCount === 0) toast.ok(tx('{0} çalışan başarıyla içe aktarıldı.', [okCount]))
+    const updatedCount = outcomes.filter((o) => o.updated).length
+    if (failCount === 0 && updatedCount === okCount) toast.ok(tx('{0} çalışan güncellendi.', [okCount]))
+    else if (failCount === 0) toast.ok(tx('{0} çalışan başarıyla içe aktarıldı.', [okCount]))
     else toast.stop(tx('{0} başarılı, {1} başarısız. Detaylar aşağıda.', [okCount, failCount]))
   }
 
@@ -244,7 +292,7 @@ export function ImportEmployeesModal({
       open={open}
       onClose={handleClose}
       title={tx('Excel\'den çalışan içe aktar')}
-      note={tx('Sütunlar: Ad, Soyad, E-posta, Telefon (isteğe bağlı), İşe giriş tarihi, Departman (isteğe bağlı).')}
+      note={tx('Sütunlar: Ad, Soyad, E-posta, Telefon (isteğe bağlı), İşe giriş tarihi, Departman (isteğe bağlı), Unvan (isteğe bağlı). E-postası kayıtlı çalışanların unvanı ve departmanı güncellenir.')}
       size="lg"
       footer={
         <>
@@ -337,6 +385,7 @@ export function ImportEmployeesModal({
                     <th className="px-3 py-2">{tx('Ad Soyad')}</th>
                     <th className="px-3 py-2">{tx('E-posta')}</th>
                     <th className="px-3 py-2">{tx('Departman')}</th>
+                    <th className="px-3 py-2">{tx('Unvan')}</th>
                     <th className="px-3 py-2">{tx('Durum')}</th>
                   </tr>
                 </thead>
@@ -349,9 +398,12 @@ export function ImportEmployeesModal({
                       </td>
                       <td className="px-3 py-2">{r.email}</td>
                       <td className="px-3 py-2">{r.departmentLabel || '—'}</td>
+                      <td className="px-3 py-2">{r.positionTitle || '—'}</td>
                       <td className="px-3 py-2">
                         {r.error ? (
                           <span className="text-red-500">{r.error}</span>
+                        ) : r.existing ? (
+                          <span className="text-sky-500">{tx('Güncellenecek')}</span>
                         ) : (
                           <span className="text-emerald-500">{tx('Hazır')}</span>
                         )}
