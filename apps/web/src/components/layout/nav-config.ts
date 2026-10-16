@@ -185,6 +185,7 @@ export const navGroups: NavGroupData[] = [
     items: [
       { id: 'analytics', title: tx('Analitik'), description: tx('Kadro, devir, izin, mesai eğilimi'), icon: BarChart3, path: '/panel/analitik', permission: 'performance:manage', tenantOnly: true },
       { id: 'model-card', title: tx('Model kartı'), description: tx('Devir riski modeli: önem, kayma, adalet'), icon: BarChart3, path: '/panel/model-karti', permission: 'performance:manage', tenantOnly: true, requireRoles: ['hr-admin', 'tenant-admin', 'platform-admin'] },
+      { id: 'product-insights', title: tx('Ekran içgörüleri'), description: tx('Kullanım ve kullanıcı geri bildirimi'), icon: MessageSquareText, path: '/panel/ekran-icgoruleri', tenantOnly: true, requireRoles: ['hr-admin', 'tenant-admin', 'platform-admin'] },
       { id: 'nl-report', title: tx('Rapor asistanı'), description: tx('Türkçe sorun, tablo ve grafik gelsin'), icon: Sparkles, path: '/panel/rapor-asistani', permission: 'performance:manage', tenantOnly: true },
       { id: 'time-machine', title: tx('Zaman makinesi'), description: tx('Organizasyon geçmişte nasıldı?'), icon: History, path: '/panel/zaman-makinesi', permission: 'performance:manage', tenantOnly: true },
       // Olay yükleri kiracı genelinde kişisel veri taşır: yalnızca İK (sunucu: RequireHrAdmin).

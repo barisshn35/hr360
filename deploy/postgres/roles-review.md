@@ -36,7 +36,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 | timeshift-service | `hr360_timeshift` | 24 | 16 | 5 | 1 |
 | performance-service | `hr360_performance` | 24 | 18 | 5 | 0 |
 | learning-service | `hr360_learning` | 27 | 19 | 6 | 1 |
-| engagement-service | `hr360_engagement` | 43 | 21 | 20 | 1 |
+| engagement-service | `hr360_engagement` | 45 | 23 | 20 | 1 |
 | governance-service | `hr360_governance` | 175 | 72 | 56 | 46 |
 | compensation-service | `hr360_compensation` | 34 | 19 | 13 | 1 |
 | expense-service | `hr360_expense` | 21 | 10 | 5 | 3 |

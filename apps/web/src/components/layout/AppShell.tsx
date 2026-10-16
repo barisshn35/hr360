@@ -14,6 +14,7 @@ import { KeyboardShortcuts } from './KeyboardShortcuts'
 import { RouteAnnouncer } from './RouteAnnouncer'
 import { ConsentBanner } from './ConsentBanner'
 import { NewVersionBanner } from './NewVersionBanner'
+import { PageFeedback, usePageViews } from './PageFeedback'
 import { PlatformAccessBanner } from './PlatformAccessBanner'
 import { InstallPrompt } from './InstallPrompt'
 import { locate } from './nav-config'
@@ -32,6 +33,7 @@ import { useServerLanguage } from '@/lib/languageSync'
 const AssistantWidget = lazy(async () => ({ default: (await import('./AssistantWidget')).AssistantWidget }))
 
 export function AppShell() {
+  usePageViews()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const location = useLocation()
   const reduced = useReducedMotion()
@@ -115,6 +117,7 @@ export function AppShell() {
           >
             <Outlet />
           </motion.div>
+          <PageFeedback />
         </main>
       </div>
 
