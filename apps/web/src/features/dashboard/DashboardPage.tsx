@@ -43,6 +43,7 @@ import { useNavGroups } from '@/components/layout/use-nav'
 import { useAuth } from '@/auth/useAuth'
 import { PinnedReportsWidget } from '@/features/insights/SavedReports'
 import { WinnerSpotlight } from '@/features/community/eom/EomWinnerCard'
+import { TodosWidget } from '@/features/todos/TodosPage'
 import { useEomMe, useEomWinners } from '@/api/eom'
 import { PlatformDashboard } from './PlatformDashboard'
 import { DashboardCustomizer } from './DashboardCustomizer'
@@ -278,6 +279,7 @@ function TenantDashboard() {
   const dashPref = useUiPref<DashboardPref | null>('dashboard', null)
   const availableWidgets = WIDGET_IDS.filter((id) => ({
     welcome: true,
+    todos: true,
     eom: eomVisible,
     pending: canWorkflow,
     overdue: canDecide,
@@ -657,6 +659,11 @@ function TenantDashboard() {
         </Tile>
 
       </>
+    ),
+    todos: (
+      <Tile i={1} className="md:col-span-6 xl:col-span-4 xl:row-span-2">
+        <TodosWidget />
+      </Tile>
     ),
     eom: (
       <Tile i={1} className="md:col-span-6 xl:col-span-4 xl:row-span-2">

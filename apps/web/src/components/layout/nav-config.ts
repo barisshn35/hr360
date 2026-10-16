@@ -66,6 +66,7 @@ export const navGroups: NavGroupData[] = [
     tagline: tx('Talepler, onaylar ve zaman çizelgesi tek akışta.'),
     icon: Sparkles,
     items: [
+      { id: 'todos', title: tx('Yapılacaklarım'), description: tx('Sizi bekleyen her şey tek listede'), icon: ClipboardList, path: '/panel/yapilacaklarim', tenantOnly: true },
       { id: 'approvals', title: tx('Onay kutusu'), description: tx('Kararınızı bekleyen talepler'), icon: Inbox, path: '/panel/onaylar', permission: 'workflow:view' },
       { id: 'leave', title: tx('İzin'), description: tx('Talepler ve yıllık bakiyeler'), icon: CalendarDays, path: '/panel/izin', permission: 'leave:view' },
       { id: 'expense', title: tx('Masraf'), description: tx('Fiş, harcama ve geri ödeme'), icon: Wallet, path: '/panel/masraf', permission: 'expense:view' },
