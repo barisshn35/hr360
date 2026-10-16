@@ -48,6 +48,8 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
         // Anonim anket yanıtı kimle ilişkilendirilmemeli: denetim satırı yanıtı
         // yanıtlayanla (UserId) eşleştirirdi.
         "SurveyResponse",
+        // Fikir kutusu: anonim fikrin yazarı ve destekleyenler denetim satırının kullanıcısından çıkarılabilirdi.
+        "Idea",
     };
 
     private static readonly JsonSerializerOptions Json = new()

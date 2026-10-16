@@ -127,6 +127,7 @@ const ProfilePage = page(() => import('@/features/profile/ProfilePage'), 'Profil
 const ChatLinkPage = page(() => import('@/features/profile/ChatAccounts'), 'ChatLinkPage')
 const ChatStepUpPage = page(() => import('@/features/profile/ChatStepUp'), 'ChatStepUpPage')
 const KudosPage = page(() => import('@/features/community/KudosPage'), 'KudosPage')
+const IdeasPage = page(() => import('@/features/community/IdeasPage'), 'IdeasPage')
 const EomPage = page(() => import('@/features/community/eom/EomPage'), 'EomPage')
 const EomAdminPage = page(() => import('@/features/community/eom/EomAdminPage'), 'EomAdminPage')
 const EomResultsPage = page(() => import('@/features/community/eom/EomResultsPage'), 'EomResultsPage')
@@ -448,6 +449,7 @@ export function App() {
 
                     {/* ---------------- Topluluk ---------------- */}
                     <Route path="takdir" element={<TenantGate><KudosPage /></TenantGate>} />
+                    <Route path="fikir-kutusu" element={<TenantGate><IdeasPage /></TenantGate>} />
                     <Route path="ayin-calisani" element={<TenantGate><EomPage /></TenantGate>} />
                     <Route path="ayin-calisani/yonetim" element={<TenantGate><EomAdminPage /></TenantGate>} />
                     <Route path="ayin-calisani/sonuc/:periodId" element={<TenantGate><EomResultsPage /></TenantGate>} />

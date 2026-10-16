@@ -39,6 +39,8 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
     public DbSet<OffboardingCase> OffboardingCases => Set<OffboardingCase>();
     public DbSet<OrgScenario> OrgScenarios => Set<OrgScenario>();
     public DbSet<EomSettings> EomSettings => Set<EomSettings>();
+    public DbSet<Idea> Ideas => Set<Idea>();
+    public DbSet<IdeaComment> IdeaComments => Set<IdeaComment>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -78,6 +80,9 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
         b.Entity<EomSettings>().Property(x => x.WeightEmployee).HasPrecision(4, 2);
         b.Entity<EomSettings>().Property(x => x.WeightManager).HasPrecision(4, 2);
         b.Entity<EomSettings>().Property(x => x.WeightHr).HasPrecision(4, 2);
+
+        b.Entity<Idea>().ToTable("engagement_ideas").ConfigureTenantColumn();
+        b.Entity<IdeaComment>().ToTable("engagement_idea_comments").ConfigureTenantColumn();
 
         b.ApplyTenantFilters(this);
     }

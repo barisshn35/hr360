@@ -169,6 +169,7 @@ export const navGroups: NavGroupData[] = [
     icon: HeartHandshake,
     items: [
       { id: 'kudos', title: tx('Takdir duvarı'), description: tx('Rozetli teşekkürler'), icon: Award, path: '/panel/takdir', tenantOnly: true },
+      { id: 'ideas', title: tx('Fikir kutusu'), description: tx('Öneri paylaş, destekle, yanıt al'), icon: Lightbulb, path: '/panel/fikir-kutusu', tenantOnly: true },
       { id: 'eom', title: tx('Ayın çalışanı'), description: tx('Departman oylaması ve kazananlar'), icon: Crown, path: '/panel/ayin-calisani', tenantOnly: true, feature: 'eom' },
       { id: 'celebrations', title: tx('Kutlamalar'), description: tx('Doğum günü ve iş yıl dönümleri'), icon: PartyPopper, path: '/panel/kutlamalar', tenantOnly: true },
       { id: 'surveys', title: tx('Anketler ve eNPS'), description: tx('Anonim nabız anketleri'), icon: MessagesSquare, path: '/panel/anketler', tenantOnly: true },

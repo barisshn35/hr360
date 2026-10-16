@@ -168,6 +168,12 @@ public static class RetentionPlans
         Upd("UPDATE engagement_eom_nominations SET", "Ayın çalışanı aday göstermeleri (aday gösteren kimliği)",
             "\"NominatorEmployeeId\" = NULL, \"NominatorKey\" = md5(random()::text || \"Id\"::text)",
             "\"TenantSlug\" = $1 AND \"NominatorEmployeeId\" = ANY($2)"),
+        Upd("UPDATE engagement_ideas SET", "Fikir kutusu (yazar adı; fikir anonim kalır)",
+            "\"AuthorEmployeeId\" = NULL, \"AuthorName\" = NULL, \"Anonymous\" = true",
+            "\"TenantSlug\" = $1 AND \"AuthorEmployeeId\" = ANY($2)"),
+        Upd("UPDATE engagement_idea_comments SET", "Fikir yorumları (yazar adı)",
+            "\"AuthorEmployeeId\" = NULL, \"AuthorName\" = 'Anonim', \"AuthorUserId\" = ''",
+            "\"TenantSlug\" = $1 AND (\"AuthorEmployeeId\" = ANY($2) OR \"AuthorUserId\" = ANY($3))"),
         Del("DELETE FROM employee_photos", "Çalışan fotoğrafı", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         // Çalışan kaydı en sonda: KeycloakUserId ($3) yukarıdaki adımlar için önceden okundu.
         Upd("UPDATE employee_employees SET", "Çalışan kaydı (ad, e-posta, telefon, hesap bağlantısı, fotoğraf)",
