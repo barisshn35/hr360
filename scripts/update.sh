@@ -159,7 +159,8 @@ if [ "$TARGET" = "$PREV" ]; then
   exit 0
 fi
 echo "Yeni surum: $(version_at "$TARGET") (${TARGET:0:12}, $REF)"
-git --no-pager log --oneline "$PREV..$TARGET" 2>/dev/null | head -20 | sed 's/^/   /'
+# "| head" KULLANMAYIN: pipefail altında 20'den fazla commit varken git SIGPIPE alır ve betik sessizce çıkar.
+git --no-pager log --oneline -n 20 "$PREV..$TARGET" 2>/dev/null | sed 's/^/   /' || true
 if [ "$YES" != 1 ]; then
   read -r -p "Guncellensin mi? (evet/hayir) " ans
   [ "$ans" = evet ] || die "iptal edildi"

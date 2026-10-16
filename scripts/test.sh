@@ -79,7 +79,7 @@ log_scan() {
             if ($0 ~ /^fail: |Exception|Error|^Traceback/ || nl == 2) keep = keep $0 "\n" }
           END { flush() }' || true)"
     if [ -n "$lines" ]; then
-      found=1; echo "-- $c"; printf '%s\n' "$lines" | sed 's/^ *//' | cut -c1-200 | sort | uniq -c | sort -rn | head -8
+      found=1; echo "-- $c"; printf '%s\n' "$lines" | sed 's/^ *//' | cut -c1-200 | sort | uniq -c | sort -rn | sed -n 1,8p
     fi
   done
   if [ "$found" = 0 ]; then echo "OK (beklenmeyen hata yok)"; else echo "BASARISIZ: servis gunluklerinde beklenmeyen hata"; fail=1; fi
