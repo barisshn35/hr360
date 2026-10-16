@@ -16,6 +16,8 @@ export interface DirectoryEntry {
   firstName: string
   lastName: string
   fullName: string
+  /** Fotoğraf sürümü; yoksa null (bkz. api/employeePhoto). */
+  photoVersion?: number | null
 }
 
 export const directoryApi = {

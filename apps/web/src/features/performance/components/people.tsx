@@ -1,5 +1,5 @@
 /**
- * Kişi gösterimi: baş harf avatarı, avatar yığını ve aranabilir kişi seçici.
+ * Kişi gösterimi: fotoğraflı (yoksa baş harfli) avatar, avatar yığını ve aranabilir kişi seçici.
  *
  * Avatar rengi kişi kimliğinden türetilir (`--chart-1..5`): aynı kişi her
  * ekranda aynı renkte görünür, sabit renk yazılmaz.
@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import { Check, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useEmployeePhoto } from '@/api/employeePhoto'
 import { initialsOf, type PickerPerson } from '../hooks'
 import { tx, appLocale } from '@/lib/i18n'
 
@@ -41,6 +42,9 @@ export function PersonAvatar({
   ring?: boolean
 }) {
   const color = colorOf(id)
+  const photo = useEmployeePhoto(id)
+  if (photo)
+    return <img src={photo} alt="" title={name} draggable={false} className={cn('shrink-0 rounded-full object-cover', SIZES[size], ring && 'ring-2 ring-card', className)} />
   return (
     <span
       aria-hidden

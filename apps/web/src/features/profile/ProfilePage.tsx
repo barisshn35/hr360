@@ -19,7 +19,8 @@ import { kvkk10Api } from '@/api/wave10'
 import { useAuth } from '@/auth/useAuth'
 import { useMyEmployeeId } from '@/api/queries'
 import { formatDate } from '@/lib/format'
-import { ChipInput, Initials, errMsg, useAction } from '@/features/shared/kit'
+import { ChipInput, errMsg, useAction } from '@/features/shared/kit'
+import { PhotoUploader } from '@/components/people/PhotoUploader'
 import { CalendarConnections } from '@/features/shared/Meetings'
 import { SkillSuggest } from '@/features/shared/SkillSuggest'
 import { MyAccessLog, MyObjections } from './PrivacyExtras'
@@ -319,7 +320,7 @@ export function ProfilePage() {
       ) : (
         <>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface mb-6 flex flex-wrap items-center gap-4 rounded-3xl border border-border p-5">
-            <Initials name={p.name} size={64} />
+            <PhotoUploader employeeId={p.employeeId} name={p.name} size={64} />
             <div className="min-w-0 flex-1">
               <h2 className="text-[20px] font-semibold tracking-tight">{p.name}</h2>
               <p className="text-[13.5px] text-muted-foreground">{p.position ?? tx('Pozisyon atanmamış')} · {p.department ?? tx('Departman yok')}</p>

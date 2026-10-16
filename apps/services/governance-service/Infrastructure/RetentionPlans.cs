@@ -159,11 +159,12 @@ public static class RetentionPlans
             "\"PersonName\" = 'Anonim', \"Contact\" = NULL, \"Details\" = NULL",
             "\"TenantSlug\" = $1 AND (\"EmployeeId\" = ANY($2) OR \"UserId\" = ANY($3)) AND (\"PersonName\" <> 'Anonim' OR \"Contact\" IS NOT NULL OR \"Details\" IS NOT NULL)"),
         Del("DELETE FROM governance_data_request_packages", "Erişim başvurusu veri paketleri", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
+        Del("DELETE FROM employee_photos", "Çalışan fotoğrafı", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         // Çalışan kaydı en sonda: KeycloakUserId ($3) yukarıdaki adımlar için önceden okundu.
-        Upd("UPDATE employee_employees SET", "Çalışan kaydı (ad, e-posta, telefon, hesap bağlantısı)",
+        Upd("UPDATE employee_employees SET", "Çalışan kaydı (ad, e-posta, telefon, hesap bağlantısı, fotoğraf)",
             """
             "FirstName" = 'Anonim', "LastName" = upper(left("Id"::text, 6)), "Email" = 'anon-' || "Id" || '@anonim.invalid',
-            "Phone" = NULL, "KeycloakUserId" = NULL
+            "Phone" = NULL, "KeycloakUserId" = NULL, "PhotoVersion" = NULL
             """,
             "\"TenantSlug\" = $1 AND \"Id\" = ANY($2)"),
     };

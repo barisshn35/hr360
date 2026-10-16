@@ -51,6 +51,7 @@ DO $$ DECLARE g text[]; BEGIN
     ['audit_log', 'SELECT, INSERT'],
     ['employee_assignments', 'SELECT, INSERT, UPDATE, DELETE'],
     ['employee_employees', 'SELECT, INSERT, UPDATE, DELETE'],
+    ['employee_photos', 'SELECT, INSERT, UPDATE, DELETE'],
     ['messaging_outbox', 'SELECT, INSERT, UPDATE, DELETE'],
     ['platform_access_grants', 'SELECT'],
     ['platform_tenants', 'SELECT']
@@ -461,6 +462,7 @@ DO $$ DECLARE g text[]; BEGIN
     ['compensation_salary_bands', 'SELECT'],
     ['employee_assignments', 'SELECT'],
     ['employee_employees', 'SELECT, UPDATE'],
+    ['employee_photos', 'SELECT, DELETE'],
     ['engagement_desk_bookings', 'SELECT, DELETE'],
     ['engagement_desks', 'SELECT'],
     ['engagement_internal_applications', 'SELECT, UPDATE'],

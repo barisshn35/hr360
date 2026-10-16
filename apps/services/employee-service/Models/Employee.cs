@@ -29,6 +29,12 @@ public class Employee : ITenantOwned
 
     public DateOnly HireDate { get; set; }
     public EmployeeStatus Status { get; set; } = EmployeeStatus.Active;
+
+    /// <summary>
+    /// Fotoğraf sürümü (yoksa null). Fotoğrafın kendisi ayrı tabloda (employee_photos) tutulur; bu sayı
+    /// her yüklemede artar ve istemcide önbellek anahtarı olur (/employees/{id}/photo?v=N).
+    /// </summary>
+    public int? PhotoVersion { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public List<Assignment> Assignments { get; set; } = new();
 }

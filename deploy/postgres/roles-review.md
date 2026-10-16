@@ -28,7 +28,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 | Servis | Rol | Toplam tablo | Kendi | Başka servisten salt okuma | Başka servise yazma |
 |---|---|---|---|---|---|
 | organization-service | `hr360_organization` | 9 | 5 | 3 | 0 |
-| employee-service | `hr360_employee` | 6 | 2 | 2 | 0 |
+| employee-service | `hr360_employee` | 7 | 3 | 2 | 0 |
 | workflow-service | `hr360_workflow` | 14 | 5 | 7 | 0 |
 | leave-service | `hr360_leave` | 15 | 5 | 6 | 1 |
 | recruitment-service | `hr360_recruitment` | 23 | 12 | 4 | 5 |
@@ -37,7 +37,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 | performance-service | `hr360_performance` | 24 | 18 | 5 | 0 |
 | learning-service | `hr360_learning` | 27 | 19 | 6 | 1 |
 | engagement-service | `hr360_engagement` | 35 | 14 | 19 | 1 |
-| governance-service | `hr360_governance` | 169 | 72 | 55 | 41 |
+| governance-service | `hr360_governance` | 170 | 72 | 55 | 42 |
 | compensation-service | `hr360_compensation` | 34 | 19 | 13 | 1 |
 | expense-service | `hr360_expense` | 20 | 9 | 5 | 3 |
 | notification-service | `hr360_notification` | 11 | 7 | 2 | 0 |
@@ -78,8 +78,9 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 
 ## governance-service (`hr360_governance`)
 
-- Başka servisin tablosuna yazma: `compensation_payslips` (DELETE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:287
-- Başka servisin tablosuna yazma: `employee_employees` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:163
+- Başka servisin tablosuna yazma: `compensation_payslips` (DELETE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:288
+- Başka servisin tablosuna yazma: `employee_employees` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:164
+- Başka servisin tablosuna yazma: `employee_photos` (DELETE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:162
 - Başka servisin tablosuna yazma: `engagement_desk_bookings` (DELETE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:86
 - Başka servisin tablosuna yazma: `engagement_internal_applications` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:76
 - Başka servisin tablosuna yazma: `engagement_kudos` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:65; apps/services/governance-service/Infrastructure/RetentionPlans.cs:67
@@ -96,7 +97,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 - Başka servisin tablosuna yazma: `learning_scorm_runtime` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:131
 - Başka servisin tablosuna yazma: `leave_requests` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:90
 - Başka servisin tablosuna yazma: `notification_category_prefs` (DELETE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:149
-- Başka servisin tablosuna yazma: `notification_messages` (DELETE, INSERT) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:135; apps/services/governance-service/Infrastructure/RetentionPlans.cs:280
+- Başka servisin tablosuna yazma: `notification_messages` (DELETE, INSERT) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:135; apps/services/governance-service/Infrastructure/RetentionPlans.cs:281
 - Başka servisin tablosuna yazma: `notification_preferences` (DELETE, INSERT, UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:137
 - Başka servisin tablosuna yazma: `notification_push_subscriptions` (DELETE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:136
 - Başka servisin tablosuna yazma: `onboarding_asset_assignments` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:133
@@ -107,13 +108,13 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 - Başka servisin tablosuna yazma: `performance_feedback` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:104
 - Başka servisin tablosuna yazma: `performance_potential_ratings` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:106
 - Başka servisin tablosuna yazma: `performance_reviews` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:102
-- Başka servisin tablosuna yazma: `recruitment_applications` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:237
-- Başka servisin tablosuna yazma: `recruitment_candidates` (DELETE, UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:265
-- Başka servisin tablosuna yazma: `recruitment_interviews` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:240
-- Başka servisin tablosuna yazma: `recruitment_offers` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:245
-- Başka servisin tablosuna yazma: `recruitment_referrals` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:121; apps/services/governance-service/Infrastructure/RetentionPlans.cs:231
-- Başka servisin tablosuna yazma: `recruitment_scorecards` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:242
-- Başka servisin tablosuna yazma: `recruitment_status_links` (DELETE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:248
+- Başka servisin tablosuna yazma: `recruitment_applications` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:238
+- Başka servisin tablosuna yazma: `recruitment_candidates` (DELETE, UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:266
+- Başka servisin tablosuna yazma: `recruitment_interviews` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:241
+- Başka servisin tablosuna yazma: `recruitment_offers` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:246
+- Başka servisin tablosuna yazma: `recruitment_referrals` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:121; apps/services/governance-service/Infrastructure/RetentionPlans.cs:232
+- Başka servisin tablosuna yazma: `recruitment_scorecards` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:243
+- Başka servisin tablosuna yazma: `recruitment_status_links` (DELETE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:249
 - Başka servisin tablosuna yazma: `timeshift_clock_credentials` (DELETE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:96
 - Başka servisin tablosuna yazma: `timeshift_clock_punches` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:94
 - Başka servisin tablosuna yazma: `timeshift_overtime_requests` (UPDATE) — apps/services/governance-service/Infrastructure/RetentionPlans.cs:98
@@ -158,7 +159,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 
 ## tenant-service (`hr360_tenant`)
 
-- Başka servisin tablosuna yazma: `organization_companies` (DELETE, INSERT) — apps/services/tenant-service/Services/TenantProvisioningService.cs:140
+- Başka servisin tablosuna yazma: `organization_companies` (DELETE, INSERT) — apps/services/tenant-service/Services/TenantProvisioningService.cs:146
 - apps/services/tenant-service/Security/KeyRotationJob.cs:112: tablo adı çalışma anında birleştiriliyor (`UPDATE {c.Table} SET {col} = @new WHERE {id} = @id AND {col} = @old`)
 - apps/services/tenant-service/Security/KeyRotationJob.cs:97: tablo adı çalışma anında birleştiriliyor (`SELECT {id}, {col} FROM {c.Table} WHERE {col} IS NOT NULL{filter}{(last is null ? "" : $" `)
 

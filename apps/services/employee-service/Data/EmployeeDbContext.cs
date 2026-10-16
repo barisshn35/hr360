@@ -24,6 +24,7 @@ public class EmployeeDbContext : DbContext, ITenantAwareContext
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<Assignment> Assignments => Set<Assignment>();
+    public DbSet<EmployeePhoto> Photos => Set<EmployeePhoto>();
 
     /// <summary>
     /// Türkçe harf katlamalı küçük harf (SQL: public.hr360_fold, scripts/sql/2026-10-09_paging_indexes.sql).
@@ -49,6 +50,9 @@ public class EmployeeDbContext : DbContext, ITenantAwareContext
         modelBuilder.Entity<Employee>().HasIndex(e => e.KeycloakUserId).IsUnique()
             .HasFilter("\"KeycloakUserId\" IS NOT NULL");
         modelBuilder.Entity<Employee>().Property(e => e.Status).HasConversion<string>();
+
+        modelBuilder.Entity<EmployeePhoto>().ConfigureTenantColumn();
+        modelBuilder.Entity<EmployeePhoto>().ToTable("employee_photos").HasKey(p => p.EmployeeId);
 
         modelBuilder.Entity<Assignment>().ToTable("employee_assignments");
         modelBuilder.Entity<Assignment>()

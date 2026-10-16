@@ -61,6 +61,8 @@ import { useNavGroups } from './use-nav'
 import { useInstallPrompt } from '@/lib/pwa'
 import { usePrivacyScreen } from '@/lib/privacy-screen'
 import { tx } from '@/lib/i18n'
+import { useEmployeePhoto } from '@/api/employeePhoto'
+import { useMyEmployeeId } from '@/api/queries'
 import { LanguageToggle } from '@/components/layout/LanguageToggle'
 import { OPEN_WHATS_NEW_EVENT, WhatsNewButton } from '@/features/whats-new/WhatsNewPanel'
 
@@ -319,6 +321,7 @@ function AccountMenu() {
   const { user, roles, logout, accountUrl, tenant, canSwitchTenant, availableTenants, switchTenant } = useAuth()
   const install = useInstallPrompt()
   const [privacy, setPrivacy] = usePrivacyScreen()
+  const photo = useEmployeePhoto(useMyEmployeeId(!!tenant).employeeId)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -328,9 +331,13 @@ function AccountMenu() {
           className="group relative ml-0.5 flex cursor-pointer items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <span className="absolute -inset-[3px] rounded-full bg-[conic-gradient(from_0deg,hsl(var(--primary)),transparent_40%,hsl(170_85%_60%),transparent_80%,hsl(var(--primary)))] opacity-40 transition-opacity group-hover:opacity-90 motion-safe:animate-[spin_6s_linear_infinite]" />
-          <span className="relative flex size-8 items-center justify-center rounded-full bg-card text-[11.5px] font-semibold text-foreground ring-2 ring-background">
-            {user?.initials ?? tx('HR')}
-          </span>
+          {photo ? (
+            <img src={photo} alt="" className="relative size-8 rounded-full object-cover ring-2 ring-background" />
+          ) : (
+            <span className="relative flex size-8 items-center justify-center rounded-full bg-card text-[11.5px] font-semibold text-foreground ring-2 ring-background">
+              {user?.initials ?? tx('HR')}
+            </span>
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { PhotoUploader } from '@/components/people/PhotoUploader'
+import { EmployeeAvatar } from '@/components/people/EmployeeAvatar'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
 import { CenteredSpinner, EmptyState, ErrorState } from '@/components/ui/States'
@@ -79,6 +81,11 @@ export function EmployeeDetailPage() {
         </Link>
       </Button>
 
+      <div className="flex items-center gap-4">
+        {canManage
+          ? <PhotoUploader employeeId={data.id} name={fullName(data)} size={64} />
+          : <EmployeeAvatar id={data.id} name={fullName(data)} size={64} />}
+        <div className="min-w-0 flex-1">
       <PageHeader
         title={fullName(data)}
         description={tx('{0} tarihinde işe başladı. {1} aktif atama.', [formatDate(data.hireDate), formatNumber(activeCount)])}
@@ -91,6 +98,8 @@ export function EmployeeDetailPage() {
           )
         }
       />
+        </div>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
         <div className="space-y-4">

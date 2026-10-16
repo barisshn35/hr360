@@ -167,6 +167,7 @@ public class EmployeesController : ControllerBase
                 e.FirstName,
                 e.LastName,
                 fullName = e.FirstName + " " + e.LastName,
+                e.PhotoVersion,
             })
             .ToListAsync();
 
@@ -224,7 +225,7 @@ public class EmployeesController : ControllerBase
         }
         return Ok(new
         {
-            employee.Id, employee.FirstName, employee.LastName, employee.Email, employee.Status,
+            employee.Id, employee.FirstName, employee.LastName, employee.Email, employee.Status, employee.PhotoVersion,
         });
     }
 

@@ -239,6 +239,7 @@ export async function apiUploadFile<T>(
   path: string,
   file: File,
   fieldName = 'file',
+  method: 'POST' | 'PUT' = 'POST',
 ): Promise<T> {
   const token = await getValidToken()
   if (!token) {
@@ -249,7 +250,7 @@ export async function apiUploadFile<T>(
   formData.append(fieldName, file)
 
   const res = await fetch(`${env.apiBase}${path}`, {
-    method: 'POST',
+    method,
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'X-HR360-Lang': lang, ...platformTenantHeaders() },
     body: formData,
   })
@@ -268,4 +269,20 @@ export async function apiUploadFile<T>(
   } catch {
     throw new ApiError(502, tx('Sunucudan beklenmeyen yanıt alındı.'))
   }
+}
+
+/**
+ * Yetkili ikili içerik (ör. çalışan fotoğrafı): <img src> Authorization başlığı gönderemediği için
+ * içerik bu yolla alınıp nesne adresine çevrilir. 404 → null (kayıt yok, hata değil).
+ */
+export async function apiFetchBlob(path: string, signal?: AbortSignal): Promise<Blob | null> {
+  const token = await getValidToken()
+  if (!token) throw new ApiError(401, tx('Oturumunuzun süresi doldu. Lütfen yeniden giriş yapın.'))
+  const res = await fetch(`${env.apiBase}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, ...platformTenantHeaders() },
+    signal,
+  })
+  if (res.status === 404) return null
+  if (!res.ok) throw await toApiError(res)
+  return res.blob()
 }

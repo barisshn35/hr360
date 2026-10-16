@@ -82,6 +82,8 @@ export interface Employee {
   hireDate: string
   status: EmployeeStatusValue
   assignments: Assignment[]
+  /** Fotoğraf sürümü; yoksa null. */
+  photoVersion?: number | null
 }
 
 export interface CreateEmployeeInput {
