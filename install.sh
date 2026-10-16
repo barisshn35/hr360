@@ -203,7 +203,7 @@ ask_secret_aes_key() {
     ask input "$prompt [bos birakin, otomatik guclu bir deger uretilsin]: "
     if [ -z "$input" ]; then
       input="$(random_aes_key)"
-      echo "   -> otomatik uretildi: $input"
+      echo "   -> otomatik uretildi (.env dosyasina yazilacak)"
       break
     fi
     is_aes_key "$input" && break
@@ -226,7 +226,7 @@ ask_secret() {
     ask input "$prompt [bos birakin, otomatik guclu bir deger uretilsin]: "
     if [ -z "$input" ]; then
       input="$(random_secret)"
-      echo "   -> otomatik uretildi: $input"
+      echo "   -> otomatik uretildi (.env dosyasina yazilacak)"
       break
     fi
     [[ "$input" =~ ^[A-Za-z0-9._~+=-]+$ ]] && [ "${#input}" -ge "$min" ] && break
@@ -1046,6 +1046,8 @@ BACKUP_ENCRYPTION_KEY="$(random_secret)$(random_secret)$(random_secret)"
 KEYCLOAK_TENANT_ADMIN_CLIENT_SECRET="$(random_secret)$(random_secret)"
 
 # --- 3) .env yaz ----------------------------------------------------------
+# Tum sirlar bu dosyada: yalnizca sahibi okuyabilsin (varsayilan umask 664 birakir).
+( umask 077; : > .env ); chmod 600 .env
 cat > .env <<EOF
 GATEWAY_PORT=${GATEWAY_PORT}
 PUBLIC_URL=${PUBLIC_URL}
@@ -1270,6 +1272,8 @@ if [ "$MAIL_MODE" = self ]; then
 fi
 
 echo ""
+# Eski kurulumlarda .env genis izinle yazilmis olabilir; guncellemede de daralt.
+chmod 600 .env 2>/dev/null || true
 echo "${GREEN}${BOLD}Kurulum tamamlandi.${RESET}"
 echo "----------------------------------------------"
 echo "Uygulama:         ${PUBLIC_ORIGIN}"
