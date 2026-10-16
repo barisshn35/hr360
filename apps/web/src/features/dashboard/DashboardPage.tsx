@@ -42,6 +42,8 @@ import { flattenItems } from '@/components/layout/nav-config'
 import { useNavGroups } from '@/components/layout/use-nav'
 import { useAuth } from '@/auth/useAuth'
 import { PinnedReportsWidget } from '@/features/insights/SavedReports'
+import { WinnerSpotlight } from '@/features/community/eom/EomWinnerCard'
+import { useEomMe, useEomWinners } from '@/api/eom'
 import { PlatformDashboard } from './PlatformDashboard'
 import { DashboardCustomizer } from './DashboardCustomizer'
 import { WIDGET_IDS, defaultLayout, resolveLayout, type DashboardPref, type DashboardRole, type WidgetId } from './dashboardLayout'
@@ -268,11 +270,18 @@ function TenantDashboard() {
   const healthTone = health.isError ? 'danger' : health.data ? 'success' : 'neutral'
   const orbit = modules.slice(0, 8)
 
+  // Ayın çalışanı: modül açık ve gösterilecek kazanan ya da kullanılacak oy varsa.
+  const eomWinners = useEomWinners()
+  const eomMe = useEomMe()
+  const eomVisible = eomWinners.data?.enabled === true
+    && ((eomWinners.data.units ?? []).length > 0 || (eomMe.data?.units ?? []).some((u) => u.action !== null))
+
   const dashboardRole: DashboardRole = can('employee:viewAll') ? 'hr' : canDecide ? 'manager' : 'employee'
   const roleDefaults = defaultLayout(dashboardRole)
   const dashPref = useUiPref<DashboardPref | null>('dashboard', null)
   const availableWidgets = WIDGET_IDS.filter((id) => ({
     welcome: true,
+    eom: eomVisible,
     pending: canWorkflow,
     overdue: canDecide,
     kpis: statsLoading || kpis.length > 0,
@@ -654,6 +663,11 @@ function TenantDashboard() {
         </Tile>
 
       </>
+    ),
+    eom: (
+      <Tile i={1} className="md:col-span-6 xl:col-span-4 xl:row-span-2">
+        <WinnerSpotlight compact />
+      </Tile>
     ),
     pinned: (
       <>

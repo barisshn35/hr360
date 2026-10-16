@@ -5,6 +5,7 @@
  */
 
 import {
+  Crown,
   LayoutDashboard, Inbox, CalendarDays, Wallet, LifeBuoy, Clock,
   Building2, Users, UserPlus, ClipboardCheck, Laptop, Target, GraduationCap,
   BadgeDollarSign, FileText, Bell, Shield, UsersRound, UserRound, Crosshair,
@@ -34,8 +35,12 @@ export type NavItemData = {
   /** permission yerine/yanında: sadece bu sabit rollerden biri varsa göster
    * (Ek İzin - ext-* - sayılmaz). Bkz. roller öğesindeki kullanım notu. */
   requireRoles?: Role[]
+  /** İsteğe bağlı modül: kiracıda kapalıysa gizlenir (İK yine görür ki açabilsin). */
+  feature?: NavFeature
   children?: NavItemData[]
 }
+
+export type NavFeature = 'eom'
 
 export type NavGroupData = {
   id: string
@@ -164,6 +169,7 @@ export const navGroups: NavGroupData[] = [
     icon: HeartHandshake,
     items: [
       { id: 'kudos', title: tx('Takdir duvarı'), description: tx('Rozetli teşekkürler'), icon: Award, path: '/panel/takdir', tenantOnly: true },
+      { id: 'eom', title: tx('Ayın çalışanı'), description: tx('Departman oylaması ve kazananlar'), icon: Crown, path: '/panel/ayin-calisani', tenantOnly: true, feature: 'eom' },
       { id: 'celebrations', title: tx('Kutlamalar'), description: tx('Doğum günü ve iş yıl dönümleri'), icon: PartyPopper, path: '/panel/kutlamalar', tenantOnly: true },
       { id: 'surveys', title: tx('Anketler ve eNPS'), description: tx('Anonim nabız anketleri'), icon: MessagesSquare, path: '/panel/anketler', tenantOnly: true },
       { id: 'directory', title: tx('Yetenek dizini'), description: tx('Kim ne biliyor?'), icon: Search, path: '/panel/yetenek-dizini', tenantOnly: true },
@@ -240,8 +246,10 @@ export function filterByPermission(
   can: (p: Permission) => boolean,
   roles: string[],
   hasTenant = true,
+  features: Partial<Record<NavFeature, boolean>> = {},
 ): NavGroupData[] {
   const allowed = (item: NavItemData) =>
+    (!item.feature || features[item.feature] === true) &&
     (!item.permission || can(item.permission)) &&
     (!item.requireRoles || hasStandardRole(roles, item.requireRoles)) &&
     (!item.tenantOnly || hasTenant)

@@ -1,11 +1,17 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/auth/useAuth'
 import { useTenantScope } from '@/lib/tenant-scope'
+import { useEomWinners } from '@/api/eom'
 import { filterByPermission, navGroups } from './nav-config'
 
-/** Kullanıcının izinleriyle süzülmüş menü ağacı. */
+/**
+ * Kullanıcının izinleriyle süzülmüş menü ağacı. İsteğe bağlı modüller (ör. ayın çalışanı) kiracıda
+ * kapalıysa gizlenir; İK yine görür ki ayarlardan açabilsin.
+ */
 export function useNavGroups() {
   const { can, roles } = useAuth()
   const { hasTenant } = useTenantScope()
-  return useMemo(() => filterByPermission(navGroups, can, roles, hasTenant), [can, roles, hasTenant])
+  const isHr = (roles as string[]).some((r) => r === 'hr-admin' || r === 'tenant-admin' || r === 'ext-engagement-manage')
+  const eom = useEomWinners(hasTenant && !isHr).data?.enabled === true
+  return useMemo(() => filterByPermission(navGroups, can, roles, hasTenant, { eom: isHr || eom }), [can, roles, hasTenant, isHr, eom])
 }

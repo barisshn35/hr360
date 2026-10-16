@@ -3,7 +3,7 @@
  * Kayıt kişiye özel (ui-prefs `dashboard`); kayıt yoksa role göre varsayılan düzen kullanılır.
  * Yetkiyle görünmeyen kartlar düzende olsa da çizilmez (yetki sunucuda ayrıca denetlenir).
  */
-export const WIDGET_IDS = ['welcome', 'queue', 'pending', 'overdue', 'kpis', 'chart', 'organization', 'modules', 'pinned'] as const
+export const WIDGET_IDS = ['welcome', 'eom', 'queue', 'pending', 'overdue', 'kpis', 'chart', 'organization', 'modules', 'pinned'] as const
 export type WidgetId = (typeof WIDGET_IDS)[number]
 
 export interface DashboardPref {
@@ -17,11 +17,11 @@ export type DashboardRole = 'employee' | 'manager' | 'hr'
 export function defaultLayout(role: DashboardRole): DashboardPref {
   switch (role) {
     case 'employee':
-      return { order: ['welcome', 'pending', 'kpis', 'modules', 'queue', 'chart', 'organization', 'overdue', 'pinned'], hidden: ['chart'] }
+      return { order: ['welcome', 'eom', 'pending', 'kpis', 'modules', 'queue', 'chart', 'organization', 'overdue', 'pinned'], hidden: ['chart'] }
     case 'manager':
-      return { order: ['welcome', 'queue', 'overdue', 'pending', 'chart', 'kpis', 'modules', 'organization', 'pinned'], hidden: [] }
+      return { order: ['welcome', 'eom', 'queue', 'overdue', 'pending', 'chart', 'kpis', 'modules', 'organization', 'pinned'], hidden: [] }
     default:
-      return { order: ['welcome', 'pending', 'overdue', 'kpis', 'chart', 'queue', 'organization', 'modules', 'pinned'], hidden: [] }
+      return { order: ['welcome', 'eom', 'pending', 'overdue', 'kpis', 'chart', 'queue', 'organization', 'modules', 'pinned'], hidden: [] }
   }
 }
 

@@ -127,6 +127,9 @@ const ProfilePage = page(() => import('@/features/profile/ProfilePage'), 'Profil
 const ChatLinkPage = page(() => import('@/features/profile/ChatAccounts'), 'ChatLinkPage')
 const ChatStepUpPage = page(() => import('@/features/profile/ChatStepUp'), 'ChatStepUpPage')
 const KudosPage = page(() => import('@/features/community/KudosPage'), 'KudosPage')
+const EomPage = page(() => import('@/features/community/eom/EomPage'), 'EomPage')
+const EomAdminPage = page(() => import('@/features/community/eom/EomAdminPage'), 'EomAdminPage')
+const EomResultsPage = page(() => import('@/features/community/eom/EomResultsPage'), 'EomResultsPage')
 const CelebrationsPage = page(() => import('@/features/community/CelebrationsPage'), 'CelebrationsPage')
 const SurveysPage = page(() => import('@/features/community/SurveysPage'), 'SurveysPage')
 const DirectoryPage = page(() => import('@/features/community/DirectoryPage'), 'DirectoryPage')
@@ -445,6 +448,9 @@ export function App() {
 
                     {/* ---------------- Topluluk ---------------- */}
                     <Route path="takdir" element={<TenantGate><KudosPage /></TenantGate>} />
+                    <Route path="ayin-calisani" element={<TenantGate><EomPage /></TenantGate>} />
+                    <Route path="ayin-calisani/yonetim" element={<TenantGate><EomAdminPage /></TenantGate>} />
+                    <Route path="ayin-calisani/sonuc/:periodId" element={<TenantGate><EomResultsPage /></TenantGate>} />
                     <Route path="kutlamalar" element={<TenantGate><CelebrationsPage /></TenantGate>} />
                     <Route path="anketler" element={<TenantGate><SurveysPage /></TenantGate>} />
                     <Route path="yetenek-dizini" element={<TenantGate><DirectoryPage /></TenantGate>} />
