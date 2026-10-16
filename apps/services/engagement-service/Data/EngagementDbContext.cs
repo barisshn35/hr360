@@ -41,6 +41,7 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
     public DbSet<EomSettings> EomSettings => Set<EomSettings>();
     public DbSet<Idea> Ideas => Set<Idea>();
     public DbSet<IdeaComment> IdeaComments => Set<IdeaComment>();
+    public DbSet<WeeklyCheckin> WeeklyCheckins => Set<WeeklyCheckin>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -83,6 +84,7 @@ public class EngagementDbContext : DbContext, ITenantAwareContext
 
         b.Entity<Idea>().ToTable("engagement_ideas").ConfigureTenantColumn();
         b.Entity<IdeaComment>().ToTable("engagement_idea_comments").ConfigureTenantColumn();
+        b.Entity<WeeklyCheckin>().ToTable("engagement_weekly_checkins").ConfigureTenantColumn();
 
         b.ApplyTenantFilters(this);
     }

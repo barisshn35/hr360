@@ -36,3 +36,19 @@ public class IdeaComment : ITenantOwned
     public string Body { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+
+/// <summary>Haftalık check-in: çalışanın kısa haftalık notu (yöneticisi görür).</summary>
+public class WeeklyCheckin : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string TenantSlug { get; set; } = "";
+    public Guid EmployeeId { get; set; }
+    public DateOnly WeekStart { get; set; }
+    public string? Progress { get; set; }
+    public string? Blockers { get; set; }
+    public string? NextWeek { get; set; }
+    public short Mood { get; set; }
+    public bool AddedToOneOnOne { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

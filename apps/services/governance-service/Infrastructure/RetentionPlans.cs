@@ -175,6 +175,7 @@ public static class RetentionPlans
             "\"AuthorEmployeeId\" = NULL, \"AuthorName\" = 'Anonim', \"AuthorUserId\" = ''",
             "\"TenantSlug\" = $1 AND (\"AuthorEmployeeId\" = ANY($2) OR \"AuthorUserId\" = ANY($3))"),
         Del("DELETE FROM engagement_newhire_checkins", "İlk 90 gün uyum formları", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
+        Del("DELETE FROM engagement_weekly_checkins", "Haftalık check-in notları", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         Del("DELETE FROM employee_photos", "Çalışan fotoğrafı", "\"TenantSlug\" = $1 AND \"EmployeeId\" = ANY($2)"),
         // Çalışan kaydı en sonda: KeycloakUserId ($3) yukarıdaki adımlar için önceden okundu.
         Upd("UPDATE employee_employees SET", "Çalışan kaydı (ad, e-posta, telefon, hesap bağlantısı, fotoğraf)",

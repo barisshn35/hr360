@@ -127,6 +127,7 @@ const ProfilePage = page(() => import('@/features/profile/ProfilePage'), 'Profil
 const ChatLinkPage = page(() => import('@/features/profile/ChatAccounts'), 'ChatLinkPage')
 const ChatStepUpPage = page(() => import('@/features/profile/ChatStepUp'), 'ChatStepUpPage')
 const KudosPage = page(() => import('@/features/community/KudosPage'), 'KudosPage')
+const CheckinPage = page(() => import('@/features/growth/CheckinPage'), 'CheckinPage')
 const NewHirePage = page(() => import('@/features/growth/NewHirePage'), 'NewHirePage')
 const ProductInsightsPage = page(() => import('@/features/insights/ProductInsightsPage'), 'ProductInsightsPage')
 const TodosPage = page(() => import('@/features/todos/TodosPage'), 'TodosPage')
@@ -452,6 +453,7 @@ export function App() {
 
                     {/* ---------------- Topluluk ---------------- */}
                     <Route path="takdir" element={<TenantGate><KudosPage /></TenantGate>} />
+                    <Route path="check-in" element={<TenantGate><CheckinPage /></TenantGate>} />
                     <Route path="ilk-90-gun" element={<TenantGate><NewHirePage /></TenantGate>} />
                     <Route path="ekran-icgoruleri" element={guarded('performance:manage', <ProductInsightsPage />, ['hr-admin', 'tenant-admin', 'platform-admin'])} />
                     <Route path="yapilacaklarim" element={<TenantGate><TodosPage /></TenantGate>} />
