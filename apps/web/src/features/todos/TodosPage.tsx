@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
 import {
-  Award, BookOpen, CheckCheck, ClipboardList, FileSignature, FileWarning, Gavel, Inbox, Megaphone, MessageSquareHeart, Rocket, ShieldCheck, Vote,
+  Award, BookOpen, CheckCheck, ClipboardList, FileSignature, FileWarning, Sprout, Gavel, Inbox, Megaphone, MessageSquareHeart, Rocket, ShieldCheck, Vote,
 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
@@ -14,6 +14,7 @@ import { tx } from '@/lib/i18n'
 import { todoKindLabels, useMyTodos, type Todo, type TodoKind } from './useMyTodos'
 
 const ICON: Record<TodoKind, React.ElementType> = {
+  newhire: Sprout,
   document: FileWarning,
   approval: Inbox, signature: FileSignature, defence: Gavel, training: BookOpen, onboarding: Rocket, survey: MessageSquareHeart,
   consent: ShieldCheck, announcement: Megaphone, feedback360: Award, vote: Vote,

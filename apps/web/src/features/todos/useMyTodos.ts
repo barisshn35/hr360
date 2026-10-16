@@ -9,12 +9,13 @@ import { kvkk10Api } from '@/api/wave10'
 import { onboardingApi } from '@/api/onboarding'
 import { eomApi } from '@/api/eom'
 import { documentTypeLabels, expenseApi } from '@/api/expense'
+import { newHireApi } from '@/features/growth/NewHirePage'
 import { useMyEmployeeId } from '@/api/queries'
 import { workflowTypeLabels, type Workflow } from '@/api/types'
 import { useAuth } from '@/auth/useAuth'
 import { tx } from '@/lib/i18n'
 
-export type TodoKind = 'document' | 'approval' | 'signature' | 'defence' | 'training' | 'onboarding' | 'survey' | 'consent' | 'announcement' | 'feedback360' | 'vote'
+export type TodoKind = 'newhire' | 'document' | 'approval' | 'signature' | 'defence' | 'training' | 'onboarding' | 'survey' | 'consent' | 'announcement' | 'feedback360' | 'vote'
 
 export interface Todo {
   id: string
@@ -27,7 +28,7 @@ export interface Todo {
 }
 
 export const todoKindLabels = (): Record<TodoKind, string> => ({
-  document: tx('Eksik belge'), approval: tx('Onay'), signature: tx('İmza'), defence: tx('Savunma'), training: tx('Eğitim'), onboarding: tx('İşe giriş görevi'),
+  newhire: tx('Uyum formu'), document: tx('Eksik belge'), approval: tx('Onay'), signature: tx('İmza'), defence: tx('Savunma'), training: tx('Eğitim'), onboarding: tx('İşe giriş görevi'),
   survey: tx('Anket'), consent: tx('Bilgilendirme metni'), announcement: tx('Duyuru'), feedback360: tx('360 geri bildirim'), vote: tx('Ayın çalışanı'),
 })
 
@@ -86,6 +87,9 @@ export function useMyTodos() {
         queryFn: ({ signal }: { signal: AbortSignal }) => f360Api.mine(signal).then((list): Todo[] => list
           .filter((i) => !i.submitted)
           .map((i) => ({ id: `f3:${i.id}`, kind: 'feedback360', title: i.subjectName ? tx('{0} için geri bildirim', [i.subjectName]) : i.title, detail: i.title, due: i.dueDate ?? null, href: '/panel/performans/360' }))) },
+      { queryKey: ['todos', 'newhire'], enabled: on, ...opt,
+        queryFn: ({ signal }: { signal: AbortSignal }) => newHireApi.mine(signal).then((list): Todo[] => list.filter((c) => !c.answeredAt)
+          .map((c) => ({ id: `nh:${c.id}`, kind: 'newhire', title: tx('{0}. gün uyum formu', [c.milestone]), detail: tx('Üç kısa soru'), due: null, href: '/panel/ilk-90-gun' }))) },
       { queryKey: ['todos', 'documents'], enabled: on, ...opt,
         queryFn: ({ signal }: { signal: AbortSignal }) => expenseApi.myCompliance(signal).then((list): Todo[] => list
           .map((i) => ({ id: `doc:${i.type}`, kind: 'document', title: documentTypeLabels[i.type],

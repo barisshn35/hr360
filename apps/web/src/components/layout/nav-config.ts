@@ -159,6 +159,7 @@ export const navGroups: NavGroupData[] = [
       { id: 'due-training', title: tx('Zorunlu eğitim takibi'), description: tx('Son tarih, sertifika ve İSG eğitimi'), icon: CalendarClock, path: '/panel/egitim-takibi', permission: 'learning:view' },
       { id: 'mentorship', title: tx('Mentorluk'), description: tx('Beceri eşleştirmeli mentor bulma'), icon: Handshake, path: '/panel/mentorluk', tenantOnly: true },
       { id: 'mobility', title: tx('İç ilanlar'), description: tx('Şirket içi açık pozisyonlar'), icon: Megaphone, path: '/panel/ic-ilanlar', tenantOnly: true },
+      { id: 'newhire', title: tx('İlk 90 gün'), description: tx('Yeni çalışan uyum formları'), icon: Sprout, path: '/panel/ilk-90-gun', tenantOnly: true },
       { id: 'one-on-ones', title: tx('1:1 görüşmeler'), description: tx('Ortak gündem, aksiyonlar, notlar'), icon: MessagesSquare, path: '/panel/birebir', tenantOnly: true },
       { id: 'team-health', title: tx('Ekip sağlığı'), description: tx('Tükenmişlik sinyalleri'), icon: HeartPulse, path: '/panel/ekip-sagligi', permission: 'performance:manage', tenantOnly: true },
     ],

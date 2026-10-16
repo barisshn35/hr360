@@ -35,6 +35,8 @@ builder.Services.AddSingleton<EngagementService.Infrastructure.PeopleDirectory>(
 builder.Services.AddSingleton<EngagementService.Infrastructure.Notifier>();
 builder.Services.AddSingleton<EngagementService.Infrastructure.Eom.EomStore>();
 builder.Services.AddHostedService<EngagementService.Infrastructure.Eom.EomWorker>();
+builder.Services.AddSingleton<EngagementService.Infrastructure.NewHire.NewHireWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<EngagementService.Infrastructure.NewHire.NewHireWorker>());
 // Anahtar yenileme: etkin olmayan anahtarla şifreli değerleri yeniden yazar (scripts/crypto-keys.sh).
 // Bu servisin sahibi olduğu tüm şifreli sütunlar burada listelenir; yenisini eklerken buraya ve
 // scripts/crypto-keys.sh içindeki listeye ekleyin.
