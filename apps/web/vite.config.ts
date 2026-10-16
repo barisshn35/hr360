@@ -17,10 +17,25 @@ export default defineConfig(({ mode }) => {
   const appVersion =
     env.HR360_VERSION?.trim() || (existsSync(versionFile) ? readFileSync(versionFile, 'utf8').trim() : '') || 'dev'
 
+  // Derleme kimliği: aynı sürüm numarasıyla yapılan her yeniden derlemede değişir. Açık sekmeler
+  // /version.json'u yoklayıp kendi kimlikleriyle karşılaştırır ("Yeni sürüm hazır" şeridi).
+  const buildId = `${appVersion}+${Date.now().toString(36)}`
+
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: 'hr360-version-json',
+        apply: 'build',
+        generateBundle() {
+          this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: appVersion, build: buildId }) })
+        },
+      },
+    ],
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
+      __BUILD_ID__: JSON.stringify(buildId),
     },
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },

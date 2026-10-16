@@ -13,6 +13,7 @@ import { CommandPalette } from './CommandPalette'
 import { KeyboardShortcuts } from './KeyboardShortcuts'
 import { RouteAnnouncer } from './RouteAnnouncer'
 import { ConsentBanner } from './ConsentBanner'
+import { NewVersionBanner } from './NewVersionBanner'
 import { PlatformAccessBanner } from './PlatformAccessBanner'
 import { InstallPrompt } from './InstallPrompt'
 import { locate } from './nav-config'
@@ -95,6 +96,7 @@ export function AppShell() {
           </div>
         )}
 
+        <NewVersionBanner />
         <PlatformAccessBanner />
         <ConsentBanner />
         <InstallPrompt />
