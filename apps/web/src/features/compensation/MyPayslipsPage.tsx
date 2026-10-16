@@ -15,6 +15,7 @@ import { PayslipBreakdown, monthName } from './PayrollPage'
 import { printPayslip } from './payslipPrint'
 import { MyAdvancesPanel } from './PayrollExtras'
 import { MyEPayslipBox } from './PayrollTr'
+import { TotalRewards } from './TotalRewards'
 
 /** Çalışanın kendi bordro pusulaları (yalnızca kapanmış dönemler). */
 export function MyPayslipsPage() {
@@ -55,6 +56,7 @@ export function MyPayslipsPage() {
           )}
         </div>
       )}
+      {!!q.data?.length && <div className="mt-5"><TotalRewards slips={q.data} /></div>}
       <div className="mt-4"><InfoNote>{tx('Pusulanızı yalnızca siz ve bordro yetkilisi görebilir.')}</InfoNote></div>
       <div className="mt-5"><MyAdvancesPanel /></div>
     </>
