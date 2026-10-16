@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { ArrowRight, Bell, FlaskConical, MessageSquare, Pencil, Plus, Trash2, Webhook, Workflow, Zap } from 'lucide-react'
+import { ArrowRight, Bell, FlaskConical, MessageSquare, Pencil, Plus, Sparkles, Trash2, Webhook, Workflow, Zap } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
@@ -17,13 +17,14 @@ import { cn } from '@/lib/utils'
 import { TenantGate, useAction } from '@/features/shared/kit'
 import { tx } from '@/lib/i18n'
 import { useConfirm } from '@/components/ui/Confirm'
+import { ruleRecipes, type RuleDraft } from './ruleRecipes'
 
 const ACTION_ICON: Record<string, React.ElementType> = { notify: Bell, slack: MessageSquare, teams: MessageSquare, webhook: Webhook }
-type Draft = Omit<Rule, 'id' | 'fireCount' | 'lastFiredAt' | 'createdAt'>
+type Draft = RuleDraft
 
-function RuleEditor({ rule, catalog, onClose }: { rule?: Rule; catalog: RuleCatalog; onClose: () => void }) {
+function RuleEditor({ rule, initial, catalog, onClose }: { rule?: Rule; initial?: Draft; catalog: RuleCatalog; onClose: () => void }) {
   const [d, setD] = useState<Draft>(rule ? { name: rule.name, description: rule.description, trigger: rule.trigger, conditions: rule.conditions, actions: rule.actions, isEnabled: rule.isEnabled }
-    : { name: '', description: '', trigger: 'leave.approved', conditions: [], actions: [{ type: 'notify', target: 'employee', message: '{{ozet}}' }], isEnabled: true })
+    : initial ?? { name: '', description: '', trigger: 'leave.approved', conditions: [], actions: [{ type: 'notify', target: 'employee', message: '{{ozet}}' }], isEnabled: true })
   const fields = catalog.events.find((e) => e.type === d.trigger)?.fields ?? []
   const [sample, setSample] = useState('')
   const samplePayload = useMemo(() => {
@@ -124,6 +125,7 @@ export function RulesPage() {
   const rules = useQuery({ queryKey: ['rules'], queryFn: ({ signal }) => governanceApi.rules(signal) })
   const runs = useQuery({ queryKey: ['rules', 'runs'], queryFn: ({ signal }) => governanceApi.ruleRuns(undefined, signal), enabled: tab === 'calismalar', refetchInterval: 15_000 })
   const [edit, setEdit] = useState<Rule | null | undefined>(undefined)
+  const [recipe, setRecipe] = useState<RuleDraft | null>(null)
   const samples = useAction(() => governanceApi.sampleRules(), { success: tx('Örnek kurallar eklendi'), invalidate: [['rules']] })
   const toggle = useAction((r: Rule) => governanceApi.updateRule(r.id, { name: r.name, description: r.description, trigger: r.trigger, conditions: r.conditions, actions: r.actions, isEnabled: !r.isEnabled }), { invalidate: [['rules']] })
   const del = useAction((id: string) => governanceApi.deleteRule(id), { success: tx('Silindi'), invalidate: [['rules']] })
@@ -136,6 +138,20 @@ export function RulesPage() {
       <PageHeader title={tx('Kural motoru')} description={tx('“5 günden uzun izin onaylanınca İK kanalına yaz”, “ayrılışta webhook tetikle”… Kod yazmadan olay tabanlı otomasyonlar.')} actions={catalog.data && <Button onClick={() => setEdit(null)}><Plus className="size-4" />{' '}{tx('Yeni kural')}</Button>} />
       <div className="mb-4"><InfoNote>{tx('Kurallar Kafka olay akışında değerlendirilir (governance-service). Her tetiklenme “Çalışmalar” sekmesine sonucuyla yazılır.')}</InfoNote></div>
       <div className="mb-5"><Tabs label={tx('Kural motoru')} value={tab} onChange={setTab} tabs={[{ key: 'kurallar', label: tx('Kurallar'), count: rules.data?.length }, { key: 'calismalar', label: tx('Çalışmalar') }]} /></div>
+      {tab === 'kurallar' && catalog.data && (
+        <Panel className="mb-5">
+          <PanelHead title={<span className="flex items-center gap-2"><Sparkles className="size-4 text-amber-400" />{tx('Hazır tarifler')}</span>} note={tx('Tıklayın, düzenleyicide açılsın; isterseniz değiştirip kaydedin.')} />
+          <PanelBody className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {ruleRecipes().map((x) => (
+              <button key={x.id} type="button" onClick={() => setRecipe(x.draft)}
+                className="cursor-pointer rounded-xl border border-border p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5">
+                <span className="block text-[13px] font-semibold">{x.title}</span>
+                <span className="block text-[12px] text-muted-foreground">{x.detail}</span>
+              </button>
+            ))}
+          </PanelBody>
+        </Panel>
+      )}
       {tab === 'kurallar' ? (
         rules.isPending ? <RowsSkeleton /> : (rules.data ?? []).length === 0 ? (
           <EmptyState icon={Workflow} title={tx('Henüz kural yok')} detail={tx('Örnek kurallarla başlayın veya kendi kuralınızı oluşturun.')} action={<Button onClick={() => samples.mutate(undefined)}>{tx('Örnek kurallar ekle')}</Button>} />
@@ -174,6 +190,7 @@ export function RulesPage() {
         </Panel>
       )}
       {edit !== undefined && catalog.data && <RuleEditor rule={edit ?? undefined} catalog={catalog.data} onClose={() => setEdit(undefined)} />}
+      {recipe && catalog.data && <RuleEditor initial={recipe} catalog={catalog.data} onClose={() => setRecipe(null)} />}
     </TenantGate>
   )
 }
