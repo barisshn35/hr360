@@ -33,6 +33,16 @@ PAGES = [
     "/panel/egitim",
     "/panel/takdir",
     "/panel/performans/benim",
+    # Sürüm 1.1
+    "/panel/yapilacaklarim",
+    "/panel/fikir-kutusu",
+    "/panel/etkinlikler",
+    "/panel/kartlar",
+    "/panel/kahve",
+    "/panel/oduller",
+    "/panel/ayin-calisani",
+    "/panel/check-in",
+    "/panel/profil?sekme=rozetler",
 ]
 LIGHT_PAGES = ["/panel", "/panel/izin", "/panel/profil?sekme=bildirimler", "/panel/bildirimler", "/panel/masraf"]
 # İK yöneticisinin (admin) ana ekranları.
@@ -49,6 +59,10 @@ ADMIN_PAGES = [
     "/panel/denetim",
     "/panel/duyurular",
     "/panel/analitik",
+    "/panel/norm-kadro",
+    "/panel/ekran-icgoruleri",
+    "/panel/ayin-calisani/yonetim",
+    "/panel/oduller?sekme=yonetim",
 ]
 ADMIN_LIGHT_PAGES = ["/panel", "/panel/calisanlar", "/panel/kvkk"]
 BLOCKING = {"serious", "critical"}
