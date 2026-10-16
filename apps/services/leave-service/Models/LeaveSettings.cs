@@ -17,5 +17,10 @@ public class LeaveSettings : ITenantOwned
     public bool ConflictWarnEnabled { get; set; } = true;
     public int ConflictThresholdPercent { get; set; } = 30;
     public decimal? CarryOverMaxDays { get; set; }
+    /// <summary>
+    /// Ekip izin takviminde çalışanlar ekip arkadaşlarının onaylı izinlerini adıyla (türsüz) görür. Kapalıyken
+    /// (varsayılan) yalnızca gün başına izinli sayısını görür; yönetici ve İK her durumda ayrıntıyı görür.
+    /// </summary>
+    public bool TeamCalendarNames { get; set; }
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

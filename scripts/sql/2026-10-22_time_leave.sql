@@ -73,3 +73,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "IX_leave_settings_TenantSlug" ON leave_settin
 DO $$ BEGIN
     IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
 END $$;
+
+-- Ekip izin takvimi (yenilik haritası #1): çalışanlar ekip arkadaşlarının onaylı izinlerini adıyla
+-- (türsüz) görsün mü. Varsayılan kapalı: çakışma uyarısındaki gibi çalışan yalnızca sayıyı görür.
+ALTER TABLE leave_settings ADD COLUMN IF NOT EXISTS "TeamCalendarNames" boolean NOT NULL DEFAULT false;

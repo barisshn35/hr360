@@ -96,6 +96,21 @@ export interface LeaveSettings {
   conflictWarnEnabled: boolean
   conflictThresholdPercent: number
   carryOverMaxDays: number | null
+  /** Ekip takviminde çalışanlar ekip arkadaşlarının onaylı izinlerini adıyla (türsüz) görür. */
+  teamCalendarNames: boolean
+}
+
+/**
+ * Ekip izin takvimi. `detail`: ad ve tür görülebilen kişi (kendisi, yöneticinin ekibi, İK).
+ * `entries[].type` yalnızca ayrıntı görülen kişilerde dolu; `others`: adı gösterilmeyen izinliler
+ * (gün başına sayı; ekip 5 kişiden küçükse `count` null, yalnızca "izinli var").
+ */
+export interface TeamCalendar {
+  teamSize: number
+  people: { id: string; name: string; self: boolean; detail: boolean }[]
+  entries: { employeeId: string; startDate: string; endDate: string; status: 'Approved' | 'Submitted'; type: LeaveType | null; days: number; hours: number | null }[]
+  others: { date: string; count: number | null }[]
+  holidays: { date: string; name: string; isHalfDay: boolean }[]
 }
 
 /**
@@ -191,7 +206,9 @@ export const leaveApi = {
     apiFetch<{ changed: number; skippedNotAccrued?: number }>(`${BASE}/leave-balances/statutory/apply`, { method: 'POST', body: { year, employeeIds, onlyAccrued } }),
 
   settings: (signal?: AbortSignal) => apiFetch<LeaveSettings>(`${BASE}/leave-settings`, { signal }),
-  saveSettings: (body: { dayHours: number | null; conflictWarnEnabled: boolean; conflictThresholdPercent: number; carryOverMaxDays: number | null }) =>
+  teamCalendar: (from: string, to: string, departmentId?: string, signal?: AbortSignal) =>
+    apiFetch<TeamCalendar>(`${BASE}/leave-requests/team-calendar${qs({ from, to, departmentId })}`, { signal }),
+  saveSettings: (body: { dayHours: number | null; conflictWarnEnabled: boolean; conflictThresholdPercent: number; carryOverMaxDays: number | null; teamCalendarNames?: boolean }) =>
     apiFetch<LeaveSettings>(`${BASE}/leave-settings`, { method: 'PUT', body }),
   teamConflict: (f: { employeeId?: string; startDate?: string; endDate?: string; leaveRequestId?: string }, signal?: AbortSignal) =>
     apiFetch<TeamConflict>(`${BASE}/leave-requests/team-conflict${qs(f)}`, { signal }),

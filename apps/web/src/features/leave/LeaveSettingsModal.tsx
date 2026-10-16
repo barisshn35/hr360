@@ -26,6 +26,7 @@ export function LeaveSettingsModal({ onClose }: { onClose: () => void }) {
 function Form({ s, onClose }: { s: LeaveSettings; onClose: () => void }) {
   const [dayHours, setDayHours] = useState(s.customDayHours != null ? formatNumber(s.customDayHours) : '')
   const [warn, setWarn] = useState(s.conflictWarnEnabled)
+  const [names, setNames] = useState(s.teamCalendarNames ?? false)
   const [threshold, setThreshold] = useState(String(s.conflictThresholdPercent))
   const [carry, setCarry] = useState(s.carryOverMaxDays != null ? formatNumber(s.carryOverMaxDays) : '')
   const dh = dayHours.trim() ? parseDecimal(dayHours) : null
@@ -36,7 +37,7 @@ function Form({ s, onClose }: { s: LeaveSettings; onClose: () => void }) {
     threshold: !Number.isInteger(th) || th < 1 || th > 100 ? tx('%1-100 arası bir tam sayı.') : undefined,
     carry: carry.trim() && (co === null || co < 0 || co > 365) ? tx('0-365 gün.') : undefined,
   }
-  const save = useAction(() => leaveApi.saveSettings({ dayHours: dh, conflictWarnEnabled: warn, conflictThresholdPercent: th, carryOverMaxDays: co }), {
+  const save = useAction(() => leaveApi.saveSettings({ dayHours: dh, conflictWarnEnabled: warn, conflictThresholdPercent: th, carryOverMaxDays: co, teamCalendarNames: names }), {
     success: tx('İzin ayarları kaydedildi'), invalidate: [['leave', 'settings']], onDone: onClose,
   })
   return (
@@ -47,6 +48,12 @@ function Form({ s, onClose }: { s: LeaveSettings; onClose: () => void }) {
       {warn && (
         <TextField label={tx('Uyarı eşiği (% ekip aynı anda izinde)')} inputMode="numeric" value={threshold} error={errs.threshold} onChange={(e) => setThreshold(e.target.value)} />
       )}
+      <label className="flex items-start gap-2 text-[13px]">
+        <Checkbox checked={names} onCheckedChange={(v) => setNames(v === true)} className="mt-0.5" />
+        <span>{tx('Ekip takviminde çalışanlar ekip arkadaşlarının onaylı izinlerini adıyla görsün')}
+          <span className="block text-[12px] text-muted-foreground">{tx('Çalışanlara izin türü hiçbir zaman gösterilmez. Kapalıyken çalışan yalnızca gün başına izinli sayısını görür; yönetici ve İK her durumda ayrıntıyı görür.')}</span>
+        </span>
+      </label>
       <TextField label={tx('Yıllık izin devrinde önerilen üst sınır (gün)')} inputMode="decimal" value={carry} error={errs.carry}
         hint={tx('Boş: sınırsız. Yıllık ücretli izin yasal olarak yanmaz; bu yalnızca şirket içi devir politikasıdır.')} onChange={(e) => setCarry(e.target.value)} />
       <InfoNote>{tx('Çakışma uyarısı engel değildir. Talep eden yalnızca sayıyı görür (ekip 5 kişiden küçükse yalnızca eşik aşıldı bilgisini); adları yalnızca yönetici ve İK görür, izin türü hiç gösterilmez.')}</InfoNote>

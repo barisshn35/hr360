@@ -23,14 +23,14 @@ public class LeaveSettingsController : ControllerBase
     private static object Dto(LeaveSettings s) => new
     {
         dayHours = LeaveEntitlement.EffectiveDayHours(s.DayHours), customDayHours = s.DayHours,
-        s.ConflictWarnEnabled, s.ConflictThresholdPercent, s.CarryOverMaxDays,
+        s.ConflictWarnEnabled, s.ConflictThresholdPercent, s.CarryOverMaxDays, s.TeamCalendarNames,
     };
 
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct) =>
         Ok(Dto(await _db.LeaveSettings.AsNoTracking().FirstOrDefaultAsync(ct) ?? new LeaveSettings()));
 
-    public record SettingsInput(decimal? DayHours, bool ConflictWarnEnabled, int ConflictThresholdPercent, decimal? CarryOverMaxDays);
+    public record SettingsInput(decimal? DayHours, bool ConflictWarnEnabled, int ConflictThresholdPercent, decimal? CarryOverMaxDays, bool? TeamCalendarNames = null);
 
     [HttpPut]
     [Authorize(Policy = "RequireHrAdmin")]
@@ -46,6 +46,7 @@ public class LeaveSettingsController : ControllerBase
         s.ConflictWarnEnabled = b.ConflictWarnEnabled;
         s.ConflictThresholdPercent = b.ConflictThresholdPercent;
         s.CarryOverMaxDays = b.CarryOverMaxDays;
+        if (b.TeamCalendarNames is { } tc) s.TeamCalendarNames = tc;
         s.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
         return Ok(Dto(s));

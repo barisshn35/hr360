@@ -158,6 +158,83 @@ public class LeaveRequestsController : ControllerBase
         });
     }
 
+    /// <summary>Bir departmana bugün doğrudan atanmış aktif çalışanlar.</summary>
+    private Task<List<TeamRow>> DepartmentMembersAsync(Guid departmentId, CancellationToken ct) =>
+        _db.Database.SqlQueryRaw<TeamRow>(
+            """
+            SELECT DISTINCT e."Id", e."FirstName", e."LastName" FROM employee_assignments a
+            JOIN employee_employees e ON e."Id" = a."EmployeeId"
+            WHERE a."TenantSlug" = {0} AND a."DepartmentId" = {1} AND e."Status" <> 'Terminated'
+              AND a."EffectiveFrom" <= current_date AND (a."EffectiveTo" IS NULL OR a."EffectiveTo" >= current_date)
+            """, _db.CurrentTenantSlug ?? "", departmentId).ToListAsync(ct);
+
+    /// <summary>
+    /// Ekip izin takvimi (yenilik haritası #1). Kapsam: kişinin departmanı; İK ve departman başı
+    /// <paramref name="departmentId"/> ile bir departman seçebilir. Ayrıntı (ad, tür, bekleyen talepler)
+    /// yalnızca kişinin kendisine, İK'ya ve yöneticinin ekibine; diğer ekip arkadaşları için izin
+    /// ayarındaki <c>TeamCalendarNames</c> açıksa onaylı izin adıyla ama türsüz, kapalıysa (varsayılan)
+    /// yalnızca gün başına sayı döner. Ekip 5 kişiden küçükse sayı yerine yalnızca "izinli var" bilgisi
+    /// verilir (çakışma uyarısıyla aynı kural).
+    /// </summary>
+    [HttpGet("team-calendar")]
+    public async Task<IActionResult> TeamCalendar([FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] Guid? departmentId, CancellationToken ct)
+    {
+        if (to < from || to.DayNumber - from.DayNumber > 92) return BadRequest(new { message = "Tarih aralığı en fazla 3 ay olabilir" });
+        var me = await _approvals.FindMyEmployeeIdAsync(ct);
+        var visible = await VisibleEmployeesAsync(ct); // İK: null (hepsi)
+        List<TeamRow> people;
+        if (departmentId is { } dep)
+        {
+            var heads = await _db.Database.SqlQueryRaw<Guid>(
+                "SELECT \"Id\" AS \"Value\" FROM organization_departments WHERE \"TenantSlug\" = {0} AND \"Id\" = {1} AND \"HeadEmployeeId\" = {2}",
+                _db.CurrentTenantSlug ?? "", dep, me ?? Guid.Empty).ToListAsync(ct);
+            if (!IsHr && heads.Count == 0) return Forbid();
+            people = await DepartmentMembersAsync(dep, ct);
+        }
+        else
+        {
+            if (me is null) return BadRequest(new { message = "Bir departman seçin" });
+            people = await TeammatesAsync(me.Value, ct);
+            var self = await _db.Database.SqlQueryRaw<TeamRow>(
+                "SELECT \"Id\", \"FirstName\", \"LastName\" FROM employee_employees WHERE \"TenantSlug\" = {0} AND \"Id\" = {1}",
+                _db.CurrentTenantSlug ?? "", me.Value).ToListAsync(ct);
+            people.InsertRange(0, self);
+        }
+        bool Detail(Guid id) => id == me || visible is null || visible.Contains(id);
+        var settings = await SettingsAsync(ct);
+        var ids = people.Select(p => p.Id).ToList();
+        var leaves = await _db.LeaveRequests.AsNoTracking()
+            .Where(r => ids.Contains(r.EmployeeId) && r.StartDate <= to && r.EndDate >= from
+                && (r.Status == LeaveRequestStatus.Approved || r.Status == LeaveRequestStatus.Submitted))
+            .Select(r => new { r.EmployeeId, r.StartDate, r.EndDate, r.Status, r.Type, r.Days, r.Hours })
+            .ToListAsync(ct);
+
+        var shown = new List<object>();
+        var hiddenDays = new Dictionary<DateOnly, HashSet<Guid>>();
+        foreach (var l in leaves)
+        {
+            if (Detail(l.EmployeeId))
+                shown.Add(new { employeeId = l.EmployeeId, startDate = l.StartDate, endDate = l.EndDate, status = l.Status.ToString(), type = l.Type.ToString(), l.Days, l.Hours });
+            else if (l.Status == LeaveRequestStatus.Approved && settings.TeamCalendarNames)
+                shown.Add(new { employeeId = l.EmployeeId, startDate = l.StartDate, endDate = l.EndDate, status = "Approved", type = (string?)null, l.Days, Hours = (decimal?)null });
+            else if (l.Status == LeaveRequestStatus.Approved)
+                for (var d = l.StartDate < from ? from : l.StartDate; d <= l.EndDate && d <= to; d = d.AddDays(1))
+                    (hiddenDays.TryGetValue(d, out var set) ? set : hiddenDays[d] = new()).Add(l.EmployeeId);
+        }
+        var named = people.Where(p => Detail(p.Id) || settings.TeamCalendarNames).ToList();
+        var exact = people.Count >= 5;
+        var holidays = await _db.PublicHolidays.AsNoTracking().Where(h => h.Date >= from && h.Date <= to)
+            .OrderBy(h => h.Date).Select(h => new { h.Date, h.Name, h.IsHalfDay }).ToListAsync(ct);
+        return Ok(new
+        {
+            teamSize = people.Count,
+            people = named.Select(p => new { id = p.Id, name = $"{p.FirstName} {p.LastName}".Trim(), self = p.Id == me, detail = Detail(p.Id) }),
+            entries = shown,
+            others = hiddenDays.OrderBy(kv => kv.Key).Select(kv => new { date = kv.Key, count = exact ? kv.Value.Count : (int?)null }),
+            holidays,
+        });
+    }
+
     /// <summary>
     /// Izin taleplerini listeler.
     ///

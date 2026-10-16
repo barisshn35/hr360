@@ -32,6 +32,8 @@ import { HolidaysModal } from './HolidaysModal'
 import { StatutoryModal } from './StatutoryModal'
 import { LeaveSettingsModal } from './LeaveSettingsModal'
 import { NewLeaveRequestModal } from './NewLeaveRequestModal'
+import { TeamCalendar } from './TeamCalendar'
+import { BridgeDays } from './BridgeDays'
 import { CancelApprovedLeaveModal } from './CancelApprovedLeaveModal'
 import { OfflineDrafts } from '@/components/OfflineDrafts'
 import { useNewParam } from '@/lib/useNewParam'
@@ -141,6 +143,7 @@ export function LeavePage() {
   const [tab, setTab] = useTabParam<TabKey>('durum', 'Submitted')
   const [employeeId, setEmployeeId] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [prefill, setPrefill] = useState<{ start: string; end: string } | null>(null)
   const [balanceOpen, setBalanceOpen] = useState(false)
   useNewParam(can('leave:create'), () => setModalOpen(true))
   const [holidaysOpen, setHolidaysOpen] = useState(false)
@@ -314,6 +317,11 @@ export function LeavePage() {
 
       <OfflineDrafts kind="leave" />
 
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <TeamCalendar />
+        <BridgeDays onPick={can('leave:create') ? (s) => { setPrefill({ start: s.leaveDates[0], end: s.leaveDates[s.leaveDates.length - 1] }); setModalOpen(true) } : undefined} />
+      </div>
+
       <div className="max-w-sm">
         <EmployeePicker
           value={employeeId}
@@ -437,8 +445,10 @@ export function LeavePage() {
 
       <NewLeaveRequestModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setPrefill(null) }}
         defaultEmployeeId={employeeId}
+        defaultStart={prefill?.start}
+        defaultEnd={prefill?.end}
       />
 
       <HolidaysModal open={holidaysOpen} onClose={() => setHolidaysOpen(false)} year={year} />

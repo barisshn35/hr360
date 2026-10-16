@@ -39,10 +39,15 @@ export function NewLeaveRequestModal({
   open,
   onClose,
   defaultEmployeeId = '',
+  defaultStart,
+  defaultEnd,
 }: {
   open: boolean
   onClose: () => void
   defaultEmployeeId?: string
+  /** Köprü günü önerisinden açılınca dolu gelen tarihler (yyyy-aa-gg). */
+  defaultStart?: string
+  defaultEnd?: string
 }) {
   const toast = useToast()
   // Onay akışı tanımında gerekçe onaycıdan gizlenmişse form metni buna göre değişir
@@ -79,6 +84,7 @@ export function NewLeaveRequestModal({
   useEffect(() => {
     if (open) {
       setEmployeeId(isHr ? defaultEmployeeId : (selfIdForReset ?? ''))
+      if (defaultStart) { setStartDate(defaultStart); setEndDate(defaultEnd ?? defaultStart) }
     } else {
       setType('Annual')
       setStartDate('')
@@ -89,7 +95,7 @@ export function NewLeaveRequestModal({
       setErrors({})
       setSubmitted(false)
     }
-  }, [open, defaultEmployeeId, isHr, selfIdForReset])
+  }, [open, defaultEmployeeId, isHr, selfIdForReset, defaultStart, defaultEnd])
 
   const year = startDate ? new Date(startDate).getFullYear() : new Date().getFullYear()
   const balances = useLeaveBalances(employeeId || undefined, year, Boolean(employeeId))
