@@ -98,9 +98,12 @@ public class EventsController : AppController
         var e = await _db.Events.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (e is null) return NotFound();
         if (Validate(body) is { } err) return err;
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        await LockAsync(id, ct);
         Apply(e, body);
         await _db.SaveChangesAsync(ct);
         await PromoteAsync(e, ct);
+        await tx.CommitAsync(ct);
         return Ok(Dto(e, await _db.EventRsvps.AsNoTracking().Where(r => r.EventId == id).ToListAsync(ct), null));
     }
 
@@ -130,23 +133,39 @@ public class EventsController : AppController
         if (e is null) return NotFound();
         if (e.Status != "Published") return BadRequest(new { message = "Etkinlik iptal edildi" });
         if (e.StartsAt <= DateTime.UtcNow) return BadRequest(new { message = "Etkinlik başladı ya da geçti" });
+        if (body.Going && e.RsvpDeadline is { } dl && dl < DateTime.UtcNow) return BadRequest(new { message = "Son katılım tarihi geçti" });
+        // Kontenjan sayımı, kayıt ve sıradakini alma etkinlik başına kilit altında tek işlemde: aynı anda gelen
+        // iki katılım son yeri birlikte alamaz, aynı kişinin çift tıklaması ikinci kayıt açmaz.
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        await LockAsync(id, ct);
         var mine = await _db.EventRsvps.FirstOrDefaultAsync(r => r.EventId == id && r.EmployeeId == me.Id, ct);
+        string? status;
         if (!body.Going)
         {
-            if (mine is null) return Ok(new { status = (string?)null });
-            _db.EventRsvps.Remove(mine);
-            await _db.SaveChangesAsync(ct);
-            await PromoteAsync(e, ct);
-            return Ok(new { status = (string?)null });
+            status = null;
+            if (mine is not null)
+            {
+                _db.EventRsvps.Remove(mine);
+                await _db.SaveChangesAsync(ct);
+                await PromoteAsync(e, ct);
+            }
         }
-        if (mine is not null) return Ok(new { status = mine.Status });
-        if (e.RsvpDeadline is { } dl && dl < DateTime.UtcNow) return BadRequest(new { message = "Son katılım tarihi geçti" });
-        var going = await _db.EventRsvps.CountAsync(r => r.EventId == id && r.Status == "Going", ct);
-        var r = new EventRsvp { EventId = id, EmployeeId = me.Id, Name = me.Name, Status = e.Capacity is { } cap && going >= cap ? "Waitlist" : "Going" };
-        _db.EventRsvps.Add(r);
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { status = r.Status });
+        else if (mine is not null) status = mine.Status;
+        else
+        {
+            var going = await _db.EventRsvps.CountAsync(r => r.EventId == id && r.Status == "Going", ct);
+            var r = new EventRsvp { EventId = id, EmployeeId = me.Id, Name = me.Name, Status = e.Capacity is { } cap && going >= cap ? "Waitlist" : "Going" };
+            _db.EventRsvps.Add(r);
+            await _db.SaveChangesAsync(ct);
+            status = r.Status;
+        }
+        await tx.CommitAsync(ct);
+        return Ok(new { status });
     }
+
+    /// <summary>Etkinlik başına işlem kilidi (işlem bitince kendiliğinden bırakılır).</summary>
+    private Task LockAsync(Guid eventId, CancellationToken ct) =>
+        _db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(hashtext({0}))", [$"event:{Tenant}:{eventId}"], ct);
 
     /// <summary>Boşalan yerlere bekleme listesinden sırayla alır ve haber verir.</summary>
     private async Task PromoteAsync(CompanyEvent e, CancellationToken ct)

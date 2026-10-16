@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(__file__))
 from common import FAIL, api, check, tok  # noqa: E402
@@ -56,7 +57,11 @@ try:
     code, s = api("ik", "PUT", f"{B}/settings", {"enabled": True, "cadence": "Weekly", "dayOfWeek": 1, "crossDepartment": True})
     check("CF1: İK açar", code == 200 and s["enabled"], (code, s))
 
-    for w in ("ayse", "mehmet", "ik"):
+    with ThreadPoolExecutor(4) as ex:
+        res = list(ex.map(lambda _: api("ayse", "PUT", f"{B}/me", {"joined": True})[0], range(4)))
+    check("CF2: eşzamanlı katılım istekleri tek kayıt, hata yok", res == [200] * 4
+          and psql(f"""SELECT count(*) FROM engagement_coffee_participants WHERE "EmployeeId" = '{AYSE}'""") == "1", res)
+    for w in ("mehmet", "ik"):
         api(w, "PUT", f"{B}/me", {"joined": True})
     psql(f"""INSERT INTO engagement_coffee_participants ("Id","TenantSlug","EmployeeId","JoinedAt") VALUES (gen_random_uuid(),'demo','{ZEYNEP}',now()) ON CONFLICT DO NOTHING""")
     _, me = api("ayse", "GET", f"{B}/me")

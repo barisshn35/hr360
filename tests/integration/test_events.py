@@ -10,10 +10,11 @@ katılım işaretleme yalnızca etkinlik başladıktan sonra; gönüllülük saa
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(__file__))
-from common import FAIL, api, check  # noqa: E402
+from common import FAIL, api, check, tok  # noqa: E402
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "support"))
 from demo_ids import AYSE, MEHMET  # noqa: E402
 
@@ -93,6 +94,25 @@ try:
     check("EV9: yalnız katılanlar sayılır", float(after["totalHours"]) - float(before["totalHours"]) == 4, (before["totalHours"], after["totalHours"]))
     _, past = api("ayse", "GET", B + "?past=true")
     check("EV10: geçmiş etkinlikler ayrı listelenir", any(e["id"] == vol["id"] for e in past), len(past))
+
+    # Eşzamanlılık: son yer aynı anda gelen iki katılıma verilmez; çift tıklama ikinci kayıt açmaz.
+    for w in ("ayse", "mehmet", "ik"):
+        tok(w)
+    code, race = api("ik", "POST", B, {**base, "title": "TEST-EVT yarış", "capacity": 1})
+    rid = race["id"]
+    with ThreadPoolExecutor(3) as ex:
+        res = list(ex.map(lambda w: api(w, "POST", f"{B}/{rid}/rsvp", {"going": True}), ("ayse", "mehmet", "ik")))
+    statuses = sorted(r[1]["status"] for r in res if r[0] == 200)
+    check("EV11: aynı anda üç katılımdan yalnızca biri yer alır", [r[0] for r in res] == [200, 200, 200] and statuses == ["Going", "Waitlist", "Waitlist"], res)
+    going = psql(f"SELECT count(*) FROM engagement_event_rsvps WHERE \"EventId\" = '{rid}' AND \"Status\" = 'Going'")
+    check("EV11: veritabanında kontenjan aşılmaz", going == "1", going)
+    api("ayse", "POST", f"{B}/{rid}/rsvp", {"going": False})
+    api("mehmet", "POST", f"{B}/{rid}/rsvp", {"going": False})
+    api("ik", "POST", f"{B}/{rid}/rsvp", {"going": False})
+    with ThreadPoolExecutor(5) as ex:
+        res = list(ex.map(lambda _: api("ayse", "POST", f"{B}/{rid}/rsvp", {"going": True})[0], range(5)))
+    rows = psql(f"SELECT count(*) FROM engagement_event_rsvps WHERE \"EventId\" = '{rid}' AND \"EmployeeId\" = '{AYSE}'")
+    check("EV12: aynı kişinin eşzamanlı beş isteği tek kayıt, hata yok", res == [200] * 5 and rows == "1", (res, rows))
 finally:
     psql("DELETE FROM engagement_events WHERE \"Title\" LIKE 'TEST-EVT%'")
     psql("DELETE FROM notification_messages WHERE \"TemplateCode\" LIKE 'events.%' AND \"TenantSlug\" = 'demo'")

@@ -58,14 +58,19 @@ public class CoffeeController : AppController
     {
         var me = await MyPersonAsync(ct);
         if (me is null) return BadRequest(new { message = "Katılım için çalışan kaydınız olmalı" });
-        var row = await _db.CoffeeParticipants.FirstOrDefaultAsync(p => p.EmployeeId == me.Id, ct);
-        if (b.Joined && row is null)
+        if (b.Joined)
         {
             if (!(await SettingsAsync(ct)).Enabled) return BadRequest(new { message = "Kahve eşleştirme kapalı" });
-            _db.CoffeeParticipants.Add(new CoffeeParticipant { EmployeeId = me.Id });
+            // Atomik: eşzamanlı ikinci "katıl" isteği hata üretmez.
+            await _db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO engagement_coffee_participants ("Id","TenantSlug","EmployeeId","JoinedAt") VALUES ({Guid.NewGuid()}, {Tenant}, {me.Id}, now())
+                ON CONFLICT ("TenantSlug","EmployeeId") DO NOTHING
+                """, ct);
         }
-        else if (!b.Joined && row is not null) _db.CoffeeParticipants.Remove(row);
-        await _db.SaveChangesAsync(ct);
+        else
+            await _db.Database.ExecuteSqlInterpolatedAsync($"""
+                DELETE FROM engagement_coffee_participants WHERE "TenantSlug" = {Tenant} AND "EmployeeId" = {me.Id}
+                """, ct);
         return Ok(new { joined = b.Joined });
     }
 

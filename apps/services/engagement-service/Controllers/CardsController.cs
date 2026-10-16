@@ -103,11 +103,14 @@ public class CardsController : AppController
         var msg = (b.Message ?? "").Trim();
         if (msg.Length is < 1 or > 500) return BadRequest(new { message = "Not 1-500 karakter olmalı" });
         var color = Colors.Contains(b.Color) ? b.Color! : "yellow";
-        var s = await _db.CardSignatures.FirstOrDefaultAsync(x => x.CardId == id && x.EmployeeId == me.Id, ct);
-        if (s is null) _db.CardSignatures.Add(s = new CardSignature { CardId = id, EmployeeId = me.Id, Name = me.Name });
-        (s.Message, s.Color, s.UpdatedAt) = (msg, color, DateTime.UtcNow);
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { s.Id, s.Message, s.Color });
+        // Tek atomik ekle-ya da-güncelle: aynı kişinin eşzamanlı istekleri tek imza bırakır, hata üretmez.
+        var sid = (await _db.Database.SqlQuery<Guid>($"""
+            INSERT INTO engagement_card_signatures ("Id","TenantSlug","CardId","EmployeeId","Name","Message","Color","CreatedAt","UpdatedAt")
+            VALUES ({Guid.NewGuid()}, {Tenant}, {id}, {me.Id}, {me.Name}, {msg}, {color}, now(), now())
+            ON CONFLICT ("CardId","EmployeeId") DO UPDATE SET "Message" = EXCLUDED."Message", "Color" = EXCLUDED."Color", "UpdatedAt" = now()
+            RETURNING "Id" AS "Value"
+            """).ToListAsync(ct)).Single();
+        return Ok(new { Id = sid, Message = msg, Color = color });
     }
 
     [HttpDelete("{id:guid}/sign")]

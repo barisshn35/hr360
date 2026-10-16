@@ -11,10 +11,11 @@ imza yok. Test kayıtları sonda silinir (başlık öneki "TEST-CARD").
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(__file__))
-from common import FAIL, api, check  # noqa: E402
+from common import FAIL, api, check, tok  # noqa: E402
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "support"))
 from demo_ids import AYSE, MEHMET  # noqa: E402
 
@@ -66,6 +67,12 @@ try:
     check("GC4: kişi başı tek imza, güncellenir", len(det["signatures"]) == 2 and len(mine) == 1 and mine[0]["message"].startswith("Mutlu") and mine[0]["color"] == "green", det["signatures"])
     code, _ = api("mehmet", "POST", f"{B}/{cid}/deliver")
     check("GC4: başkası erken teslim edemez", code in (403, 404), code)
+    tok("mehmet")
+    code, race = api("ayse", "POST", B, {"recipientEmployeeId": MEHMET, "occasion": "Congrats", "title": "TEST-CARD yarış", "deliverAt": soon, "notifyTeam": False})
+    with ThreadPoolExecutor(5) as ex:
+        res = list(ex.map(lambda i: api("ik", "PUT", f"{B}/{race['id']}/sign", {"message": f"not {i}", "color": "blue"})[0], range(5)))
+    n = psql(f"SELECT count(*) FROM engagement_card_signatures WHERE \"CardId\" = '{race['id']}'")
+    check("GC4: aynı kişinin eşzamanlı imzaları tek kayıt, hata yok", res == [200] * 5 and n == "1", (res, n))
 
     # Zamanlayıcı: teslim zamanı geçmiş kart teslim edilir, alıcıya haber gider.
     code, empty = api("ik", "POST", B, {"recipientEmployeeId": AYSE, "occasion": "Congrats", "title": "TEST-CARD boş", "deliverAt": soon, "notifyTeam": False})
