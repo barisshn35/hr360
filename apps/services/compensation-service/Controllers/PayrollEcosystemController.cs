@@ -540,9 +540,14 @@ public class PayrollEcosystemController : ControllerBase
         if (c.AppliedAt is not null) return Conflict(new { message = "Zam dönemi zaten uygulandı" });
         if (c.Status != RaiseCycleStatus.Open) return Conflict(new { message = "Yalnızca önerilere açık zam dönemi uygulanabilir" });
         var approved = await _db.RaiseProposals.Where(p => p.CycleId == id && p.Status == RaiseProposalStatus.Approved).ToListAsync(ct);
+        var approvedIds = approved.Select(p => p.EmployeeId).Distinct().ToList();
+        var openByEmployee = (await _db.Records
+                .Where(r => approvedIds.Contains(r.EmployeeId) && r.EffectiveTo == null && r.EffectiveFrom < c.EffectiveDate)
+                .ToListAsync(ct))
+            .ToLookup(r => r.EmployeeId);
         foreach (var p in approved)
         {
-            var open = await _db.Records.Where(r => r.EmployeeId == p.EmployeeId && r.EffectiveTo == null && r.EffectiveFrom < c.EffectiveDate).ToListAsync(ct);
+            var open = openByEmployee[p.EmployeeId].ToList();
             foreach (var r in open) r.EffectiveTo = c.EffectiveDate.AddDays(-1);
             var last = open.OrderByDescending(r => r.EffectiveFrom).FirstOrDefault();
             _db.Records.Add(new CompensationRecord

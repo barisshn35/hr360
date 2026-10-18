@@ -82,13 +82,19 @@ public class ShiftOverridesController : ControllerBase
         if (targetEmployeeIds.Count == 0)
             return BadRequest(new { message = "Hedeflenen çalışan bulunamadı" });
 
+        // Mevcut kayitlar tek sorguda (onceden gun x calisan basina bir sorgu: 1 yil x 200 kisi = 73 bin sorgu).
+        var existingByKey = (await _db.ShiftOverrides
+                .Where(o => targetEmployeeIds.Contains(o.EmployeeId) && o.Date >= request.From && o.Date <= request.To)
+                .ToListAsync())
+            .GroupBy(o => (o.EmployeeId, o.Date))
+            .ToDictionary(g => g.Key, g => g.First());
+
         var created = new List<ShiftOverride>();
         for (var date = request.From; date <= request.To; date = date.AddDays(1))
         {
             foreach (var employeeId in targetEmployeeIds)
             {
-                var existing = await _db.ShiftOverrides.FirstOrDefaultAsync(o =>
-                    o.EmployeeId == employeeId && o.Date == date);
+                var existing = existingByKey.GetValueOrDefault((employeeId, date));
 
                 // Sistem yonetimli (Leave) override'in ustune YAZILMAZ -
                 // izin onceligi vardir, elle tatil/manuel eklense bile.
