@@ -1,3 +1,4 @@
+using HR360.Platform;
 using Prometheus;
 using System.Security.Claims;
 using System.Text.Json;
@@ -22,7 +23,7 @@ builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantCon
 
 builder.Services.AddDbContext<OnboardingDbContext>(options =>
     options.UseNpgsql(connectionString)
-        .AddInterceptors(new OnboardingService.Auditing.AuditInterceptor("onboarding-service"),
+        .AddInterceptors(HR360.Platform.TenantSessionInterceptor.Instance, new OnboardingService.Auditing.AuditInterceptor("onboarding-service"),
             new OnboardingService.Observability.BusinessMetricsInterceptor()));
 
 var keycloakAuthority = Environment.GetEnvironmentVariable("KEYCLOAK_AUTHORITY")
@@ -134,6 +135,8 @@ builder.Services.AddSingleton<OnboardingService.Services.Sql>();
 builder.Services.AddHostedService<OnboardingService.Services.OnboardingJobsWorker>();
 
 var app = builder.Build();
+// Zamanlanmış arka plan işleri çok kopyada tek kopyada çalışır (HR360.Platform.LeaderGate).
+HR360.Platform.LeaderGate.Configure(connectionString, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LeaderGate"));
 
 app.UseSwagger();
 // Swagger arayuzu yalnizca gelistirmede; JSON belge (/swagger/v1/swagger.json) gateway'in
@@ -146,6 +149,7 @@ app.UseAuthorization();
 app.UseHttpMetrics();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "onboarding-service" }));
+app.MapReadiness<OnboardingDbContext>("onboarding-service");
 app.MapControllers();
 app.MapMetrics();
 

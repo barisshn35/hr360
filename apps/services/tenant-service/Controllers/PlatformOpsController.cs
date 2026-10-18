@@ -19,7 +19,7 @@ namespace TenantService.Controllers;
 [Authorize(Policy = "RequirePlatformAdmin")]
 public partial class PlatformOpsController : ControllerBase
 {
-    public static readonly string[] Kinds = ["backup", "backup-verify", "schedule", "unschedule", "check-updates", "update", "rollback", "restore"];
+    public static readonly string[] Kinds = ["backup", "backup-verify", "schedule", "unschedule", "check-updates", "update", "rollback", "restore", "db-isolation"];
     private static readonly string[] Destructive = ["update", "rollback", "restore"];
     public const string RestoreConfirm = "GERİ YÜKLE", RollbackConfirm = "GERİ AL";
     /// <summary>Çalıştırıcı son tur bundan eskiyse "çalışmıyor" sayılır.</summary>

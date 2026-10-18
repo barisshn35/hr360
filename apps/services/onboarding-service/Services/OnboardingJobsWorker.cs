@@ -26,7 +26,10 @@ public sealed class OnboardingJobsWorker : BackgroundService
         _interval = TimeSpan.FromSeconds(s);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("onboarding/OnboardingJobsWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         try { await Task.Delay(TimeSpan.FromSeconds(Math.Min(10, _interval.TotalSeconds)), ct); } catch (OperationCanceledException) { return; }
         while (!ct.IsCancellationRequested)

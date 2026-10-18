@@ -131,7 +131,10 @@ public sealed class MfaPolicyHostedService : BackgroundService
     private readonly ILogger<MfaPolicyHostedService> _log;
     public MfaPolicyHostedService(IServiceScopeFactory scopes, ILogger<MfaPolicyHostedService> log) { _scopes = scopes; _log = log; }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("tenant/MfaPolicyHostedService", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         var seconds = int.TryParse(Environment.GetEnvironmentVariable("MFA_POLICY_INTERVAL_SECONDS"), out var s) ? s : 600;
         if (seconds <= 0) return;

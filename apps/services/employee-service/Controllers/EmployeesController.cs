@@ -250,9 +250,12 @@ public class EmployeesController : ControllerBase
         // kayit dondurup kendi talebini onaylama korumalarini bosa cikarabiliyordu.
         if (string.IsNullOrWhiteSpace(request.KeycloakUserId))
             return BadRequest(new { message = "KeycloakUserId zorunlu" });
-        var takenBy = await _db.Employees.IgnoreQueryFilters()
-            .Where(e => e.KeycloakUserId == request.KeycloakUserId && e.Id != id)
-            .Select(e => (Guid?)e.Id).FirstOrDefaultAsync();
+        // Hesap başka KİRACIDAKİ bir kayda da bağlı olabilir: bilerek tüm kiracılarda bakılır (RLS dahil).
+        Guid? takenBy;
+        using (HR360.Platform.TenantSession.AllTenants())
+            takenBy = await _db.Employees.IgnoreQueryFilters()
+                .Where(e => e.KeycloakUserId == request.KeycloakUserId && e.Id != id)
+                .Select(e => (Guid?)e.Id).FirstOrDefaultAsync();
         if (takenBy is not null)
             return Conflict(new { message = "Bu giriş hesabı başka bir çalışan kaydına bağlı" });
         if (!string.IsNullOrEmpty(employee.KeycloakUserId) && employee.KeycloakUserId != request.KeycloakUserId)

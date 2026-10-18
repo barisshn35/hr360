@@ -50,7 +50,10 @@ public class EmailSenderWorker : BackgroundService
         _options = options;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("notification/EmailSenderWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation(
             "EmailSenderWorker basladi. Varsayilan SMTP: {Host}:{Port}, gonderen: {From}",

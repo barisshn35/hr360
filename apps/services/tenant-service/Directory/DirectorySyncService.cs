@@ -206,7 +206,10 @@ public sealed class DirectorySyncHostedService : BackgroundService
         TimeSpan.FromMinutes(double.TryParse(Environment.GetEnvironmentVariable("DIRECTORY_SYNC_MINUTES"),
             System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var m) && m >= 0.05 ? m : 60);
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("tenant/DirectorySyncHostedService", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         try { await Task.Delay(TimeSpan.FromSeconds(30), ct); } catch (OperationCanceledException) { return; }
         while (!ct.IsCancellationRequested)

@@ -584,7 +584,10 @@ public sealed class ExportPurgeWorker : BackgroundService
     private readonly ILogger<ExportPurgeWorker> _log;
     public ExportPurgeWorker(IServiceProvider sp, ILogger<ExportPurgeWorker> log) { _sp = sp; _log = log; }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("compensation/ExportPurgeWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         await Task.Delay(TimeSpan.FromSeconds(20), ct);
         while (!ct.IsCancellationRequested)

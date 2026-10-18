@@ -293,7 +293,10 @@ public sealed class RealmMailSyncHostedService : BackgroundService
     private readonly ILogger<RealmMailSyncHostedService> _log;
     public RealmMailSyncHostedService(IServiceProvider sp, ILogger<RealmMailSyncHostedService> log) { _sp = sp; _log = log; }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("tenant/RealmMailSyncHostedService", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         for (var attempt = 1; attempt <= 20 && !ct.IsCancellationRequested; attempt++)
         {

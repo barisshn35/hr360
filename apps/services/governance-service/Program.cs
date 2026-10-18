@@ -1,3 +1,4 @@
+using HR360.Platform;
 using Prometheus;
 using System.Security.Claims;
 using System.Text.Json;
@@ -28,7 +29,7 @@ var dataSource = dataSourceBuilder.Build();
 builder.Services.AddSingleton(dataSource);
 builder.Services.AddDbContext<GovernanceDbContext>(options =>
     options.UseNpgsql(dataSource)
-        .AddInterceptors(new GovernanceService.Auditing.AuditInterceptor("governance-service")));
+        .AddInterceptors(HR360.Platform.TenantSessionInterceptor.Instance, new GovernanceService.Auditing.AuditInterceptor("governance-service")));
 builder.Services.AddSingleton<GovernanceService.Infrastructure.Sql>();
 builder.Services.AddSingleton<GovernanceService.Infrastructure.AppCache>();
 builder.Services.AddSingleton<GovernanceService.Infrastructure.PeopleDirectory>();
@@ -188,6 +189,8 @@ builder.Services.AddSwaggerGen(c => c.CustomSchemaIds(t => (t.FullName ?? t.Name
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
+// Zamanlanmış arka plan işleri çok kopyada tek kopyada çalışır (HR360.Platform.LeaderGate).
+HR360.Platform.LeaderGate.Configure(connectionString, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LeaderGate"));
 
 app.UseSwagger();
 // Swagger arayuzu yalnizca gelistirmede; JSON belge (/swagger/v1/swagger.json) gateway'in
@@ -200,6 +203,7 @@ app.UseAuthorization();
 app.UseHttpMetrics();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "governance-service" }));
+app.MapReadiness<GovernanceDbContext>("governance-service");
 app.MapControllers();
 app.MapMetrics();
 

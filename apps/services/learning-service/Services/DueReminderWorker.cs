@@ -54,7 +54,10 @@ public sealed class DueReminderWorker : BackgroundService
         LEFT JOIN organization_departments d ON d."Id" = a."DepartmentId"
         """;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("learning/DueReminderWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken stoppingToken)
     {
         try { await Task.Delay(TimeSpan.FromSeconds(Math.Min(15, _interval.TotalSeconds)), stoppingToken); }
         catch (OperationCanceledException) { return; }

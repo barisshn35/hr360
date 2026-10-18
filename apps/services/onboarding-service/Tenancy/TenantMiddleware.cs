@@ -44,6 +44,9 @@ public class TenantMiddleware
             }
         }
 
+        // Satır düzeyi güvenlik: kiracı kullanıcısının isteğinde DB oturumuna app.tenant (HR360.Platform.TenantSession).
+        HR360.Platform.TenantSession.Current = tenantContext.IsPlatformAdmin ? null : tenantContext.TenantSlug;
+
         await _next(context);
     }
 

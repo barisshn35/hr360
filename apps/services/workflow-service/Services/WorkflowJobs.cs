@@ -29,7 +29,10 @@ public class WorkflowJobsWorker : BackgroundService
     private readonly ILogger<WorkflowJobsWorker> _log;
     public WorkflowJobsWorker(IServiceProvider sp, ILogger<WorkflowJobsWorker> log) { _sp = sp; _log = log; }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("workflow/WorkflowJobsWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         await Task.Delay(TimeSpan.FromSeconds(20), ct);
         while (!ct.IsCancellationRequested)

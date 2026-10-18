@@ -20,7 +20,10 @@ public sealed class EomWorker : BackgroundService
         _interval = TimeSpan.FromSeconds(s);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("engagement/EomWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken stoppingToken)
     {
         try { await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken); }
         catch (OperationCanceledException) { return; }

@@ -57,7 +57,10 @@ public sealed class CertificateReminderWorker : BackgroundService
         public Guid? HeadId { get; set; }
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("learning/CertificateReminderWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken stoppingToken)
     {
         try { await Task.Delay(TimeSpan.FromSeconds(Math.Min(10, _interval.TotalSeconds)), stoppingToken); }
         catch (OperationCanceledException) { return; }

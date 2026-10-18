@@ -54,7 +54,10 @@ public sealed class SiemExporter : BackgroundService
                $"{Sd(service)} {Sd(entity)} {Sd(action)}";
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("governance/SiemExporter", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         if (Endpoint is null) return;
         _log.LogInformation("SIEM aktarımı açık: {Endpoint}", EndpointDisplay);

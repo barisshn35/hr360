@@ -350,7 +350,10 @@ public sealed class TravelPurgeWorker : BackgroundService
         await db.Database.ExecuteSqlRawAsync(
             "UPDATE expense_travel_requests SET \"PassportCipher\" = NULL, \"PassportPurgedAt\" = now() WHERE \"PassportCipher\" IS NOT NULL AND \"EndDate\" < (now() AT TIME ZONE 'Europe/Istanbul')::date - 7", ct);
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("expense/TravelPurgeWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         await Task.Delay(TimeSpan.FromSeconds(30), ct);
         while (!ct.IsCancellationRequested)

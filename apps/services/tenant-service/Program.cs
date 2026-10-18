@@ -1,3 +1,4 @@
+using HR360.Platform;
 using Prometheus;
 using System.Security.Claims;
 using System.Text.Json;
@@ -210,6 +211,8 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+// Zamanlanmış arka plan işleri çok kopyada tek kopyada çalışır (HR360.Platform.LeaderGate).
+HR360.Platform.LeaderGate.Configure(connectionString, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LeaderGate"));
 
 app.UseSwagger();
 // Swagger arayuzu yalnizca gelistirmede; JSON belge (/swagger/v1/swagger.json) gateway'in
@@ -259,6 +262,7 @@ app.UseAuthorization();
 app.UseHttpMetrics();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "tenant-service" }));
+app.MapReadiness<TenantDbContext>("tenant-service");
 app.MapControllers();
 app.MapMetrics();
 

@@ -358,7 +358,10 @@ public sealed class MassViewWorker : BackgroundService
             "security.massview", ct);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("governance/MassViewWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         await Task.Delay(TimeSpan.FromSeconds(30), ct);
         while (!ct.IsCancellationRequested)

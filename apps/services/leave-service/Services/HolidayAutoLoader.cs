@@ -35,7 +35,10 @@ public sealed class HolidayAutoLoader : BackgroundService
     /// <summary>Şirket × yıl için yükleme gerekli mi (saf): hiç yüklenmemiş ya da eski sürümle yüklenmiş.</summary>
     public static bool NeedsLoad(int? appliedVersion) => appliedVersion is null || appliedVersion < DataVersion;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("leave/HolidayAutoLoader", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken stoppingToken)
     {
         if (!Enabled) return;
         try { await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken); } catch (OperationCanceledException) { return; }

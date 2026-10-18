@@ -26,7 +26,10 @@ public class DigestWorker : BackgroundService
         _log = log;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("notification/DigestWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {

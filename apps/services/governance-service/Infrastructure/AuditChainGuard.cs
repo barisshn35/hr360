@@ -110,7 +110,10 @@ public sealed class AuditChainGuard : BackgroundService
         return problems == 0;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("governance/AuditChainGuard", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         await Task.Delay(TimeSpan.FromMinutes(2), ct);
         while (!ct.IsCancellationRequested)

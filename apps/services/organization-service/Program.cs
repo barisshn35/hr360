@@ -1,3 +1,4 @@
+using HR360.Platform;
 using Prometheus;
 using System.Security.Claims;
 using System.Text.Json;
@@ -23,7 +24,7 @@ builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantCon
 
 builder.Services.AddDbContext<OrganizationDbContext>(options =>
     options.UseNpgsql(connectionString)
-        .AddInterceptors(new OrganizationService.Auditing.AuditInterceptor("organization-service")));
+        .AddInterceptors(HR360.Platform.TenantSessionInterceptor.Instance, new OrganizationService.Auditing.AuditInterceptor("organization-service")));
 
 var keycloakAuthority = Environment.GetEnvironmentVariable("KEYCLOAK_AUTHORITY")
     ?? "http://keycloak:8080/auth/realms/hr360";
@@ -129,6 +130,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+// Zamanlanmış arka plan işleri çok kopyada tek kopyada çalışır (HR360.Platform.LeaderGate).
+HR360.Platform.LeaderGate.Configure(connectionString, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LeaderGate"));
 
 using (var scope = app.Services.CreateScope())
 {
@@ -153,6 +156,7 @@ app.UseAuthorization();
 app.UseHttpMetrics();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "organization-service" }));
+app.MapReadiness<OrganizationDbContext>("organization-service");
 
 app.MapControllers();
 app.MapMetrics();

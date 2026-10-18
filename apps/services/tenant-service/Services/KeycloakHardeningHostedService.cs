@@ -11,7 +11,10 @@ public sealed class KeycloakHardeningHostedService : BackgroundService
     private readonly ILogger<KeycloakHardeningHostedService> _log;
     public KeycloakHardeningHostedService(IServiceProvider sp, ILogger<KeycloakHardeningHostedService> log) { _sp = sp; _log = log; }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("tenant/KeycloakHardeningHostedService", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         if (string.Equals(Environment.GetEnvironmentVariable("KEYCLOAK_PASSKEYS"), "false", StringComparison.OrdinalIgnoreCase)) return;
         for (var attempt = 1; attempt <= 20 && !ct.IsCancellationRequested; attempt++)

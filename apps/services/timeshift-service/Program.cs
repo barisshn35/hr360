@@ -1,3 +1,4 @@
+using HR360.Platform;
 using Prometheus;
 using System.Security.Claims;
 using System.Text.Json;
@@ -30,7 +31,7 @@ builder.Services.AddHttpClient<DepartmentDirectoryClient>();
 
 builder.Services.AddDbContext<TimeShiftDbContext>(options =>
     options.UseNpgsql(connectionString)
-        .AddInterceptors(new TimeShiftService.Auditing.AuditInterceptor("timeshift-service"),
+        .AddInterceptors(HR360.Platform.TenantSessionInterceptor.Instance, new TimeShiftService.Auditing.AuditInterceptor("timeshift-service"),
             new TimeShiftService.Observability.BusinessMetricsInterceptor()));
 
 var keycloakAuthority = Environment.GetEnvironmentVariable("KEYCLOAK_AUTHORITY")
@@ -154,6 +155,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.CustomSchemaIds(t => (t.FullName ?? t.Name).Replace('+', '.')));
 
 var app = builder.Build();
+// Zamanlanmış arka plan işleri çok kopyada tek kopyada çalışır (HR360.Platform.LeaderGate).
+HR360.Platform.LeaderGate.Configure(connectionString, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LeaderGate"));
 
 app.UseSwagger();
 // Swagger arayuzu yalnizca gelistirmede; JSON belge (/swagger/v1/swagger.json) gateway'in
@@ -167,6 +170,7 @@ app.UseRateLimiter();
 app.UseHttpMetrics();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "timeshift-service" }));
+app.MapReadiness<TimeShiftDbContext>("timeshift-service");
 app.MapControllers();
 app.MapMetrics();
 

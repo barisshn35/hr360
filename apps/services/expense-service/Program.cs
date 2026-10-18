@@ -1,3 +1,4 @@
+using HR360.Platform;
 using Prometheus;
 using System.Security.Claims;
 using System.Text.Json;
@@ -42,7 +43,7 @@ builder.Services.AddHostedService<ExpenseService.Controllers.TravelPurgeWorker>(
 
 builder.Services.AddDbContext<ExpenseDbContext>(options =>
     options.UseNpgsql(connectionString)
-        .AddInterceptors(new ExpenseService.Auditing.AuditInterceptor("expense-service"),
+        .AddInterceptors(HR360.Platform.TenantSessionInterceptor.Instance, new ExpenseService.Auditing.AuditInterceptor("expense-service"),
             new ExpenseService.Observability.BusinessMetricsInterceptor()));
 
 var keycloakAuthority = Environment.GetEnvironmentVariable("KEYCLOAK_AUTHORITY")
@@ -160,6 +161,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+// Zamanlanmış arka plan işleri çok kopyada tek kopyada çalışır (HR360.Platform.LeaderGate).
+HR360.Platform.LeaderGate.Configure(connectionString, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LeaderGate"));
 
 app.UseSwagger();
 // Swagger arayuzu yalnizca gelistirmede; JSON belge (/swagger/v1/swagger.json) gateway'in
@@ -172,6 +175,7 @@ app.UseAuthorization();
 app.UseHttpMetrics();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "expense-service" }));
+app.MapReadiness<ExpenseDbContext>("expense-service");
 app.MapControllers();
 app.MapMetrics();
 

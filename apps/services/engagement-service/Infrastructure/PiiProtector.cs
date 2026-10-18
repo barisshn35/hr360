@@ -37,7 +37,10 @@ public static class PiiProtector
 /// <summary>Açılışta düz metin kalmış TCKN/IBAN değerlerini şifreler (bir kez, idempotent).</summary>
 public sealed class PiiBackfill(IServiceProvider sp, ILogger<PiiBackfill> log) : BackgroundService
 {
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("engagement/PiiBackfill", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         if (!PiiProtector.Enabled)
         {

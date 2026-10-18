@@ -22,7 +22,10 @@ public sealed class CoffeeWorker : BackgroundService
         _interval = TimeSpan.FromSeconds(int.TryParse(Environment.GetEnvironmentVariable("COFFEE_TICK_SECONDS"), out var v) && v > 0 ? v : 900);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("engagement/CoffeeWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         try { await Task.Delay(TimeSpan.FromSeconds(50), ct); } catch (OperationCanceledException) { return; }
         while (!ct.IsCancellationRequested)

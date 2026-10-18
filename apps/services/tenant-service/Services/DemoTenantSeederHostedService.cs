@@ -40,7 +40,10 @@ public class DemoTenantSeederHostedService : BackgroundService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("tenant/DemoTenantSeederHostedService", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken stoppingToken)
     {
         // Keycloak realm-import'u ve bu servisin kendi DB semasi (postgres init
         // sirasinda tek seferde olusturuluyor) tenant-service ayaga kalktiginda

@@ -569,7 +569,10 @@ public sealed class AccessReviewWorker : BackgroundService
     private readonly ILogger<AccessReviewWorker> _log;
     public AccessReviewWorker(IServiceProvider sp, ILogger<AccessReviewWorker> log) { _sp = sp; _log = log; }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("governance/AccessReviewWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         await Task.Delay(TimeSpan.FromMinutes(3), ct);
         while (!ct.IsCancellationRequested)

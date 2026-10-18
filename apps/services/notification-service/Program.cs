@@ -1,3 +1,4 @@
+using HR360.Platform;
 using Prometheus;
 using System.Security.Claims;
 using System.Text.Json;
@@ -50,7 +51,7 @@ builder.Services.AddHostedService<NotificationService.Preferences.DigestWorker>(
 
 builder.Services.AddDbContext<NotificationDbContext>(options =>
     options.UseNpgsql(connectionString)
-        .AddInterceptors(new NotificationService.Auditing.AuditInterceptor("notification-service")));
+        .AddInterceptors(HR360.Platform.TenantSessionInterceptor.Instance, new NotificationService.Auditing.AuditInterceptor("notification-service")));
 
 var keycloakAuthority = Environment.GetEnvironmentVariable("KEYCLOAK_AUTHORITY")
     ?? "http://keycloak:8080/auth/realms/hr360";
@@ -146,6 +147,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+// Zamanlanmış arka plan işleri çok kopyada tek kopyada çalışır (HR360.Platform.LeaderGate).
+HR360.Platform.LeaderGate.Configure(connectionString, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LeaderGate"));
 
 app.UseSwagger();
 // Swagger arayuzu yalnizca gelistirmede; JSON belge (/swagger/v1/swagger.json) gateway'in
@@ -158,6 +161,7 @@ app.UseAuthorization();
 app.UseHttpMetrics();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "notification-service" }));
+app.MapReadiness<NotificationDbContext>("notification-service");
 app.MapControllers();
 app.MapMetrics();
 

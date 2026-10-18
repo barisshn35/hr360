@@ -225,7 +225,10 @@ public sealed class SavedReportWorker(IServiceProvider sp, ILogger<SavedReportWo
 {
     private static readonly int IntervalSeconds = int.TryParse(Environment.GetEnvironmentVariable("SAVED_REPORTS_INTERVAL_SECONDS"), out var s) && s > 0 ? s : 300;
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("governance/SavedReportWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         await Task.Delay(TimeSpan.FromSeconds(Math.Min(20, IntervalSeconds)), ct);
         while (!ct.IsCancellationRequested)

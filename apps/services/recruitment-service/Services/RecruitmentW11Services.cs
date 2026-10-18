@@ -74,7 +74,10 @@ public class ReferralRewardWorker : BackgroundService
         _log = log;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("recruitment/ReferralRewardWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken stoppingToken)
     {
         try { await Task.Delay(TimeSpan.FromSeconds(90), stoppingToken); } catch (OperationCanceledException) { return; }
         var hours = int.TryParse(Environment.GetEnvironmentVariable("RECRUITMENT_REFERRAL_INTERVAL_HOURS"), out var h) && h > 0 ? h : 6;

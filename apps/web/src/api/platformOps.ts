@@ -3,10 +3,24 @@ import { apiFetch } from './client'
 /** Arayüzden bakım işleri (tenant-service /api/platform/ops). Komutları sunucudaki çalıştırıcı yürütür. */
 const B = '/api/tenant/platform/ops'
 
-export type OpsKind = 'backup' | 'backup-verify' | 'schedule' | 'unschedule' | 'check-updates' | 'update' | 'rollback' | 'restore'
+export type OpsKind = 'backup' | 'backup-verify' | 'schedule' | 'unschedule' | 'check-updates' | 'update' | 'rollback' | 'restore' | 'db-isolation'
 export type OpsStatus = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Cancelled'
 
 export interface OpsBackup { name: string; size: number; createdAt: string; encrypted: boolean; manifest: boolean }
+/** Sunucu güvenlik duruşu (yalnızca açık/kapalı; sır değeri yok). Eski çalıştırıcıda yoktur. */
+export interface OpsSecurity {
+  dbIsolationOff: boolean
+  dbRoles: number
+  rlsTables: string
+  tls: boolean
+  backupEncrypted: boolean
+  backupScheduled: boolean
+  backupOffsite: boolean
+  keyRotation: boolean
+  redisPassword: boolean
+  monitoring: boolean
+  publicSignup: boolean
+}
 export interface OpsSnapshot {
   version: string | null
   commit: string
@@ -19,6 +33,7 @@ export interface OpsSnapshot {
   diskTotal: number
   host: string
   runnerAt: string
+  security?: OpsSecurity
 }
 export interface OpsJob {
   id: string

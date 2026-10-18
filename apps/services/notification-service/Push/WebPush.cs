@@ -154,7 +154,10 @@ public class PushSenderWorker : BackgroundService
         _sp = sp; _log = log; _keys = keys; _http = http.CreateClient("webpush");
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("notification/PushSenderWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {

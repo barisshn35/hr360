@@ -485,7 +485,10 @@ public sealed class Housekeeping : BackgroundService
     private readonly ILogger<Housekeeping> _log;
     public Housekeeping(IServiceProvider sp, ILogger<Housekeeping> log) { _sp = sp; _log = log; }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("governance/Housekeeping", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         await Task.Delay(TimeSpan.FromSeconds(30), ct);
         while (!ct.IsCancellationRequested)

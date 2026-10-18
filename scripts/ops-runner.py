@@ -14,6 +14,7 @@ izinli komutları, doğrulanmış bağımsız değişkenlerle çalıştırır:
   update          scripts/update.sh --ref vX.Y.Z --yes
   rollback        scripts/update.sh rollback --yes
   restore         scripts/restore.sh backups/ARŞİV --yes [--only-db]
+  db-isolation    scripts/db-isolation.sh ensure --recreate (servis rolleri + RLS; yalnızca açar)
 
 Sonuç hem veritabanına hem ops-logs/<iş>.json dosyasına yazılır: geri yükleme veritabanını değiştirdiği
 için iş kaydı kaybolursa sonraki turda dosyadan geri yazılır. Her turda sunucu durum özeti
@@ -79,6 +80,45 @@ def backups():
     return items[:60]
 
 
+def env_keys():
+    """.env'de DOLU olan anahtarların adları (değerler okunur ama hiçbir yere yazılmaz)."""
+    keys = {}
+    try:
+        with open(os.path.join(ROOT, ".env")) as f:
+            for line in f:
+                if "=" in line and not line.lstrip().startswith("#"):
+                    k, v = line.rstrip("\n").split("=", 1)
+                    keys[k.strip()] = v.strip().strip("'\"")
+    except OSError:
+        pass
+    return keys
+
+
+def security():
+    """Güvenlik duruşu: yalnızca açık/kapalı ve sayılar (sır değeri YOK). Platform › Bakım'da gösterilir."""
+    env = env_keys()
+    has = lambda k: bool(env.get(k))  # noqa: E731
+    roles = sum(1 for k, v in env.items() if k.startswith("HR360_DB_USER_") and v)
+    try:
+        rls = psql("""SELECT count(*) FILTER (WHERE rls_enabled) || '/' || count(*) FROM hr360_rls_status()""") or "0/0"
+    except RuntimeError:
+        rls = "0/0"  # eski şema: RLS fonksiyonları yok
+    _, cron = sh(["crontab", "-l"])
+    profiles = env.get("COMPOSE_PROFILES", "")
+    return {
+        "dbIsolationOff": env.get("HR360_DB_ISOLATION") == "off",
+        "dbRoles": roles, "rlsTables": rls,
+        "tls": env.get("TLS_MODE", "") not in ("", "none"),
+        "backupEncrypted": has("BACKUP_ENCRYPTION_KEY"),
+        "backupScheduled": "# hr360-backup" in cron,
+        "backupOffsite": (has("BACKUP_S3_BUCKET") and has("BACKUP_S3_ENDPOINT")) or has("BACKUP_MINIO_URL"),
+        "keyRotation": has("TENANT_SECRET_KEYS"),
+        "redisPassword": has("REDIS_PASSWORD"),
+        "monitoring": "monitoring" in profiles.split(","),
+        "publicSignup": env.get("PUBLIC_SIGNUP_ENABLED", "true").lower() != "false",
+    }
+
+
 def snapshot():
     def read(p):
         try:
@@ -94,7 +134,7 @@ def snapshot():
     return {
         "version": read("VERSION"), "commit": commit, "commitDate": date, "tags": tags(), "backups": backups(),
         "backupStatus": bstatus, "updateStatus": ustatus, "diskFree": usage.free, "diskTotal": usage.total,
-        "host": os.uname().nodename, "runnerAt": now(),
+        "host": os.uname().nodename, "runnerAt": now(), "security": security(),
     }
 
 
@@ -128,6 +168,8 @@ def command(kind, args):
         if not (isinstance(ref, str) and TAG.match(ref) and ref in tags()):
             raise ValueError("geçersiz sürüm etiketi")
         return ["scripts/update.sh", "--ref", ref, "--yes"]
+    if kind == "db-isolation":
+        return ["scripts/db-isolation.sh", "ensure", "--recreate"]
     if kind == "rollback":
         return ["scripts/update.sh", "rollback", "--yes"]
     if kind == "restore":

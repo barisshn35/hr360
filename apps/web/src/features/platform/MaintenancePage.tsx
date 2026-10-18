@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArchiveRestore, CalendarClock, CheckCircle2, CircleAlert, DownloadCloud, HardDrive, History, LoaderCircle, RefreshCw, ShieldCheck, Undo2, X } from 'lucide-react'
+import { ArchiveRestore, CalendarClock, CheckCircle2, CircleAlert, DownloadCloud, HardDrive, History, Info, LoaderCircle, RefreshCw, ShieldCheck, Undo2, X } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
 import { useConfirm } from '@/components/ui/Confirm'
 import { useAction } from '@/features/shared/kit'
-import { newerThan, platformOpsApi, type OpsBackup, type OpsJob, type OpsKind, type OpsStatus } from '@/api/platformOps'
+import { newerThan, platformOpsApi, type OpsBackup, type OpsJob, type OpsKind, type OpsSecurity, type OpsStatus } from '@/api/platformOps'
 import { formatDateTime, formatRelativeToNow } from '@/lib/format'
 import { tx } from '@/lib/i18n'
 
@@ -22,6 +22,7 @@ const ROLLBACK_CONFIRM = 'GERİ AL'
 const kindLabels = (): Record<OpsKind, string> => ({
   backup: tx('Yedek al'), 'backup-verify': tx('Yedeği doğrula'), schedule: tx('Yedek zamanla'), unschedule: tx('Zamanlamayı kaldır'),
   'check-updates': tx('Güncellemeleri denetle'), update: tx('Güncelle'), rollback: tx('Önceki sürüme dön'), restore: tx('Yedekten geri yükle'),
+  'db-isolation': tx('Veritabanı yalıtımını aç'),
 })
 const STATUS: Record<OpsStatus, { tone: 'neutral' | 'info' | 'success' | 'danger'; label: () => string }> = {
   Pending: { tone: 'neutral', label: () => tx('Sırada') }, Running: { tone: 'info', label: () => tx('Çalışıyor') },
@@ -93,6 +94,42 @@ function JobsPanel({ jobs, onOpen }: { jobs: OpsJob[]; onOpen: (id: string) => v
             ))}
           </ul>
         )}
+      </PanelBody>
+    </Panel>
+  )
+}
+
+/** Sunucu güvenlik duruşu: önerilen ayarların açık/kapalı durumu (değerler değil). */
+function SecurityPanel({ sec, disabled, onIsolate }: { sec: OpsSecurity; disabled: boolean; onIsolate: () => void }) {
+  const [rlsOn, rlsAll] = sec.rlsTables.split('/').map((x) => Number(x) || 0)
+  const isolated = !sec.dbIsolationOff && sec.dbRoles >= 15 && rlsAll > 0 && rlsOn === rlsAll
+  const items: { ok: boolean; title: string; note: string; action?: React.ReactNode }[] = [
+    { ok: isolated, title: tx('Veritabanı yalıtımı'),
+      note: isolated ? tx('Her servis kendi en az yetkili rolüyle bağlanır; şirket verileri satır düzeyinde ayrılır ({0} tablo).', [String(rlsAll)])
+        : tx('Servis rolleri: {0}, satır düzeyi güvenlik: {1} tablo.', [String(sec.dbRoles), sec.rlsTables]),
+      action: isolated ? undefined : <Button size="sm" disabled={disabled} onClick={onIsolate}>{tx('Aç')}</Button> },
+    { ok: sec.tls, title: tx('HTTPS'), note: sec.tls ? tx('Trafik şifreli.') : tx('Uygulama şifresiz HTTP ile sunuluyor.') },
+    { ok: sec.backupScheduled, title: tx('Otomatik yedek'), note: sec.backupScheduled ? tx('Günlük yedek zamanlanmış.') : tx('Zamanlanmış yedek yok; "Otomatik yedek" bölümünden zamanlayın.') },
+    { ok: sec.backupEncrypted, title: tx('Yedek şifreleme'), note: sec.backupEncrypted ? tx('Yedekler şifreli alınır.') : tx('Yedekler şifresiz.') },
+    { ok: sec.backupOffsite, title: tx('Sunucu dışı yedek kopyası'), note: sec.backupOffsite ? tx('Yedekler ayrıca dış depoya gönderilir.') : tx('Yedekler yalnızca bu sunucuda; sunucu kaybında yedek de kaybolur.') },
+    { ok: sec.redisPassword, title: tx('Önbellek parolası'), note: sec.redisPassword ? tx('Önbellek parolayla korunuyor.') : tx('Önbellek parolasız.') },
+    { ok: sec.monitoring, title: tx('İzleme ve alarmlar'), note: sec.monitoring ? tx('Ölçümler toplanıyor, alarmlar açık.') : tx('İzleme kapalı; servis çökmesi ya da disk dolması bildirilmez.') },
+  ]
+  const okCount = items.filter((i) => i.ok).length
+  return (
+    <Panel>
+      <PanelHead title={<span className="flex items-center gap-2"><ShieldCheck className="size-4 text-primary" />{tx('Güvenlik durumu')}</span>}
+        note={tx('{0}/{1} önerilen ayar açık. Herkese açık şirket kaydı: {2}.', [String(okCount), String(items.length), sec.publicSignup ? tx('açık') : tx('kapalı')])} />
+      <PanelBody className="p-0">
+        <ul className="divide-y divide-border">
+          {items.map((i) => (
+            <li key={i.title} className="flex items-center gap-3 px-5 py-2.5 text-[13px]">
+              {i.ok ? <CheckCircle2 className="size-4 shrink-0 text-primary" /> : <Info className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />}
+              <span className="min-w-0 flex-1"><span className="font-medium">{i.title}</span><span className="block text-[12px] text-muted-foreground">{i.note}</span></span>
+              {i.action}
+            </li>
+          ))}
+        </ul>
       </PanelBody>
     </Panel>
   )
@@ -198,6 +235,11 @@ export function MaintenancePage() {
           )}
         </PanelBody>
       </Panel>
+
+      {s?.security && <SecurityPanel sec={s.security} disabled={disabled || busy} onIsolate={async () => {
+        if (await confirm({ title: tx('Veritabanı yalıtımı açılsın mı?'), note: tx('Her servis kendi rolüne geçer ve satır düzeyi güvenlik açılır. Servisler yeniden başlatılır; uygulama bir dakika kadar erişilemez olabilir.'), action: tx('Aç'), destructive: false }))
+          run.mutate({ kind: 'db-isolation' })
+      }} />}
 
       {jobs.data && <JobsPanel jobs={jobs.data} onOpen={setOutput} />}
 

@@ -143,8 +143,12 @@ Gerçek yabancı anahtar yoktur, ID referansı kullanılır. Bağlantı iki yold
 
 ## Bilinen sınırlar
 
-- **EF Migrations yok:** Şema tek SQL dosyası ve tarihli göç betikleriyle yönetilir.
-- **Yük dengeleme ve yedeklilik yok:** Tek sunucu kurulumunda her servisin tek kopyası çalışır.
-  İzleme (Prometheus/Grafana) bu kurulumda yoktur; servisler `/metrics` uçlarını sunar.
-- **Planın Hafta 15 kapsamı uygulanmadı:** Offer-to-hire saga'sı ve tam bitemporal/audit modeli
-  yok.
+- **EF Migrations yok:** Şema temel SQL dosyası (`data/migrations/sql-all-schemas.sql`) ve tarihli göç
+  betikleriyle (`scripts/sql`) yönetilir; uygulanan göçler `schema_migrations` defterinde tutulur
+  (`scripts/migrate.sh`).
+- **Yük dengeleme ve yedeklilik yok:** Tek sunucu kurulumunda her servisin tek kopyası çalışır. Zamanlanmış
+  arka plan işleri çok kopyada yalnızca bir kopyada yürür (`LeaderGate`, PostgreSQL danışma kilidi).
+  İzleme (Prometheus/Grafana) isteğe bağlı profildir; servisler `/metrics` uçlarını sunar.
+- **Sağlık uçları:** `/health` canlılık, `/health/ready` veritabanı bağlantısı (iç ağ; ağ geçidi dışarı açmaz).
+- **Tam bitemporal model yok:** Teklif → işe alım sagası var (`api/sagas/offer-to-hire`); tarihçe zaman
+  makinesi belirli bir anın görünümüdür, geçerlilik + kayıt zamanlı (bitemporal) model değildir.

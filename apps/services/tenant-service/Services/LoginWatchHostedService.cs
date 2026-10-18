@@ -46,7 +46,10 @@ public sealed class LoginWatchHostedService : BackgroundService
         _key = SHA256.HashData(Encoding.UTF8.GetBytes("hr360-login-watch|" + secret));
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("tenant/LoginWatchHostedService", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         var seconds = int.TryParse(Environment.GetEnvironmentVariable("LOGIN_WATCH_INTERVAL_SECONDS"), out var s) ? s : 60;
         if (seconds <= 0 || string.IsNullOrEmpty(Cs)) return;

@@ -1,3 +1,4 @@
+using HR360.Platform;
 using Prometheus;
 using System.Security.Claims;
 using System.Text.Json;
@@ -22,7 +23,7 @@ builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantCon
 
 builder.Services.AddDbContext<RecruitmentDbContext>(options =>
     options.UseNpgsql(connectionString)
-        .AddInterceptors(new RecruitmentService.Auditing.AuditInterceptor("recruitment-service"),
+        .AddInterceptors(HR360.Platform.TenantSessionInterceptor.Instance, new RecruitmentService.Auditing.AuditInterceptor("recruitment-service"),
             new RecruitmentService.Observability.BusinessMetricsInterceptor()));
 
 // Dalga 5c: teklif onay akışı (workflow-service, kullanıcının jetonuyla), Kafka karar olayları,
@@ -135,6 +136,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => c.CustomSchemaIds(t => (t.FullName ?? t.Name).Replace('+', '.')));
 
 var app = builder.Build();
+// Zamanlanmış arka plan işleri çok kopyada tek kopyada çalışır (HR360.Platform.LeaderGate).
+HR360.Platform.LeaderGate.Configure(connectionString, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LeaderGate"));
 
 app.UseSwagger();
 // Swagger arayuzu yalnizca gelistirmede; JSON belge (/swagger/v1/swagger.json) gateway'in
@@ -147,6 +150,7 @@ app.UseAuthorization();
 app.UseHttpMetrics();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "recruitment-service" }));
+app.MapReadiness<RecruitmentDbContext>("recruitment-service");
 app.MapControllers();
 app.MapMetrics();
 

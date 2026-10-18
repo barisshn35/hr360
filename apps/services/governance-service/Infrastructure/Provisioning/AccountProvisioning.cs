@@ -418,7 +418,10 @@ public sealed class ProvisioningScanner(Sql sql, ILogger<ProvisioningScanner> lo
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(
         double.TryParse(EnvVar.Or("PROVISIONING_SCAN_MINUTES", "15"), NumberStyles.Float, CultureInfo.InvariantCulture, out var m) ? Math.Clamp(m, 0.05, 1440) : 15);
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("governance/ProvisioningScanner", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         try { await Task.Delay(TimeSpan.FromSeconds(45), ct); } catch (OperationCanceledException) { return; }
         while (!ct.IsCancellationRequested)

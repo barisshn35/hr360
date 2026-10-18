@@ -107,7 +107,10 @@ public class RetentionWorker : BackgroundService
         _log = log;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("recruitment/RetentionWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken stoppingToken)
     {
         var minutes = int.TryParse(Environment.GetEnvironmentVariable("RECRUITMENT_RETENTION_INTERVAL_MINUTES"), out var m) && m > 0 ? m : 360;
         try { await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken); } catch (OperationCanceledException) { return; }

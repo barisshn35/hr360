@@ -1053,7 +1053,10 @@ public sealed class ChatDigestWorker(IServiceProvider sp, ILogger<ChatDigestWork
 {
     public static readonly int Hour = int.TryParse(EnvVar.Or("CHAT_DIGEST_HOUR", "9"), out var h) && h is >= 0 and <= 23 ? h : 9;
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("governance/ChatDigestWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
@@ -1083,7 +1086,10 @@ public sealed class ChatDigestWorker(IServiceProvider sp, ILogger<ChatDigestWork
 /// <summary>Sohbet gönderim kuyruğunu periyodik olarak işler.</summary>
 public sealed class ChatOutboxWorker(IServiceProvider sp, ILogger<ChatOutboxWorker> log) : BackgroundService
 {
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("governance/ChatOutboxWorker", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         var period = TimeSpan.FromSeconds(Math.Clamp(ChatService.RetryBaseSeconds / 2, 1, 30));
         // Dalga 5e: zamanlanmış bot işleri de bu döngüden (CHAT_JOBS_SECONDS, varsayılan 5 dk) çalışır.

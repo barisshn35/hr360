@@ -31,7 +31,10 @@ public sealed class KeyRotationJob(string connectionEnv, IReadOnlyList<EncColumn
     public static byte[]? Reencrypt(byte[] stored) =>
         KeyRing.BytesKeyId(stored) == KeyRing.ActiveId ? null : KeyRing.SealBytes(KeyRing.OpenBytes(stored));
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        HR360.Platform.LeaderGate.RunAsync("notification/KeyRotationJob", stoppingToken, LeaderLoopAsync);
+
+    private async Task LeaderLoopAsync(CancellationToken ct)
     {
         if (string.Equals(Environment.GetEnvironmentVariable("CRYPTO_REENCRYPT"), "off", StringComparison.OrdinalIgnoreCase)) return;
         var delay = int.TryParse(Environment.GetEnvironmentVariable("CRYPTO_REENCRYPT_DELAY_SECONDS"), out var d) ? d : 60;
