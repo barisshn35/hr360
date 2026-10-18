@@ -61,13 +61,17 @@ public static class Signatures
 
     public static string NewCode() => RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
 
-    private static byte[] Key()
+    private static readonly Lazy<byte[]> OtpKey = new(() =>
     {
+        // Anahtar yoksa süreç başına rastgele (bilinen sabit anahtar YOK): yeniden başlatmada bekleyen
+        // kodlar geçersizleşir, kişi yeni kod ister. Kurulum TENANT_SECRET_KEY'i her zaman üretir.
         var b64 = Environment.GetEnvironmentVariable("TENANT_SECRET_KEY");
-        var seed = string.IsNullOrEmpty(b64) ? Encoding.UTF8.GetBytes("hr360-otp-dev") : Convert.FromBase64String(b64);
+        var seed = string.IsNullOrEmpty(b64) ? RandomNumberGenerator.GetBytes(32) : Convert.FromBase64String(b64);
         // Anahtar ayrımı: şifreleme anahtarı doğrudan HMAC'te kullanılmaz.
         return HMACSHA256.HashData(seed, Encoding.UTF8.GetBytes("hr360/otp/v1"));
-    }
+    });
+
+    private static byte[] Key() => OtpKey.Value;
 
     /// <summary>Kodun özeti; kayıt kimliği tuz görevi görür (aynı kod farklı özet üretir).</summary>
     public static string Hash(Guid otpId, string code) =>

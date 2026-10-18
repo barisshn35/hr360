@@ -39,4 +39,10 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Puantajda konum sınırı (geofence): web sayfası navigator.geolocation ister, Capacitor çalışma
+         anında izni sorar. Tanımlı değilse istek her zaman reddedilir. Kamera izni bilerek yok: fiş/QR
+         fotoğrafı sistem kamera uygulamasıyla çekilir (izinsiz çalışır; izin tanımlanırsa ayrıca sorulmak zorunda). -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 </manifest>
