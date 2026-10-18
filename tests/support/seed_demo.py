@@ -167,7 +167,12 @@ for key in ("mehmet", "ayse", "ik"):
     _, r = api("admin", "POST", f"/api/tenant/my-tenant/members/{ids[key]}/invite")
     kc[key] = r["keycloakUserId"]
     kcadm("update", f"users/{kc[key]}", "-s", "emailVerified=true", "-s", "requiredActions=[]")
-    kcadm("set-password", "--userid", kc[key], "--new-password", password)
+    # Tekrar çalıştırmada parola zaten budur; Keycloak parola geçmişi kuralı aynı parolayı reddeder.
+    try:
+        kcadm("set-password", "--userid", kc[key], "--new-password", password)
+    except SystemExit as e:
+        if "invalidPasswordHistoryMessage" not in str(e):
+            raise
     drop_token(key)
 kcadm("add-roles", "--uid", kc["mehmet"], "--rolename", "manager")
 kcadm("add-roles", "--uid", kc["ik"], "--rolename", "hr-admin")
