@@ -117,12 +117,22 @@ deploy() {
   if [ -x scripts/db-isolation.sh ]; then
     scripts/db-isolation.sh ensure || echo "UYARI: veritabani yalitimi acilamadi (scripts/db-isolation.sh ensure)." >&2
   fi
-  # Paralel derleme, calisan servislerin yaninda kucuk sunucularda bellegi tuketebilir (npm "cannot
-  # allocate memory") ya da gecici ag hatasi alabilir: basarisizsa servis servis sirayla bir kez daha dene.
-  docker compose build >/dev/null || {
+  # Paralel derleme, calisan servislerin yaninda kucuk sunucularda bellegi tuketebilir: ya npm "cannot
+  # allocate memory" ile duser ya da hic dusmeden saatlerce takas yapar. Bos bellek azsa bastan sirayla
+  # derle; paralel derleme basarisiz olursa da (gecici ag hatasi vb.) servis servis bir kez daha dene.
+  local avail_kb cg_max cg_cur; avail_kb="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+  # Konteyner/LXC icinde /proc/meminfo makinenin tamamini gosterir; cgroup siniri daha darsa onu kullan.
+  cg_max="$(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo max)"; cg_cur="$(cat /sys/fs/cgroup/memory.current 2>/dev/null || echo 0)"
+  if [[ "$cg_max" =~ ^[0-9]+$ ]] && [[ "$cg_cur" =~ ^[0-9]+$ ]] && [ $(( (cg_max - cg_cur) / 1024 )) -lt "${avail_kb:-0}" ]; then
+    avail_kb=$(( (cg_max - cg_cur) / 1024 ))
+  fi
+  if [ "${avail_kb:-0}" -lt "${HR360_PARALLEL_BUILD_MIN_KB:-6291456}" ]; then
+    echo "==> Bos bellek az ($((${avail_kb:-0} / 1024)) MB): imajlar sirayla derleniyor" >&2
+    local s; for s in $(docker compose config --services); do docker compose build "$s" >/dev/null || return 1; done
+  else docker compose build >/dev/null || {
     echo "UYARI: imaj derlemesi basarisiz; servisler sirayla yeniden derleniyor." >&2
     local s; for s in $(docker compose config --services); do docker compose build "$s" >/dev/null || return 1; done
-  } || return 1
+  } || return 1; fi
   docker compose up -d --remove-orphans >/dev/null || return 1
 }
 
