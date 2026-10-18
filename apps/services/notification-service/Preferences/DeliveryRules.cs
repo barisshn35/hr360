@@ -20,8 +20,9 @@ public sealed record QuietHours(bool Enabled, TimeOnly Start, TimeOnly End, int 
 }
 
 /// <summary>Bir kişinin gönderim anında geçerli tercihleri (kayıt yoksa varsayılanlar).</summary>
+/// <param name="Sms">Kişi SMS almayı kapatabilir (güvenlik açısından kritik iletiler hariç).</param>
 public sealed record EffectivePrefs(
-    IReadOnlyDictionary<string, ChannelPrefs> Categories, QuietHours Quiet, bool DigestEnabled, int DigestHour)
+    IReadOnlyDictionary<string, ChannelPrefs> Categories, QuietHours Quiet, bool DigestEnabled, int DigestHour, bool Sms = true)
 {
     public static readonly EffectivePrefs Default = new(new Dictionary<string, ChannelPrefs>(), QuietHours.Off, false, 18);
 
@@ -239,6 +240,23 @@ public static class DeliveryRules
             if (!prefs.For(cat).Email) return (Delivery.Suppress, null);
             // Tek kullanımlık eylem bağlantısı olan e-posta özete girmez (bağlantı kaybolurdu).
             if (prefs.DigestEnabled && NotificationCategories.Get(cat).Digestible && !hasAction) return (Delivery.Digest, null);
+        }
+        var until = QuietHoursCalc.QuietUntil(nowUtc, prefs.Quiet);
+        return until is null ? (Delivery.Send, null) : (Delivery.Defer, until);
+    }
+
+    /// <summary>
+    /// Bekleyen bir SMS için karar: kritik iletiler hemen gider; kişi SMS'i kapattıysa ya da kategori
+    /// tümüyle kapalıysa (uygulama içi ve e-posta) gönderilmez; sessiz saatte ertelenir. SMS özete girmez.
+    /// </summary>
+    public static (Delivery Decision, DateTimeOffset? Until) DecideSms(string? templateCode, EffectivePrefs? prefs, DateTimeOffset nowUtc)
+    {
+        if (prefs is null || NotificationCategories.IsSecurityCritical(templateCode)) return (Delivery.Send, null);
+        if (!prefs.Sms) return (Delivery.Suppress, null);
+        if (!string.IsNullOrEmpty(templateCode))
+        {
+            var ch = prefs.For(NotificationCategories.Categorize(templateCode));
+            if (!ch.InApp && !ch.Email) return (Delivery.Suppress, null);
         }
         var until = QuietHoursCalc.QuietUntil(nowUtc, prefs.Quiet);
         return until is null ? (Delivery.Send, null) : (Delivery.Defer, until);

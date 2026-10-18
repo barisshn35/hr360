@@ -29,6 +29,7 @@ public class NotificationDbContext : DbContext, ITenantAwareContext
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
     public DbSet<VapidKeyRow> VapidKeys => Set<VapidKeyRow>();
     public DbSet<UiPreference> UiPreferences => Set<UiPreference>();
+    public DbSet<SmsSettings> SmsSettings => Set<SmsSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -72,6 +73,10 @@ public class NotificationDbContext : DbContext, ITenantAwareContext
         modelBuilder.Entity<UiPreference>().ToTable("notification_ui_prefs");
         modelBuilder.Entity<UiPreference>().Property(p => p.Value).HasColumnType("jsonb");
         modelBuilder.Entity<UiPreference>().HasIndex(p => new { p.TenantSlug, p.UserSub, p.Key }).IsUnique();
+
+        modelBuilder.Entity<SmsSettings>().ConfigureTenantColumn();
+        modelBuilder.Entity<SmsSettings>().ToTable("notification_sms_settings");
+        modelBuilder.Entity<SmsSettings>().HasKey(s => s.TenantSlug);
 
         modelBuilder.ApplyTenantFilters(this);
     }

@@ -24,6 +24,9 @@ public class NotificationPreference : ITenantOwned
     public bool DigestEnabled { get; set; }
     public int DigestHour { get; set; } = 18;
     public DateTimeOffset? DigestLastSentAt { get; set; }
+
+    /// <summary>SMS almak istiyor mu (varsayılan evet; güvenlik açısından kritik iletiler her durumda gider).</summary>
+    public bool SmsEnabled { get; set; } = true;
 }
 
 /// <summary>

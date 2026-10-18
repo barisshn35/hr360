@@ -130,6 +130,17 @@ public partial class NotificationsController : ControllerBase
         // Failed'e dusurup onceki (guvenli) davranisi korur.
         if (request.Channel == NotificationChannel.Email)
             notification.RecipientEmail = await _employees.GetEmailAsync(request.RecipientEmployeeId, HttpContext.RequestAborted);
+        // SMS: sağlayıcı tanımlı ve açık olmalı, alıcının geçerli telefonu olmalı; aksi halde hemen 400
+        // (sessizce kuyrukta başarısız olmasın).
+        if (request.Channel == NotificationChannel.Sms)
+        {
+            if (!await _db.SmsSettings.AnyAsync(s => s.Enabled, HttpContext.RequestAborted))
+                return BadRequest(new { message = "SMS sağlayıcısı tanımlı değil ya da kapalı (Ayarlar › SMS)" });
+            notification.RecipientPhone = Sms.SmsFormat.NormalizePhone(
+                await _employees.GetPhoneAsync(request.RecipientEmployeeId, HttpContext.RequestAborted));
+            if (notification.RecipientPhone is null)
+                return BadRequest(new { message = "Çalışanın kayıtlı geçerli bir telefon numarası yok" });
+        }
 
         // E-posta cercevesi (dugme, alt bilgi) alicinin dil tercihine gore; metni cagiran verir.
         notification.Language = NotificationTexts.Normalize(await _db.Preferences.AsNoTracking()

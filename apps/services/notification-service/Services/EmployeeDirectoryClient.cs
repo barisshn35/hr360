@@ -45,6 +45,19 @@ public class EmployeeDirectoryClient
 
     public async Task<string?> GetEmailAsync(Guid employeeId, CancellationToken ct)
     {
+        var dto = await GetContactAsync(employeeId, ct);
+        return string.IsNullOrWhiteSpace(dto?.Email) ? null : dto.Email;
+    }
+
+    /// <summary>SMS kanalı için çalışanın kayıtlı telefonu (ham; biçimlemeyi SmsFormat yapar).</summary>
+    public async Task<string?> GetPhoneAsync(Guid employeeId, CancellationToken ct)
+    {
+        var dto = await GetContactAsync(employeeId, ct);
+        return string.IsNullOrWhiteSpace(dto?.Phone) ? null : dto.Phone;
+    }
+
+    private async Task<EmployeeContactDto?> GetContactAsync(Guid employeeId, CancellationToken ct)
+    {
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, $"{_employeeBase}/api/employees/{employeeId}");
@@ -56,12 +69,11 @@ public class EmployeeDirectoryClient
             if (!resp.IsSuccessStatusCode) return null;
 
             var body = await resp.Content.ReadAsStringAsync(ct);
-            var dto = JsonSerializer.Deserialize<EmployeeEmailDto>(body, Json);
-            return string.IsNullOrWhiteSpace(dto?.Email) ? null : dto.Email;
+            return JsonSerializer.Deserialize<EmployeeContactDto>(body, Json);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Calisan e-postasi cozulemedi: {EmployeeId}", employeeId);
+            _logger.LogWarning(ex, "Calisan iletisim bilgisi cozulemedi: {EmployeeId}", employeeId);
             return null;
         }
     }
@@ -92,6 +104,6 @@ public class EmployeeDirectoryClient
         }
     }
 
-    private record EmployeeEmailDto(string? Email);
+    private record EmployeeContactDto(string? Email, string? Phone);
     private record EmployeeIdDto(Guid Id);
 }

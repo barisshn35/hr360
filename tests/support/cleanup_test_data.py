@@ -189,12 +189,15 @@ ON CONFLICT DO NOTHING;
 --    test_chat_plus.py : TAG "TEST5E-xxxxxx" (duyuru konusu), test çalışanları "T5e<i> Test<RUN>" (takas)
 --    test_payroll_eco.py: seyahat akışı konusu "Seyahat: TEST <yer>" (akışı test siliyor, bildirim kalıyor)
 --    test_telemetry.py : ret gerekçesi "TEST-telemetry"
+--    test_sms.py       : konu "TEST-SMS-xxxxxx"
 INSERT INTO c_notif SELECT n."Id", 'işaret' FROM notification_messages n
  WHERE n."TenantSlug" = 'demo'
    AND (n."Subject" ~ '^TEST5E-[0-9a-f]{{6}} ' OR n."Body" ~ 'TEST5E-[0-9a-f]{{6}}'
         OR n."Body" ~ 'T5e[1-4] Test[0-9a-f]{{6}}'
         OR n."Body" LIKE '%"Seyahat: TEST %'
         OR n."Body" LIKE '%TEST-telemetry%'
+        -- test_sms.py: konu "TEST-SMS-xxxxxx"
+        OR n."Subject" ~ '^TEST-SMS-[0-9a-f]{{6}}'
         -- elle QA testi: konu/gövdede "TEST-QA" (izin gerekçesi, ret/iptal gerekçesi, başlık)
         OR n."Subject" ILIKE '%TEST-QA%' OR n."Body" ILIKE '%TEST-QA%')
 ON CONFLICT DO NOTHING;

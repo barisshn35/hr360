@@ -142,12 +142,53 @@ export interface NotificationChannelPrefs {
   /** days: 0 = Pazar … 6 = Cumartesi (pencerenin başladığı gün). */
   quietHours: { enabled: boolean; start: string; end: string; days: number[] }
   digest: { enabled: boolean; hour: number }
+  /** Kişi SMS almak istiyor mu (eski sunucuda alan yok → açık sayılır). */
+  sms?: boolean
 }
 
 export const notificationPrefsApi = {
   get: (signal?: AbortSignal) =>
     apiFetch<NotificationChannelPrefs>(`${BASE}/notifications/preferences/me`, { signal }),
-  save: (input: Pick<NotificationChannelPrefs, 'quietHours' | 'digest'> & {
+  save: (input: Pick<NotificationChannelPrefs, 'quietHours' | 'digest' | 'sms'> & {
     categories: Array<Pick<NotificationCategoryPref, 'key' | 'inApp' | 'email' | 'push' | 'chat'>>
   }) => apiFetch<NotificationChannelPrefs>(`${BASE}/notifications/preferences/me`, { method: 'PUT', body: input }),
+}
+
+/* ------------------------------------------------------------------ SMS sağlayıcısı (Ayarlar › SMS) */
+
+export type SmsProvider = 'netgsm' | 'iletimerkezi'
+
+export const smsProviderLabels: Record<SmsProvider, string> = {
+  netgsm: 'Netgsm',
+  iletimerkezi: 'İleti Merkezi',
+}
+
+export interface SmsSettings {
+  configured: boolean
+  enabled: boolean
+  provider: SmsProvider
+  username: string
+  hasSecret: boolean
+  sender: string
+  dailyLimit: number
+  sentToday: number
+  providers: SmsProvider[]
+  updatedAt: string | null
+}
+
+export interface SmsSettingsInput {
+  enabled: boolean
+  provider: SmsProvider
+  username: string
+  /** Boş bırakılırsa kayıtlı anahtar korunur. */
+  secret: string | null
+  sender: string
+  dailyLimit: number
+}
+
+export const smsSettingsApi = {
+  get: (signal?: AbortSignal) => apiFetch<SmsSettings>(`${BASE}/notifications/sms-settings`, { signal }),
+  save: (input: SmsSettingsInput) => apiFetch<SmsSettings>(`${BASE}/notifications/sms-settings`, { method: 'PUT', body: input }),
+  remove: () => apiFetch<void>(`${BASE}/notifications/sms-settings`, { method: 'DELETE' }),
+  test: (phone: string) => apiFetch<{ ok: boolean; reference?: string }>(`${BASE}/notifications/sms-settings/test`, { method: 'POST', body: { phone } }),
 }

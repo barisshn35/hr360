@@ -19,6 +19,11 @@ public class Notification : ITenantOwned
     /// employee-service'ten RecipientEmployeeId ile sorup doldurur.
     /// </summary>
     public string? RecipientEmail { get; set; }
+    /// <summary>
+    /// SMS alıcısı (E.164 rakamları). KVKK (veri en aza indirme): gönderim sonuçlanınca (gönderildi,
+    /// başarısız, kapatıldı) silinir; yalnızca bekleyen kayıtta durur.
+    /// </summary>
+    public string? RecipientPhone { get; set; }
     public NotificationChannel Channel { get; set; } = NotificationChannel.InApp;
     public string? TemplateCode { get; set; }
     public string? Subject { get; set; }

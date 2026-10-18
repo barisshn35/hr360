@@ -34,7 +34,7 @@ public class PreferencesController : ControllerBase
     /// PUT /me gövdesi: alanların hepsi isteğe bağlı. Yalnızca dil gönderen eski istemciler aynen çalışır;
     /// kategoriler / sessiz saatler / özet verilirse G11 kanal tercihleri de güncellenir.
     /// </summary>
-    public record MeInput(string? Language, List<CategoryInput>? Categories, QuietInput? QuietHours, DigestInput? Digest);
+    public record MeInput(string? Language, List<CategoryInput>? Categories, QuietInput? QuietHours, DigestInput? Digest, bool? Sms = null);
 
     /// <summary>Bildirim dili + G11 kanal tercihleri (kategori x kanal, sessiz saatler, günlük özet).</summary>
     [HttpGet("me")]
@@ -49,7 +49,7 @@ public class PreferencesController : ControllerBase
     [HttpPut("me")]
     public async Task<IActionResult> Set([FromBody] MeInput body, CancellationToken ct)
     {
-        var channels = body.Categories is not null || body.QuietHours is not null || body.Digest is not null;
+        var channels = body.Categories is not null || body.QuietHours is not null || body.Digest is not null || body.Sms is not null;
         if (body.Language is null && !channels) return BadRequest(new { message = "Güncellenecek bir alan yok." });
         if (body.Language is not null && body.Language is not ("tr" or "en")) return BadRequest(new { message = "Dil 'tr' ya da 'en' olmalı." });
         if (channels) return await SaveAsync(body, ct);
@@ -107,6 +107,7 @@ public class PreferencesController : ControllerBase
                 days = Enumerable.Range(0, 7).Where(d => QuietHoursCalc.DayOn(eff.Quiet.DaysMask, (DayOfWeek)d)).ToArray(),
             },
             digest = new { enabled = eff.DigestEnabled, hour = eff.DigestHour },
+            sms = eff.Sms,
         };
     }
 
@@ -184,13 +185,14 @@ public class PreferencesController : ControllerBase
             g.DigestEnabled = d.Enabled;
             g.DigestHour = d.Hour;
         }
+        if (body.Sms is { } sms) g.SmsEnabled = sms;
         g.UpdatedAt = now;
         await _db.SaveChangesAsync(ct);
 
         // Ertelenmiş gönderimler yeni tercihlerle bir sonraki turda yeniden değerlendirilir.
         var mine = _db.Notifications.Where(n => n.RecipientEmployeeId == me.Value);
         await mine.Where(n => n.DeferredUntil > now &&
-                              ((n.Channel == NotificationChannel.Email && n.Status == NotificationStatus.Pending)
+                              (((n.Channel == NotificationChannel.Email || n.Channel == NotificationChannel.Sms) && n.Status == NotificationStatus.Pending)
                                || (n.Channel == NotificationChannel.InApp && n.PushedAt == null)))
             .ExecuteUpdateAsync(u => u.SetProperty(n => n.DeferredUntil, now), ct);
         // Özet kapatıldıysa bekleyenler tek tek gönderim kuyruğuna döner.
@@ -236,6 +238,7 @@ public class PreferencesController : ControllerBase
                 inApp = ch.InApp,
                 email = DeliveryRules.DecideEmail(templateCode, false, eff, now).Decision.ToString(),
                 push = DeliveryRules.DecidePush(templateCode, eff, now).Decision.ToString(),
+                sms = DeliveryRules.DecideSms(templateCode, eff, now).Decision.ToString(),
                 // Sohbet iletimi governance'ta: kanal açık mı ve sessiz saat bitene kadar ertelenmeli mi.
                 chat = ch.Chat,
                 // Güvenlik açısından kritik bildirim sessiz saatte de hemen iletilir.

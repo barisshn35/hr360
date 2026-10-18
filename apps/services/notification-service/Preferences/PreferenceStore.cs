@@ -10,7 +10,7 @@ public static class PreferenceStore
     public static EffectivePrefs Compose(NotificationPreference? p, IEnumerable<CategoryPreference> cats) =>
         new(cats.ToDictionary(c => c.Category, c => new ChannelPrefs(c.InApp, c.Email, c.Push, c.Chat)),
             p is null ? QuietHours.Off : new QuietHours(p.QuietHoursEnabled, p.QuietStart, p.QuietEnd, p.QuietDays),
-            p?.DigestEnabled ?? false, p?.DigestHour ?? 18);
+            p?.DigestEnabled ?? false, p?.DigestHour ?? 18, p?.SmsEnabled ?? true);
 
     /// <summary>Kayıtlı tercihi olmayan kişi sözlükte yer almaz (varsayılan: her şey açık, hemen gönder).</summary>
     public static async Task<Dictionary<(string Tenant, Guid Employee), EffectivePrefs>> LoadAsync(

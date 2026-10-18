@@ -14,6 +14,7 @@ import { CompanyNamePanel, BrandingPanel } from './BrandingPanel'
 import { tx } from '@/lib/i18n'
 import { PasswordMethodPanel } from '@/features/access/PasswordLinksPanel'
 import { SampleDataPanel } from './SampleDataPanel'
+import { SmsPanel } from './SmsPanel'
 import { nativeShell } from '@/lib/nativeShell'
 import { AndroidAppPanel } from './AndroidAppPanel'
 
@@ -176,6 +177,7 @@ export function SettingsPage() {
         <>
           <CompanyNamePanel tenant={tenant} />
           <BrandingPanel tenant={tenant} />
+          <SmsPanel />
           <PasswordMethodPanel canEdit />
           <SampleDataPanel />
         </>

@@ -30,6 +30,7 @@ builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantCon
 NotificationService.Security.EncColumn[] encryptedColumns =
 [
     new("notification_vapid_keys", "PrivateKeyEnc", NotificationService.Security.EncKind.Text),
+    new("notification_sms_settings", "SecretEnc", NotificationService.Security.EncKind.Text, IdColumn: "TenantSlug"),
 ];
 builder.Services.AddHostedService(sp => new NotificationService.Security.KeyRotationJob("NOTIFICATION_DB_CONNECTION", encryptedColumns,
     sp.GetRequiredService<ILogger<NotificationService.Security.KeyRotationJob>>()));
@@ -48,6 +49,8 @@ builder.Services.AddHttpClient("webpush", c => c.Timeout = TimeSpan.FromSeconds(
 builder.Services.AddHostedService<NotificationService.Push.PushSenderWorker>();
 // G11: günlük bildirim özeti (DIGEST_POLL_SECONDS).
 builder.Services.AddHostedService<NotificationService.Preferences.DigestWorker>();
+builder.Services.AddHttpClient("sms", c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHostedService<NotificationService.Sms.SmsSenderWorker>();
 
 builder.Services.AddDbContext<NotificationDbContext>(options =>
     options.UseNpgsql(connectionString)
@@ -128,6 +131,8 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAssertion(ctx =>
             ctx.User.IsInRole("hr-admin") || ctx.User.IsInRole("tenant-admin") ||
             ctx.User.IsInRole("platform-admin") || ctx.User.IsInRole("ext-notification-manage")));
+    options.AddPolicy("RequireTenantAdmin", policy =>
+        policy.RequireAssertion(ctx => ctx.User.IsInRole("tenant-admin")));
     options.AddPolicy("RequireManagerOrAbove", policy =>
         policy.RequireAssertion(ctx =>
             ctx.User.IsInRole("manager") || ctx.User.IsInRole("hr-admin") ||

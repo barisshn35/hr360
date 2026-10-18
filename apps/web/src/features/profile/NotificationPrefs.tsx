@@ -50,6 +50,8 @@ function PrefsForm({ initial }: { initial: NotificationChannelPrefs }) {
   const [cats, setCats] = useState<NotificationCategoryPref[]>(initial.categories)
   const [quiet, setQuiet] = useState(initial.quietHours)
   const [digest, setDigest] = useState(initial.digest)
+  const [sms, setSms] = useState(initial.sms ?? true)
+  const smsId = useId()
   const [error, setError] = useState<string | null>(null)
   const quietId = useId()
   const digestId = useId()
@@ -59,6 +61,7 @@ function PrefsForm({ initial }: { initial: NotificationChannelPrefs }) {
       categories: cats.map(({ key, inApp, email, push, chat }) => ({ key, inApp, email, push, chat })),
       quietHours: quiet,
       digest,
+      sms,
     }),
     { success: tx('Bildirim tercihleriniz kaydedildi'), invalidate: [['notification-prefs'], ['notifications'], ['unread-count']] },
   )
@@ -124,6 +127,13 @@ function PrefsForm({ initial }: { initial: NotificationChannelPrefs }) {
               {tx('Güvenlik açısından kritik bildirimler (kişisel veri ihlali bildirimi, hesap güvenliği uyarıları, parola/hesap işlemleri ve tek kullanımlık doğrulama kodları) tercihlerinizden bağımsız olarak tüm kanallardan hemen iletilir; sessiz saatler ve günlük özet bunlara uygulanmaz.')}
             </InfoNote>
           </div>
+        </PanelBody>
+        <PanelBody className="border-t border-border">
+          <label className="flex items-center gap-2 text-[13px]" htmlFor={smsId}>
+            <Checkbox id={smsId} checked={sms} disabled={!initial.linked} onCheckedChange={(v) => setSms(v === true)} />
+            {tx('Şirketim SMS gönderdiğinde almak istiyorum')}
+          </label>
+          <p className="mt-1.5 text-[12px] text-muted-foreground">{tx('SMS, profilinizdeki telefon numarasına gider. Güvenlik iletileri bu ayardan bağımsız olarak gönderilir.')}</p>
         </PanelBody>
       </Panel>
 

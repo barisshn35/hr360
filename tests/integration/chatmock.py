@@ -28,6 +28,11 @@ Dalga 12 (hesap açma/kapatma):
     /graph/v1.0/users                       Microsoft Graph: GET liste, POST aç (var olan -> 400 "already exists"),
                                             PATCH /users/<upn>, POST /users/<upn>/revokeSignInSessions
     GET  /_directory                        açılan/askıya alınan sahte hesaplar (test doğrulaması)
+
+SMS (notification-service, yurt içi sağlayıcılar):
+    POST /netgsm/sms/rest/v2/send          Netgsm REST v2; Basic "smsuser:smspass" ve başlık "HR360" ise {"code":"00"},
+                                            parola hatalıysa {"code":"30"}, başlık başkaysa {"code":"40"}
+    POST /iletimerkezi/v1/send-sms/json    İleti Merkezi; key "imkey" + HMAC-SHA256("imsecret","imkey") ise status 200, değilse 401
 """
 
 import base64
@@ -282,6 +287,27 @@ class H(BaseHTTPRequestHandler):
                 FAILS[hit] -= 1
         if hit:
             return self._send(500, {"ok": False, "error": "injected_failure"})
+        if u.path == "/netgsm/sms/rest/v2/send":
+            import base64 as _b64
+            auth = self.headers.get("Authorization") or ""
+            ok_auth = auth == "Basic " + _b64.b64encode(b"smsuser:smspass").decode()
+            q = json.loads(body or "{}")
+            if not ok_auth:
+                return self._send(200, {"code": "30", "description": "invalid credentials"})
+            if q.get("msgheader") != "HR360":
+                return self._send(200, {"code": "40", "description": "msgheader not defined"})
+            if not q.get("messages") or not all(m.get("no") and m.get("msg") for m in q["messages"]):
+                return self._send(200, {"code": "70", "description": "invalid parameters"})
+            return self._send(200, {"code": "00", "jobid": next_id("J"), "description": "queued"})
+        if u.path == "/iletimerkezi/v1/send-sms/json":
+            import hashlib as _hl
+            import hmac as _hm
+            q = json.loads(body or "{}").get("request", {})
+            a = q.get("authentication", {})
+            want = _hm.new(b"imsecret", b"imkey", _hl.sha256).hexdigest()
+            if a.get("key") != "imkey" or a.get("hash") != want:
+                return self._send(200, {"response": {"status": {"code": "401", "message": "Üyelik bilgileri hatalı"}}})
+            return self._send(200, {"response": {"status": {"code": "200", "message": "İşlem başarılı"}, "order": {"id": next_id("O")}}})
         if u.path.endswith("/oauth2/v2.0/token") or u.path == "/google/token":
             f = {k: v[0] for k, v in parse_qs(body).items()}
             if f.get("client_secret") == "wrong":

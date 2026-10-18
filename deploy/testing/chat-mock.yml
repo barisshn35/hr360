@@ -48,6 +48,10 @@ services:
       # (uretimde docker-compose.yml notification-service ortamina da eklenmeli).
       EMAIL_POLL_SECONDS: "2"
       DIGEST_CHECK_SECONDS: "3"
+      # SMS: yurt ici saglayicilarin sahtesi (tests/integration/chatmock.py), kuyruk 2 sn.
+      NETGSM_API_BASE: "http://chatmock:8000/netgsm"
+      ILETIMERKEZI_API_BASE: "http://chatmock:8000/iletimerkezi"
+      SMS_POLL_SECONDS: "2"
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
       INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
   workflow-service:

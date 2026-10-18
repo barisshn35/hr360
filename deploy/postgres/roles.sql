@@ -798,6 +798,7 @@ DO $$ DECLARE g text[]; BEGIN
     ['notification_messages', 'SELECT, INSERT, UPDATE, DELETE'],
     ['notification_preferences', 'SELECT, INSERT, UPDATE, DELETE'],
     ['notification_push_subscriptions', 'SELECT, INSERT, UPDATE, DELETE'],
+    ['notification_sms_settings', 'SELECT, INSERT, UPDATE, DELETE'],
     ['notification_templates', 'SELECT, INSERT, UPDATE, DELETE'],
     ['notification_ui_prefs', 'SELECT, INSERT, UPDATE, DELETE'],
     ['notification_vapid_keys', 'SELECT, INSERT, UPDATE, DELETE'],
