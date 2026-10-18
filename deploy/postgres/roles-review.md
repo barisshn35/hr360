@@ -45,7 +45,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 
 ## leave-service (`hr360_leave`)
 
-- Başka servisin tablosuna yazma: `notification_messages` (INSERT) — apps/services/leave-service/Controllers/LeaveRequestsController.cs:695
+- Başka servisin tablosuna yazma: `notification_messages` (INSERT) — apps/services/leave-service/Controllers/LeaveRequestsController.cs:698
 
 ## recruitment-service (`hr360_recruitment`)
 
@@ -72,7 +72,7 @@ taramanın kesin karar veremediği ya da bilinçli bir tercih gerektiren noktala
 
 ## engagement-service (`hr360_engagement`)
 
-- Başka servisin tablosuna yazma: `notification_messages` (INSERT) — apps/services/engagement-service/Infrastructure/Platform.cs:156; apps/services/engagement-service/Infrastructure/Platform.cs:190
+- Başka servisin tablosuna yazma: `notification_messages` (INSERT) — apps/services/engagement-service/Infrastructure/Platform.cs:164; apps/services/engagement-service/Infrastructure/Platform.cs:198
 - apps/services/engagement-service/Controllers/RecognitionController.cs:128: satır kilidi (FOR UPDATE/SHARE) — metindeki tüm tablolara UPDATE verildi: engagement_rewards
 - apps/services/engagement-service/Security/KeyRotationJob.cs:112: tablo adı çalışma anında birleştiriliyor (`UPDATE {c.Table} SET {col} = @new WHERE {id} = @id AND {col} = @old`)
 - apps/services/engagement-service/Security/KeyRotationJob.cs:97: tablo adı çalışma anında birleştiriliyor (`SELECT {id}, {col} FROM {c.Table} WHERE {col} IS NOT NULL{filter}{(last is null ? "" : $" `)

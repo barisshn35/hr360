@@ -78,7 +78,9 @@ EOF
 cat > "$BIN/crontab" <<'EOF'
 #!/usr/bin/env bash
 f="$HR360_TEST_CRON"
-case "${1:-}" in -l) [ -s "$f" ] && cat "$f" || exit 1 ;; -) cat > "$f" ;; esac
+# Gercek crontab gibi gecici dosyaya yazip degistirir: "crontab -l | ... | crontab -" borusunda okuma bitmeden
+# dosya kesilmesin (aksi halde onceki satirlar kaybolur).
+case "${1:-}" in -l) [ -s "$f" ] && cat "$f" || exit 1 ;; -) t="$(mktemp)"; cat > "$t"; mv "$t" "$f" ;; esac
 EOF
 cat > "$BIN/ufw" <<'EOF'
 #!/usr/bin/env bash
@@ -168,7 +170,8 @@ check "Keycloak servis hesabi anahtari uretildi" [ "${#sa_secret}" -ge 32 ]
 check "realm sablonunda servis hesabi anahtari dolduruldu" grep -q "\"secret\": \"${sa_secret}\"" "$d/deploy/keycloak/realm-export.json"
 check "tenant-service'e master parola verilmez" eval 'grep -q "^KEYCLOAK_TENANT_ADMIN_LEGACY_PASSWORD=$" "$d/.env"'
 check "servis hesabi ve parola politikasi Keycloak'a uygulandi" eval 'grep -q "hr360-tenant-admin" "$WORK/log-le" && grep -q "passwordPolicy" "$WORK/log-le"'
-check "bekleyen yeniden deneme yok" eval '[ -z "$(envv "$d" TLS_LE_PENDING)" ] && [ ! -s "$WORK/cron-le" ]'
+check "bekleyen yeniden deneme yok" eval '[ -z "$(envv "$d" TLS_LE_PENDING)" ] && ! grep -q hr360-tls-retry "$WORK/cron-le" 2>/dev/null'
+check "bakim calistiricisi cron'a eklendi (Platform > Bakim)" grep -q "# hr360-ops-runner$" "$WORK/cron-le"
 check "ozet: dogrulama tamam" eval 'grep -q "HTTPS:    calisiyor, sertifika gecerli" <<< "$out" && grep -q "Giris:    tamam" <<< "$out"'
 check "ozet: deneme e-postasi gonderildi" grep -q "deneme e-postasi gonderildi: admin@example.com" <<< "$out"
 check "--demo yok: HR360_DEMO=false, demo parolasi bos" eval '[ "$(envv "$d" HR360_DEMO)" = false ] && [ -z "$(envv "$d" DEMO_ADMIN_PASSWORD)" ]'

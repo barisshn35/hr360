@@ -600,11 +600,8 @@ if [ -f .env ]; then
       sleep 2
     done
     [ "$pg_ok" = 1 ] || { echo "PostgreSQL 2 dakikada hazir olmadi; 'docker compose logs postgres' ile kontrol edin."; exit 1; }
-    for f in scripts/sql/*.sql; do
-      [ -f "$f" ] || continue
-      info "Goc uygulaniyor: $f"
-      docker compose exec -T postgres psql -U hr360admin -d hr360_operational -v ON_ERROR_STOP=1 -q -f - < "$f"
-    done
+    info "Goc betikleri uygulaniyor (scripts/sql)..."
+    scripts/migrate.sh || exit 1
 
     # Keycloak artik Postgres'teki "keycloak" veritabanini kullaniyor. Veritabani yoksa
     # iki durum var: (a) Keycloak hic kurulmamis -> olustur; (b) eski kurulum, veriler
@@ -654,6 +651,10 @@ if [ -f .env ]; then
         *) warn "Gecersiz --keycloak-admin: $OPT_KC_ADMIN (open | ip:CIDR,... | port)" ;;
       esac || warn "Keycloak paneli erisimi ayarlanamadi; scripts/keycloak-admin-access.sh ile deneyin."
     fi
+    # Veritabani yalitimi (varsayilan): servis basina en az yetkili rol + kiraci basina satir duzeyi guvenlik.
+    # Kapatmak: .env'e HR360_DB_ISOLATION=off (ya da scripts/db-isolation.sh off).
+    if scripts/db-isolation.sh ensure; then docker compose up -d >/dev/null 2>&1 || true
+    else warn "Veritabani yalitimi acilamadi; sonra: scripts/db-isolation.sh ensure && docker compose up -d"; fi
     info "Guncelleme tamamlandi: $(grep '^PUBLIC_ORIGIN=' .env | tail -1 | cut -d= -f2-)"
     info "HTTPS: $(scripts/tls.sh status | head -1 | sed 's/^HTTPS: //')"
     exit 0
@@ -1183,6 +1184,24 @@ else
 fi
 
 # --- 5) Ayaga kaldir --------------------------------------------------------
+# Temel sema (data/migrations/sql-all-schemas.sql) bos veritabaninda init betigi olarak yuklenir; ustune
+# scripts/sql gocleri (idempotent) servisler baslamadan uygulanir. Boylece temel semaya eklenmesi unutulan
+# bir goc yuzunden yeni kurulumda tablo/kolon eksik kalmaz (1.1.0-1.1.1'de oldu).
+info "Veritabani hazirlaniyor..."
+docker compose up -d postgres
+pg_tries=0
+# TCP ile sor: ilk acilista init betikleri yalnizca Unix soketini dinleyen gecici sunucuda calisir; soketten
+# "hazir" cevabi init bitmeden gelebilir.
+until docker compose exec -T postgres pg_isready -h 127.0.0.1 -U hr360admin -d hr360_operational >/dev/null 2>&1; do
+  pg_tries=$((pg_tries+1))
+  if [ "$pg_tries" -gt 90 ]; then
+    echo "PostgreSQL 3 dakikada hazir olmadi; 'docker compose logs postgres' ile kontrol edin."
+    exit 1
+  fi
+  sleep 2
+done
+scripts/migrate.sh >/dev/null || { echo "Goc betikleri uygulanamadi (scripts/migrate.sh)"; exit 1; }
+
 info "Imajlar build ediliyor ve servisler baslatiliyor (ilk calistirmada birkac dakika surebilir)..."
 docker compose up -d --build
 
@@ -1257,6 +1276,11 @@ else
   scripts/tls.sh disable >/dev/null 2>&1 || warn "Ayar yapilamadi; 'scripts/tls.sh disable' ile tekrar deneyin."
 fi
 PUBLIC_ORIGIN="$(grep '^PUBLIC_ORIGIN=' .env | tail -1 | cut -d= -f2-)"
+
+# Veritabani yalitimi (varsayilan): servis basina en az yetkili rol + kiraci basina satir duzeyi guvenlik.
+# Kapatmak: .env'e HR360_DB_ISOLATION=off (ya da scripts/db-isolation.sh off).
+if scripts/db-isolation.sh ensure; then docker compose up -d >/dev/null 2>&1 || true
+else warn "Veritabani yalitimi acilamadi; sonra: scripts/db-isolation.sh ensure && docker compose up -d"; fi
 
 # Bakim calistiricisi: yedek, dogrulama, guncelleme ve geri yukleme bundan sonra Platform > Bakim
 # ekranindan yapilir (kullanicinin crontab'ina dakikada bir calisan tek satir; root gerekmez).

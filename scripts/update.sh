@@ -76,7 +76,10 @@ healthy() {
     docker compose exec -T gateway wget -qO- http://127.0.0.1:8080/gateway/health >/dev/null 2>&1 \
       || docker compose exec -T gateway wget -qO- http://127.0.0.1/gateway/health >/dev/null 2>&1 || bad="gateway"
     for s in "${SERVICES[@]}"; do
-      docker compose exec -T gateway wget -qO- -T 5 "http://$s:8080/health" >/dev/null 2>&1 || bad="$bad $s"
+      # /health/ready veritabanina baglantiyi da dogrular; eski surumde (geri donus) yoksa /health'e duser.
+      docker compose exec -T gateway wget -qO- -T 5 "http://$s:8080/health/ready" >/dev/null 2>&1 \
+        || { ! docker compose exec -T gateway wget -qO- -T 5 -S "http://$s:8080/health/ready" 2>&1 | grep -q " 503 " \
+             && docker compose exec -T gateway wget -qO- -T 5 "http://$s:8080/health" >/dev/null 2>&1; } || bad="$bad $s"
     done
     [ -z "$bad" ] && return 0
     [ "$(date +%s)" -ge "$deadline" ] && { echo "Saglik denetimi gecmedi:$bad" >&2; return 1; }
@@ -85,11 +88,16 @@ healthy() {
 }
 
 apply_migrations() {
-  for f in scripts/sql/*.sql; do
-    [ -f "$f" ] || continue
-    docker compose exec -T postgres psql -U hr360admin -d hr360_operational -v ON_ERROR_STOP=1 -q -f - < "$f" >/dev/null \
-      || { echo "Goc betigi basarisiz: $f" >&2; return 1; }
-  done
+  if [ -x scripts/migrate.sh ]; then
+    # Kayit defterli (schema_migrations): yalnizca yeni/degisen dosyalar ve sonrakiler.
+    scripts/migrate.sh >/dev/null || return 1
+  else
+    for f in scripts/sql/*.sql; do
+      [ -f "$f" ] || continue
+      docker compose exec -T postgres psql -U hr360admin -d hr360_operational -v ON_ERROR_STOP=1 -q -f - < "$f" >/dev/null \
+        || { echo "Goc betigi basarisiz: $f" >&2; return 1; }
+    done
+  fi
   # Servis basina veritabani rolleri kullaniliyorsa (scripts/db-roles.sh enable) yeni tablolarin yetkileri
   # deploy/postgres/roles.sql'den esitlenir; aksi halde kendi rolundeki servis yeni tabloya erisemez.
   if [ -f deploy/postgres/roles.sql ] && grep -qE '^HR360_DB_USER_[A-Z]+=.' .env 2>/dev/null; then
@@ -104,6 +112,11 @@ deploy() {
   docker compose up -d postgres >/dev/null
   for _ in $(seq 1 60); do docker compose exec -T postgres pg_isready -U hr360admin >/dev/null 2>&1 && break; sleep 2; done
   apply_migrations || return 1
+  # Veritabani yalitimi varsayilan acik (servis rolleri + RLS; yeni tablolar dahil). Eski surume donuste betik
+  # yoksa atlanir: eski kod app.tenant ayarlamaz, RLS politikasi o zaman her satiri gosterir.
+  if [ -x scripts/db-isolation.sh ]; then
+    scripts/db-isolation.sh ensure || echo "UYARI: veritabani yalitimi acilamadi (scripts/db-isolation.sh ensure)." >&2
+  fi
   # Paralel derleme, calisan servislerin yaninda kucuk sunucularda bellegi tuketebilir (npm "cannot
   # allocate memory") ya da gecici ag hatasi alabilir: basarisizsa servis servis sirayla bir kez daha dene.
   docker compose build >/dev/null || {

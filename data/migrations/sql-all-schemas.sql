@@ -4983,3 +4983,682 @@ ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS "PrivacyPolicyMd" text NU
 ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS "TermsMd" text NULL;
 ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS "FaqJson" text NULL;
 ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS "SearchIndexing" boolean NULL;
+
+-- ===== 2026-10-28_employee_of_month
+-- "Ayın çalışanı" oylaması (isteğe bağlı; kiracı ayarıyla açılır, varsayılan kapalı). Sahibi engagement-service.
+--
+-- engagement_eom_settings  : kiracı başına tek satır (takvim, kapsam, süreç, görünürlük, katsayılar).
+-- engagement_eom_periods   : oylama dönemi. Açıldığı andaki ayarlar "Config" içinde dondurulur: dönem
+--                            sürerken ayar değişikliği (özellikle görünürlük) o dönemi etkilemez.
+-- engagement_eom_units     : dönem içindeki oylama birimleri (departman grupları); üyeler açılışta sabitlenir.
+--                            İki aşamalı kipte 2. aşama birimi, alt birimlerin kazananları arasından seçer.
+-- engagement_eom_nominations / engagement_eom_votes : aday gösterme ve oylar.
+--
+-- KVKK / oy gizliliği: görünürlük "gizli" ise oy satırında kişi kimliği tutulmaz ("VoterEmployeeId" boş);
+-- yalnızca dönem tuzuyla üretilmiş özet ("VoterKey", tekrar oy ve oy değiştirme için) saklanır. Dönem
+-- kapanınca tuz silinir: sonrasında veritabanından bile kimin kime oy verdiği çıkarılamaz. Oylar denetim
+-- kaydına (audit_log) yazılmaz. Kimliğin görünür olduğu kiplerde kural oy verirken kişiye gösterilir.
+-- İdempotent; mevcut veriyi değiştirmez.
+-- Canlıya: docker exec -i hr360-postgres-1 psql -v ON_ERROR_STOP=1 -q -U hr360admin -d hr360_operational < bu_dosya
+
+CREATE TABLE IF NOT EXISTS engagement_eom_settings (
+    "Id"                 uuid PRIMARY KEY,
+    "TenantSlug"         character varying(64) NOT NULL,
+    "Enabled"            boolean NOT NULL DEFAULT false,
+    "Cadence"            character varying(16) NOT NULL DEFAULT 'Monthly',
+    "Scope"              character varying(24) NOT NULL DEFAULT 'TopLevel',
+    "Process"            character varying(16) NOT NULL DEFAULT 'Direct',
+    "Visibility"         character varying(24) NOT NULL DEFAULT 'WinnerOnly',
+    "RevealTo"           character varying(16) NOT NULL DEFAULT 'HrAndHead',
+    "StartDay"           integer NOT NULL DEFAULT 1,
+    "OpenHour"           integer NOT NULL DEFAULT 9,
+    "NominationDays"     integer NOT NULL DEFAULT 2,
+    "FinalistCount"      integer NOT NULL DEFAULT 5,
+    "VotingDays"         integer NOT NULL DEFAULT 3,
+    "Stage2Days"         integer NOT NULL DEFAULT 1,
+    "ReminderDaysBefore" integer NOT NULL DEFAULT 2,
+    "CooldownPeriods"    integer NOT NULL DEFAULT 3,
+    "WeightEmployee"     numeric(4,2) NOT NULL DEFAULT 1,
+    "WeightManager"      numeric(4,2) NOT NULL DEFAULT 2,
+    "WeightHr"           numeric(4,2) NOT NULL DEFAULT 2,
+    "AllowComment"       boolean NOT NULL DEFAULT true,
+    "UpdatedAt"          timestamptz NOT NULL DEFAULT now(),
+    "UpdatedByName"      text
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_eom_settings_TenantSlug" ON engagement_eom_settings ("TenantSlug");
+
+CREATE TABLE IF NOT EXISTS engagement_eom_periods (
+    "Id"                uuid PRIMARY KEY,
+    "TenantSlug"        character varying(64) NOT NULL,
+    "PeriodKey"         character varying(32) NOT NULL,
+    "Status"            character varying(16) NOT NULL,
+    "Config"            jsonb NOT NULL,
+    "NominationStartsAt" timestamptz,
+    "VotingStartsAt"    timestamptz NOT NULL,
+    "Stage1EndsAt"      timestamptz NOT NULL,
+    "Stage2EndsAt"      timestamptz,
+    "Salt"              bytea,
+    "UpcomingSentAt"    timestamptz,
+    "OpenedSentAt"      timestamptz,
+    "VotingSentAt"      timestamptz,
+    "LastCallSentAt"    timestamptz,
+    "Stage2SentAt"      timestamptz,
+    "AnnouncedAt"       timestamptz,
+    "CreatedAt"         timestamptz NOT NULL DEFAULT now(),
+    "ClosedAt"          timestamptz
+);
+-- Aynı dönem iki kez açılmaz (işçi yarışına karşı); iptal edilen dönem yeniden başlatılabilir.
+-- Elle başlatılan dönem anahtarı "M-yyyyMMddHHmmssfff" (19 karakter); ilk sürüm 16 karakterdi.
+ALTER TABLE engagement_eom_periods ALTER COLUMN "PeriodKey" TYPE character varying(32);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_eom_periods_Key" ON engagement_eom_periods ("TenantSlug", "PeriodKey") WHERE "Status" <> 'Cancelled';
+CREATE INDEX IF NOT EXISTS "IX_engagement_eom_periods_TenantSlug" ON engagement_eom_periods ("TenantSlug");
+
+CREATE TABLE IF NOT EXISTS engagement_eom_units (
+    "Id"            uuid PRIMARY KEY,
+    "TenantSlug"    character varying(64) NOT NULL,
+    "PeriodId"      uuid NOT NULL REFERENCES engagement_eom_periods("Id") ON DELETE CASCADE,
+    "Stage"         integer NOT NULL,
+    "DepartmentId"  uuid NOT NULL,
+    "Name"          text NOT NULL,
+    "ParentUnitId"  uuid,
+    "HeadEmployeeId" uuid,
+    "MemberIds"     uuid[] NOT NULL,
+    "CandidateIds"  uuid[] NOT NULL,
+    "Status"        character varying(16) NOT NULL,
+    "WinnerEmployeeId" uuid,
+    "WinnerScore"   numeric(10,2),
+    "TiedIds"       uuid[],
+    "ClosedAt"      timestamptz
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_eom_units_PeriodId" ON engagement_eom_units ("PeriodId");
+CREATE INDEX IF NOT EXISTS "IX_engagement_eom_units_TenantSlug" ON engagement_eom_units ("TenantSlug");
+
+CREATE TABLE IF NOT EXISTS engagement_eom_nominations (
+    "Id"              uuid PRIMARY KEY,
+    "TenantSlug"      character varying(64) NOT NULL,
+    "UnitId"          uuid NOT NULL REFERENCES engagement_eom_units("Id") ON DELETE CASCADE,
+    "NominatorKey"    character varying(64) NOT NULL,
+    "NominatorEmployeeId" uuid,
+    "NomineeEmployeeId" uuid NOT NULL,
+    "CreatedAt"       timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_eom_nominations_Unit_Nominator" ON engagement_eom_nominations ("UnitId", "NominatorKey");
+CREATE INDEX IF NOT EXISTS "IX_engagement_eom_nominations_TenantSlug" ON engagement_eom_nominations ("TenantSlug");
+
+CREATE TABLE IF NOT EXISTS engagement_eom_votes (
+    "Id"              uuid PRIMARY KEY,
+    "TenantSlug"      character varying(64) NOT NULL,
+    "UnitId"          uuid NOT NULL REFERENCES engagement_eom_units("Id") ON DELETE CASCADE,
+    "VoterKey"        character varying(64) NOT NULL,
+    "VoterEmployeeId" uuid,
+    "NomineeEmployeeId" uuid NOT NULL,
+    "Weight"          numeric(4,2) NOT NULL,
+    "Comment"         character varying(280),
+    "CreatedAt"       timestamptz NOT NULL DEFAULT now(),
+    "UpdatedAt"       timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_eom_votes_Unit_Voter" ON engagement_eom_votes ("UnitId", "VoterKey");
+CREATE INDEX IF NOT EXISTS "IX_engagement_eom_votes_TenantSlug" ON engagement_eom_votes ("TenantSlug");
+
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-28_employee_photos
+-- Çalışan fotoğrafı (profil, ana sayfa "Ayın çalışanı" kartı, avatarlar).
+-- Sahibi employee-service. Fotoğraf kişisel veridir: herkese açık nesne deposuna (logolar gibi) konmaz,
+-- veritabanında kiracı yalıtımı altında tutulur ve yalnızca oturum açmış aynı şirket kullanıcılarına
+-- servis ucundan verilir. Tarayıcı yüklemeden önce en çok 512 px'e küçültür; sunucu 512 KB'ı reddeder.
+-- Çalışan silinince fotoğraf da silinir (ON DELETE CASCADE); KVKK anonimleştirmesi de siler.
+-- "PhotoVersion" önbellek anahtarıdır: fotoğraf değişince artar, istemci yeni adresi ister.
+-- İdempotent; mevcut veriyi değiştirmez.
+-- Canlıya: docker exec -i hr360-postgres-1 psql -v ON_ERROR_STOP=1 -q -U hr360admin -d hr360_operational < bu_dosya
+
+ALTER TABLE employee_employees ADD COLUMN IF NOT EXISTS "PhotoVersion" integer;
+
+CREATE TABLE IF NOT EXISTS employee_photos (
+    "EmployeeId"  uuid PRIMARY KEY REFERENCES employee_employees("Id") ON DELETE CASCADE,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "ContentType" character varying(32) NOT NULL,
+    "Data"        bytea NOT NULL,
+    "UpdatedAt"   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_employee_photos_TenantSlug" ON employee_photos ("TenantSlug");
+
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-29_document_requirements
+-- Eksik belge takibi (yenilik haritası #11). Sahibi expense-service (özlük dokümanları).
+--  * expense_documents."ValidUntil": belgenin geçerlilik bitişi (ör. sağlık raporu, kimlik). Boşsa ve
+--    gereksinimde süre tanımlıysa yükleme tarihinden hesaplanır.
+--  * expense_document_requirements: şirkette (DepartmentId boş) ya da bir departmanda zorunlu belge türleri.
+-- İdempotent. Canlıya: docker exec -i hr360-postgres-1 psql -v ON_ERROR_STOP=1 -q -U hr360admin -d hr360_operational < bu_dosya
+ALTER TABLE expense_documents ADD COLUMN IF NOT EXISTS "ValidUntil" date;
+
+CREATE TABLE IF NOT EXISTS expense_document_requirements (
+    "Id"             uuid PRIMARY KEY,
+    "TenantSlug"     character varying(64) NOT NULL,
+    "Type"           text NOT NULL,
+    "DepartmentId"   uuid,
+    "ValidityMonths" integer,
+    "CreatedAt"      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_expense_document_requirements_TenantSlug" ON expense_document_requirements ("TenantSlug");
+
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-29_events
+-- Etkinlikler ve katılım (yenilik haritası #28) ile gönüllülük saatleri (#30). Sahibi engagement-service.
+-- Kontenjan dolunca katılım isteği bekleme listesine düşer; biri vazgeçince sıradaki otomatik alınır.
+-- Gönüllülük etkinliğinde İK katılımı onaylayınca kişiye etkinliğin saati yazılır. İdempotent.
+CREATE TABLE IF NOT EXISTS engagement_events (
+    "Id"             uuid PRIMARY KEY,
+    "TenantSlug"     character varying(64) NOT NULL,
+    "Title"          character varying(120) NOT NULL,
+    "Description"    character varying(2000),
+    "Kind"           character varying(16) NOT NULL,
+    "StartsAt"       timestamptz NOT NULL,
+    "EndsAt"         timestamptz NOT NULL,
+    "Location"       character varying(200),
+    "OnlineUrl"      character varying(500),
+    "Capacity"       integer,
+    "RsvpDeadline"   timestamptz,
+    "VolunteerHours" numeric(5,1),
+    "Status"         character varying(16) NOT NULL DEFAULT 'Published',
+    "CreatedByUserId" character varying(64) NOT NULL,
+    "CreatedByName"  text,
+    "CreatedAt"      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_events_TenantSlug" ON engagement_events ("TenantSlug", "StartsAt");
+
+CREATE TABLE IF NOT EXISTS engagement_event_rsvps (
+    "Id"          uuid PRIMARY KEY,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "EventId"     uuid NOT NULL REFERENCES engagement_events("Id") ON DELETE CASCADE,
+    "EmployeeId"  uuid NOT NULL,
+    "Name"        text NOT NULL,
+    "Status"      character varying(16) NOT NULL,
+    "Attended"    boolean NOT NULL DEFAULT false,
+    "CreatedAt"   timestamptz NOT NULL DEFAULT now(),
+    "UpdatedAt"   timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_event_rsvps_Event_Emp" ON engagement_event_rsvps ("EventId", "EmployeeId");
+CREATE INDEX IF NOT EXISTS "IX_engagement_event_rsvps_TenantSlug" ON engagement_event_rsvps ("TenantSlug");
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-29_ideas
+-- Fikir kutusu (yenilik haritası #24). Sahibi engagement-service.
+-- Çalışan fikir yazar (isteğe bağlı anonim), diğerleri destekler ve yorumlar, İK durum ve yanıt verir.
+-- KVKK / anonimlik: anonim fikirde yazarın kimliği tutulmaz; yalnızca kendi fikrini tanıyabilmesi için
+-- kiracı + kullanıcıdan türetilen tek yönlü anahtar ("AuthorKey") saklanır. Fikir satırları denetim
+-- kaydına yazılmaz (yazar ve destekleyenler oradan çıkarılabilirdi). İdempotent.
+-- Canlıya: docker exec -i hr360-postgres-1 psql -v ON_ERROR_STOP=1 -q -U hr360admin -d hr360_operational < bu_dosya
+
+CREATE TABLE IF NOT EXISTS engagement_ideas (
+    "Id"               uuid PRIMARY KEY,
+    "TenantSlug"       character varying(64) NOT NULL,
+    "AuthorKey"        character varying(64) NOT NULL,
+    "AuthorEmployeeId" uuid,
+    "AuthorName"       text,
+    "Anonymous"        boolean NOT NULL DEFAULT false,
+    "Title"            character varying(120) NOT NULL,
+    "Body"             character varying(2000) NOT NULL,
+    "Category"         character varying(40) NOT NULL,
+    "Status"           character varying(16) NOT NULL DEFAULT 'New',
+    "Response"         character varying(2000),
+    "RespondedByName"  text,
+    "RespondedAt"      timestamptz,
+    "Voters"           text[] NOT NULL DEFAULT '{}',
+    "CreatedAt"        timestamptz NOT NULL DEFAULT now(),
+    "UpdatedAt"        timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_ideas_TenantSlug" ON engagement_ideas ("TenantSlug");
+
+CREATE TABLE IF NOT EXISTS engagement_idea_comments (
+    "Id"               uuid PRIMARY KEY,
+    "TenantSlug"       character varying(64) NOT NULL,
+    "IdeaId"           uuid NOT NULL REFERENCES engagement_ideas("Id") ON DELETE CASCADE,
+    "AuthorUserId"     character varying(64) NOT NULL,
+    "AuthorEmployeeId" uuid,
+    "AuthorName"       text NOT NULL,
+    "Body"             character varying(1000) NOT NULL,
+    "CreatedAt"        timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_idea_comments_IdeaId" ON engagement_idea_comments ("IdeaId");
+CREATE INDEX IF NOT EXISTS "IX_engagement_idea_comments_TenantSlug" ON engagement_idea_comments ("TenantSlug");
+
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-29_interview_booking
+-- Adayın mülakat saatini kendisi seçmesi (yenilik haritası #10). Sahibi recruitment-service.
+-- İşe alım sorumlusu 2-10 uygun saat önerir; aday tek kullanımlık bağlantıyla birini seçer, mülakat o saate
+-- kurulur. Bağlantının yalnızca SHA-256 özeti saklanır. İdempotent.
+CREATE TABLE IF NOT EXISTS recruitment_interview_proposals (
+    "Id"              uuid PRIMARY KEY,
+    "TenantSlug"      character varying(64) NOT NULL,
+    "ApplicationId"   uuid NOT NULL,
+    "TokenHash"       character varying(64) NOT NULL,
+    "Type"            text NOT NULL,
+    "DurationMinutes" integer NOT NULL,
+    "InterviewerIds"  uuid[] NOT NULL,
+    "Location"        character varying(300),
+    "MeetingUrl"      character varying(500),
+    "Slots"           timestamptz[] NOT NULL,
+    "Status"          character varying(16) NOT NULL DEFAULT 'Open',
+    "ExpiresAt"       timestamptz NOT NULL,
+    "ChosenAt"        timestamptz,
+    "InterviewId"     uuid,
+    "CreatedByName"   text,
+    "CreatedAt"       timestamptz NOT NULL DEFAULT now()
+);
+-- Başvuru silinince (KVKK imhası dahil) öneri de silinir.
+DELETE FROM recruitment_interview_proposals p WHERE NOT EXISTS (SELECT 1 FROM recruitment_applications a WHERE a."Id" = p."ApplicationId");
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_recruitment_interview_proposals_App') THEN
+        ALTER TABLE recruitment_interview_proposals ADD CONSTRAINT "FK_recruitment_interview_proposals_App"
+            FOREIGN KEY ("ApplicationId") REFERENCES recruitment_applications("Id") ON DELETE CASCADE;
+    END IF;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_recruitment_interview_proposals_Token" ON recruitment_interview_proposals ("TokenHash");
+CREATE INDEX IF NOT EXISTS "IX_recruitment_interview_proposals_App" ON recruitment_interview_proposals ("ApplicationId");
+CREATE INDEX IF NOT EXISTS "IX_recruitment_interview_proposals_TenantSlug" ON recruitment_interview_proposals ("TenantSlug");
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-29_newhire_checkins
+-- İlk 90 gün takibi (yenilik haritası #8). Sahibi engagement-service.
+-- Yeni çalışana işe girişinin 30., 60. ve 90. gününde kısa uyum formu gönderilir; yöneticisi (departman
+-- başı) hatırlatılır, yanıt yöneticiye ve İK'ya açıktır (form bunu çalışana söyler; anonim değildir).
+-- Kilometre taşı son 7 gün içindeyse kayıt açılır: eski çalışanlara geriye dönük form gitmez. İdempotent.
+CREATE TABLE IF NOT EXISTS engagement_newhire_checkins (
+    "Id"                uuid PRIMARY KEY,
+    "TenantSlug"        character varying(64) NOT NULL,
+    "EmployeeId"        uuid NOT NULL,
+    "Milestone"         integer NOT NULL,
+    "DueOn"             date NOT NULL,
+    "ManagerEmployeeId" uuid,
+    "SentAt"            timestamptz NOT NULL DEFAULT now(),
+    "AnsweredAt"        timestamptz,
+    "Belonging"         smallint,
+    "Clarity"           smallint,
+    "Support"           smallint,
+    "Comment"           character varying(1000)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_newhire_checkins_Emp_Milestone" ON engagement_newhire_checkins ("TenantSlug", "EmployeeId", "Milestone");
+CREATE INDEX IF NOT EXISTS "IX_engagement_newhire_checkins_TenantSlug" ON engagement_newhire_checkins ("TenantSlug");
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-29_positions
+-- Norm kadro ve pozisyon yönetimi (yenilik haritası #12). Sahibi organization-service.
+-- Departman başına onaylı pozisyon (unvan + kadro sayısı, isteğe bağlı aylık bütçe ve kademe). Dolu kadro,
+-- departmanda o unvanla atanmış aktif çalışanlardan hesaplanır (ayrı bağ tutulmaz). Bütçe yalnızca İK'ya döner.
+CREATE TABLE IF NOT EXISTS organization_positions (
+    "Id"            uuid PRIMARY KEY,
+    "TenantSlug"    character varying(64) NOT NULL,
+    "DepartmentId"  uuid NOT NULL REFERENCES organization_departments("Id") ON DELETE CASCADE,
+    "Title"         character varying(120) NOT NULL,
+    "Headcount"     integer NOT NULL,
+    "Grade"         character varying(40),
+    "BudgetMonthly" numeric(14,2),
+    "Currency"      character varying(3) NOT NULL DEFAULT 'TRY',
+    "Notes"         character varying(500),
+    "IsActive"      boolean NOT NULL DEFAULT true,
+    "CreatedAt"     timestamptz NOT NULL DEFAULT now(),
+    "UpdatedAt"     timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_organization_positions_TenantSlug" ON organization_positions ("TenantSlug");
+CREATE INDEX IF NOT EXISTS "IX_organization_positions_DepartmentId" ON organization_positions ("DepartmentId");
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_organization_positions_Dept_Title" ON organization_positions ("DepartmentId", lower("Title")) WHERE "IsActive";
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-29_product_feedback
+-- Ürün içi geri bildirim ve ekran kullanım ölçümü (yenilik haritası #33). Sahibi engagement-service.
+-- KVKK: kişi kimliği tutulmaz. Geri bildirim isimsizdir (yalnızca ekran, oy, isteğe bağlı yorum ve rol
+-- grubu); kullanım ölçümü gün ve ekran şablonu başına sayaçtır (adres içindeki kimlikler istemcide
+-- ":id" ile değiştirilir). İdempotent.
+CREATE TABLE IF NOT EXISTS engagement_product_feedback (
+    "Id"         uuid PRIMARY KEY,
+    "TenantSlug" character varying(64) NOT NULL,
+    "Path"       character varying(200) NOT NULL,
+    "Rating"     smallint NOT NULL,
+    "Comment"    character varying(1000),
+    "RoleGroup"  character varying(16) NOT NULL,
+    "CreatedAt"  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_product_feedback_TenantSlug" ON engagement_product_feedback ("TenantSlug", "CreatedAt");
+
+CREATE TABLE IF NOT EXISTS engagement_page_views (
+    "TenantSlug" character varying(64) NOT NULL,
+    "Day"        date NOT NULL,
+    "Path"       character varying(200) NOT NULL,
+    "Views"      integer NOT NULL DEFAULT 0,
+    PRIMARY KEY ("TenantSlug", "Day", "Path")
+);
+
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-29_weekly_checkins
+-- Haftalık check-in (yenilik haritası #9). Sahibi engagement-service.
+-- Çalışan haftada bir kısa not yazar (yaptıkları, engeller, gelecek hafta, ruh hâli 1-5); yöneticisi
+-- (departman başı ya da ekip lideri) görür, engeli bir sonraki 1:1 gündemine ekleyebilir. Anonim değildir.
+CREATE TABLE IF NOT EXISTS engagement_weekly_checkins (
+    "Id"         uuid PRIMARY KEY,
+    "TenantSlug" character varying(64) NOT NULL,
+    "EmployeeId" uuid NOT NULL,
+    "WeekStart"  date NOT NULL,
+    "Progress"   character varying(1000),
+    "Blockers"   character varying(1000),
+    "NextWeek"   character varying(1000),
+    "Mood"       smallint NOT NULL,
+    "AddedToOneOnOne" boolean NOT NULL DEFAULT false,
+    "CreatedAt"  timestamptz NOT NULL DEFAULT now(),
+    "UpdatedAt"  timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_weekly_checkins_Emp_Week" ON engagement_weekly_checkins ("TenantSlug", "EmployeeId", "WeekStart");
+CREATE INDEX IF NOT EXISTS "IX_engagement_weekly_checkins_TenantSlug" ON engagement_weekly_checkins ("TenantSlug");
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-30_announcement_feed
+-- Şirket içi akış (yenilik haritası #31): duyurulara tepki ve yorum. Sahibi governance-service.
+-- Kişi başına tek tepki (değiştirilebilir/geri alınabilir). Yorumlar duyuruyu görebilenlere açıktır;
+-- İK duyuru bazında yorumları kapatabilir ("AllowComments"). Duyuru silinince tepki/yorum da silinir.
+ALTER TABLE governance_announcements ADD COLUMN IF NOT EXISTS "AllowComments" boolean NOT NULL DEFAULT true;
+
+CREATE TABLE IF NOT EXISTS governance_announcement_reactions (
+    "Id"              uuid PRIMARY KEY,
+    "TenantSlug"      character varying(64) NOT NULL,
+    "AnnouncementId"  uuid NOT NULL REFERENCES governance_announcements("Id") ON DELETE CASCADE,
+    "UserId"          character varying(64) NOT NULL,
+    "EmployeeId"      uuid,
+    -- like | love | celebrate | clap | insightful | funny
+    "Kind"            character varying(16) NOT NULL,
+    "CreatedAt"       timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_governance_announcement_reactions_User" ON governance_announcement_reactions ("AnnouncementId", "UserId");
+CREATE INDEX IF NOT EXISTS "IX_governance_announcement_reactions_TenantSlug" ON governance_announcement_reactions ("TenantSlug");
+
+CREATE TABLE IF NOT EXISTS governance_announcement_comments (
+    "Id"               uuid PRIMARY KEY,
+    "TenantSlug"       character varying(64) NOT NULL,
+    "AnnouncementId"   uuid NOT NULL REFERENCES governance_announcements("Id") ON DELETE CASCADE,
+    "AuthorUserId"     character varying(64) NOT NULL,
+    "AuthorEmployeeId" uuid,
+    "AuthorName"       text NOT NULL,
+    "Body"             character varying(1000) NOT NULL,
+    "CreatedAt"        timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_governance_announcement_comments_Ann" ON governance_announcement_comments ("AnnouncementId", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_governance_announcement_comments_TenantSlug" ON governance_announcement_comments ("TenantSlug");
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-30_badges
+-- Rozet koleksiyonu ve kilometre taşları (yenilik haritası #29). Sahibi engagement-service.
+-- Rozetler mevcut verilerden hesaplanır; burada yalnızca kazanma anı tutulur (bildirim bir kez gitsin,
+-- koleksiyonda tarih görünsün). "_init" satırı kişinin ilk eşitlemesinin sessiz yapıldığını gösterir.
+CREATE TABLE IF NOT EXISTS engagement_badge_awards (
+    "Id"          uuid PRIMARY KEY,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "EmployeeId"  uuid NOT NULL,
+    "BadgeId"     character varying(32) NOT NULL,
+    "AwardedAt"   timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_badge_awards" ON engagement_badge_awards ("TenantSlug", "EmployeeId", "BadgeId");
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-30_coffee
+-- Kahve eşleştirme (yenilik haritası #27). Sahibi engagement-service. İsteğe bağlı (varsayılan kapalı):
+-- isteyen çalışan katılır; seçilen günde (Türkiye saatiyle 09:00 sonrası) katılımcılar rastgele ikişerli
+-- eşlenir (tek sayıda ise bir grup üç kişi), son eşleşmeler ve istenirse aynı departman kaçınılır.
+-- Dönem başına tek tur (benzersiz dönem anahtarı). İdempotent.
+CREATE TABLE IF NOT EXISTS engagement_coffee_settings (
+    "Id"              uuid PRIMARY KEY,
+    "TenantSlug"      character varying(64) NOT NULL,
+    "Enabled"         boolean NOT NULL DEFAULT false,
+    "Cadence"         character varying(16) NOT NULL DEFAULT 'Biweekly',
+    "DayOfWeek"       integer NOT NULL DEFAULT 1,
+    "CrossDepartment" boolean NOT NULL DEFAULT true,
+    "UpdatedAt"       timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_coffee_settings_TenantSlug" ON engagement_coffee_settings ("TenantSlug");
+
+CREATE TABLE IF NOT EXISTS engagement_coffee_participants (
+    "Id"          uuid PRIMARY KEY,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "EmployeeId"  uuid NOT NULL,
+    "JoinedAt"    timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_coffee_participants_Emp" ON engagement_coffee_participants ("TenantSlug", "EmployeeId");
+
+CREATE TABLE IF NOT EXISTS engagement_coffee_rounds (
+    "Id"          uuid PRIMARY KEY,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "PeriodKey"   character varying(16) NOT NULL,
+    "CreatedAt"   timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_coffee_rounds_Period" ON engagement_coffee_rounds ("TenantSlug", "PeriodKey");
+
+CREATE TABLE IF NOT EXISTS engagement_coffee_matches (
+    "Id"          uuid PRIMARY KEY,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "RoundId"     uuid NOT NULL REFERENCES engagement_coffee_rounds("Id") ON DELETE CASCADE,
+    "MemberIds"   uuid[] NOT NULL,
+    "Met"         boolean NOT NULL DEFAULT false,
+    "CreatedAt"   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_coffee_matches_TenantSlug" ON engagement_coffee_matches ("TenantSlug", "CreatedAt");
+CREATE INDEX IF NOT EXISTS "IX_engagement_coffee_matches_Members" ON engagement_coffee_matches USING gin ("MemberIds");
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-30_group_cards
+-- Grup kartı (yenilik haritası #26): doğum günü, veda, hoş geldin vb. için herkesin imzaladığı kart.
+-- Sahibi engagement-service. Kart, teslim anına kadar alıcıdan gizlidir; teslim zamanı gelince
+-- (CardWorker) ya da açan kişi erken teslim edince alıcıya bildirim gider. İdempotent.
+CREATE TABLE IF NOT EXISTS engagement_cards (
+    "Id"                   uuid PRIMARY KEY,
+    "TenantSlug"           character varying(64) NOT NULL,
+    "RecipientEmployeeId"  uuid NOT NULL,
+    "RecipientName"        text NOT NULL,
+    -- Birthday | Farewell | Welcome | Anniversary | Congrats | GetWell | Other
+    "Occasion"             character varying(16) NOT NULL,
+    "Title"                character varying(120) NOT NULL,
+    "DeliverAt"            timestamptz NOT NULL,
+    "DeliveredAt"          timestamptz,
+    "CreatedByEmployeeId"  uuid,
+    "CreatedByUserId"      character varying(64) NOT NULL,
+    "CreatedByName"        text,
+    "CreatedAt"            timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_cards_TenantSlug" ON engagement_cards ("TenantSlug", "DeliveredAt");
+CREATE INDEX IF NOT EXISTS "IX_engagement_cards_Due" ON engagement_cards ("DeliverAt") WHERE "DeliveredAt" IS NULL;
+
+CREATE TABLE IF NOT EXISTS engagement_card_signatures (
+    "Id"          uuid PRIMARY KEY,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "CardId"      uuid NOT NULL REFERENCES engagement_cards("Id") ON DELETE CASCADE,
+    "EmployeeId"  uuid NOT NULL,
+    "Name"        text NOT NULL,
+    "Message"     character varying(500) NOT NULL,
+    "Color"       character varying(16) NOT NULL DEFAULT 'yellow',
+    "CreatedAt"   timestamptz NOT NULL DEFAULT now(),
+    "UpdatedAt"   timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_card_signatures_Card_Emp" ON engagement_card_signatures ("CardId", "EmployeeId");
+CREATE INDEX IF NOT EXISTS "IX_engagement_card_signatures_TenantSlug" ON engagement_card_signatures ("TenantSlug");
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-30_platform_ops
+-- Arayüzden yedek / geri yükleme / güncelleme (yenilik haritası #34). Sahibi tenant-service.
+-- Konteynerler sunucu komutu çalıştırmaz (docker soketi verilmez): platform yöneticisi arayüzden iş
+-- kuyruğa yazar; sunucudaki scripts/ops-runner.py (kullanıcı cron'u, dakikada bir) yalnızca izinli
+-- komutları çalıştırır, sonucu ve sunucu durum özetini buraya yazar. Kiracıya ait değildir. İdempotent.
+CREATE TABLE IF NOT EXISTS platform_ops_jobs (
+    "Id"           uuid PRIMARY KEY,
+    -- backup | backup-verify | schedule | unschedule | check-updates | update | rollback | restore
+    "Kind"         character varying(32) NOT NULL,
+    "Args"         jsonb NOT NULL DEFAULT '{}'::jsonb,
+    -- Pending | Running | Succeeded | Failed | Cancelled
+    "Status"       character varying(16) NOT NULL DEFAULT 'Pending',
+    "RequestedBy"  text,
+    "RequestedAt"  timestamptz NOT NULL DEFAULT now(),
+    "StartedAt"    timestamptz,
+    "FinishedAt"   timestamptz,
+    "ExitCode"     integer,
+    "Output"       text
+);
+CREATE INDEX IF NOT EXISTS "IX_platform_ops_jobs_Status" ON platform_ops_jobs ("Status", "RequestedAt");
+
+CREATE TABLE IF NOT EXISTS platform_ops_status (
+    "Id"         integer PRIMARY KEY,
+    "Snapshot"   jsonb NOT NULL,
+    "UpdatedAt"  timestamptz NOT NULL DEFAULT now()
+);
+
+-- ===== 2026-10-30_recognition_points
+-- Takdir puanları ve ödül kataloğu (yenilik haritası #25). Sahibi engagement-service. İsteğe bağlı
+-- (varsayılan kapalı): her çalışanın aylık verebileceği puan bütçesi vardır; takdirle birlikte puan
+-- gönderilir, alınan puan katalogdaki ödüllerle takas edilir. Bakiye hareket defterinden hesaplanır
+-- (engagement_points_ledger); takas anında puan düşülür, İK reddederse iade edilir. İdempotent.
+ALTER TABLE engagement_kudos ADD COLUMN IF NOT EXISTS "Points" integer NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS engagement_recognition_settings (
+    "Id"               uuid PRIMARY KEY,
+    "TenantSlug"       character varying(64) NOT NULL,
+    "Enabled"          boolean NOT NULL DEFAULT false,
+    "MonthlyAllowance" integer NOT NULL DEFAULT 100,
+    "MaxPerKudos"      integer NOT NULL DEFAULT 50,
+    "UpdatedAt"        timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "UX_engagement_recognition_settings_TenantSlug" ON engagement_recognition_settings ("TenantSlug");
+
+CREATE TABLE IF NOT EXISTS engagement_points_ledger (
+    "Id"          uuid PRIMARY KEY,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "EmployeeId"  uuid NOT NULL,
+    "Delta"       integer NOT NULL,
+    -- Kudos | KudosReversed | Redeem | Refund | Grant
+    "Reason"      character varying(16) NOT NULL,
+    "RefId"       uuid,
+    "Note"        character varying(200),
+    "CreatedAt"   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_points_ledger_Emp" ON engagement_points_ledger ("TenantSlug", "EmployeeId");
+
+CREATE TABLE IF NOT EXISTS engagement_rewards (
+    "Id"          uuid PRIMARY KEY,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "Title"       character varying(120) NOT NULL,
+    "Description" character varying(1000),
+    "Cost"        integer NOT NULL,
+    "Stock"       integer,
+    "Active"      boolean NOT NULL DEFAULT true,
+    "CreatedAt"   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_rewards_TenantSlug" ON engagement_rewards ("TenantSlug");
+
+CREATE TABLE IF NOT EXISTS engagement_reward_redemptions (
+    "Id"          uuid PRIMARY KEY,
+    "TenantSlug"  character varying(64) NOT NULL,
+    "RewardId"    uuid NOT NULL REFERENCES engagement_rewards("Id") ON DELETE RESTRICT,
+    "RewardTitle" character varying(120) NOT NULL,
+    "EmployeeId"  uuid NOT NULL,
+    "Name"        text NOT NULL,
+    "Cost"        integer NOT NULL,
+    -- Pending | Fulfilled | Rejected
+    "Status"      character varying(16) NOT NULL DEFAULT 'Pending',
+    "Note"        character varying(500),
+    "CreatedAt"   timestamptz NOT NULL DEFAULT now(),
+    "DecidedAt"   timestamptz
+);
+CREATE INDEX IF NOT EXISTS "IX_engagement_reward_redemptions_TenantSlug" ON engagement_reward_redemptions ("TenantSlug", "Status");
+DO $$ BEGIN
+    IF to_regprocedure('hr360_rls_apply_policies()') IS NOT NULL THEN PERFORM hr360_rls_apply_policies(); END IF;
+END $$;
+
+-- ===== 2026-10-30_sample_data
+-- Örnek veri (yenilik haritası #35): boş bir şirketi tek tıkla örnek çalışan, departman, takdir,
+-- fikir ve etkinlikle doldurma; sonra tek tıkla temizleme. Sahibi tenant-service. Burada yalnızca
+-- örnek verinin hangi departmanları açtığı tutulur (temizlikte yalnızca bunlar silinir). İdempotent.
+CREATE TABLE IF NOT EXISTS platform_sample_data (
+    "TenantSlug"     character varying(64) PRIMARY KEY,
+    "DepartmentIds"  uuid[] NOT NULL DEFAULT '{}',
+    "CreatedBy"      text,
+    "CreatedAt"      timestamptz NOT NULL DEFAULT now()
+);
+
+-- ===== 2026-10-22_time_leave (sonradan eklenen sutun)
+ALTER TABLE leave_settings ADD COLUMN IF NOT EXISTS "TeamCalendarNames" boolean NOT NULL DEFAULT false;
+
+-- ===== 2026-10-31_rls_shared_rows
+-- Satır düzeyi güvenlik: kiracılar arası ORTAK satırlar (TenantSlug NULL). İdempotent.
+-- Bazı tablolarda NULL kiracı "herkese ortak" demektir (ör. expense_fx_rates: TCMB kur önbelleği; kiracının
+-- elle girdiği kur kendi TenantSlug'ıyla durur). Kiracı oturumunda (app.tenant dolu) bu satırlar okunabilmeli
+-- ve önbelleğe yazılabilmeli. İstisna YALNIZCA aşağıdaki listedeki tablolar içindir; diğerlerinde NULL satır
+-- (ör. audit_log'daki platform kayıtları) kiracı oturumuna kapalı kalır.
+
+CREATE OR REPLACE FUNCTION hr360_rls_shared_tables() RETURNS text[] LANGUAGE sql IMMUTABLE AS $$
+    SELECT ARRAY['expense_fx_rates']::text[]
+$$;
+
+CREATE OR REPLACE FUNCTION hr360_rls_expr(tbl text) RETURNS text LANGUAGE sql IMMUTABLE AS $$
+    SELECT $e$coalesce(current_setting('app.tenant', true), '') = '' OR "TenantSlug" = current_setting('app.tenant', true)$e$
+        || CASE WHEN tbl = ANY (hr360_rls_shared_tables()) THEN $e$ OR "TenantSlug" IS NULL$e$ ELSE '' END
+$$;
+
+-- Eksik politikaları ekler (ifade tabloya göre: ortak tablolarda NULL satır da görünür).
+CREATE OR REPLACE FUNCTION hr360_rls_apply_policies() RETURNS integer LANGUAGE plpgsql AS $$
+DECLARE t record; n integer := 0;
+BEGIN
+    FOR t IN
+        SELECT c.relname
+          FROM pg_class c
+          JOIN pg_namespace ns ON ns.oid = c.relnamespace
+          JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'TenantSlug' AND NOT a.attisdropped
+         WHERE ns.nspname = 'public' AND c.relkind IN ('r', 'p')
+           AND NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid AND p.polname = 'hr360_tenant_isolation')
+         ORDER BY c.relname
+    LOOP
+        EXECUTE format('CREATE POLICY hr360_tenant_isolation ON public.%I AS PERMISSIVE FOR ALL USING (%s) WITH CHECK (%s)',
+            t.relname, hr360_rls_expr(t.relname), hr360_rls_expr(t.relname));
+        n := n + 1;
+    END LOOP;
+    RETURN n;
+END $$;
+
+-- Var olan politikaları listeye göre güncelle (yalnızca ortak tablolar; diğerleri aynen kalır).
+DO $$
+DECLARE t text;
+BEGIN
+    FOREACH t IN ARRAY hr360_rls_shared_tables() LOOP
+        IF EXISTS (SELECT 1 FROM pg_policy p JOIN pg_class c ON c.oid = p.polrelid
+                    WHERE p.polname = 'hr360_tenant_isolation' AND c.relname = t AND c.relnamespace = 'public'::regnamespace) THEN
+            EXECUTE format('ALTER POLICY hr360_tenant_isolation ON public.%I USING (%s) WITH CHECK (%s)', t, hr360_rls_expr(t), hr360_rls_expr(t));
+        END IF;
+    END LOOP;
+END $$;
+
+REVOKE ALL ON FUNCTION hr360_rls_apply_policies() FROM PUBLIC;

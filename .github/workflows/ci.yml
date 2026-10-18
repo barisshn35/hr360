@@ -166,6 +166,14 @@ jobs:
         run: |
           docker run --rm -v "$PWD/deploy/monitoring/blackbox.yml:/b.yml:ro" prom/blackbox-exporter:v0.25.0 --config.file=/b.yml --config.check
           python3 -c "import yaml,sys; q=yaml.safe_load(open('deploy/monitoring/postgres-exporter-queries.yml')); assert all('query' in v and 'metrics' in v for v in q.values())"
+      - name: Surum numaralari VERSION ile ayni (web, mobil)
+        run: |
+          v="$(tr -d '[:space:]' < VERSION)"
+          for p in apps/web/package.json apps/mobile/package.json; do
+            [ "$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$p")" = "$v" ] || { echo "::error::$p surumu VERSION ($v) ile farkli"; exit 1; }
+          done
+      - name: Ortak .NET kaynaklarinin servis kopyalari esit
+        run: scripts/sync-shared.sh --check
       - name: Kabuk betikleri (bash -n + shellcheck)
         run: |
           for f in install.sh scripts/*.sh scripts/lib/*.sh tests/install/*.sh; do bash -n "$f"; done
@@ -184,6 +192,13 @@ jobs:
           for _ in $(seq 1 30); do docker exec pg pg_isready -U hr360admin && break; sleep 2; done
           docker exec -i pg psql -U hr360admin -d hr360_operational -v ON_ERROR_STOP=1 -q < data/migrations/sql-all-schemas.sql
           docker exec pg psql -U hr360admin -d hr360_operational -Atc "select count(*) from information_schema.tables where table_schema='public'"
+          # Temel sema gocleri icermeli: uzerine scripts/sql uygulaninca hicbir tablo/kolon eklenmemeli
+          # (eklenirse yeni kurulumda eksik kalir; goc data/migrations/sql-all-schemas.sql sonuna eklenmeli).
+          q="select table_name||'.'||column_name from information_schema.columns where table_schema='public' order by 1"
+          docker exec pg psql -U hr360admin -d hr360_operational -Atc "$q" > /tmp/cols-base
+          for f in scripts/sql/*.sql; do docker exec -i pg psql -U hr360admin -d hr360_operational -v ON_ERROR_STOP=1 -q < "$f" >/dev/null; done
+          docker exec pg psql -U hr360admin -d hr360_operational -Atc "$q" > /tmp/cols-mig
+          if ! diff /tmp/cols-base /tmp/cols-mig; then echo "::error::Temel semada eksik goc var (yukaridaki tablo/kolonlar)"; exit 1; fi
 
   security:
     name: Guvenlik taramasi

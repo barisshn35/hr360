@@ -5,3 +5,7 @@ misconfigurations:
   - id: AVD-DS-0002
     paths:
       - "deploy/mailer/Dockerfile"
+      # Android derleme imajı (scripts/android-build.sh): yalnızca APK üretmek için yerelde çalışır, hiçbir
+      # yere dağıtılmaz ve ağa hizmet vermez; npm/Gradle önbellekleri için root gerekir, çıktıların
+      # sahipliği derleme sonunda çağıran kullanıcıya verilir (chown).
+      - "apps/mobile/Dockerfile.build"
