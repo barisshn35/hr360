@@ -8,6 +8,15 @@ Değiştirdikten sonra arayüz verisini üretin ve çevirileri tamamlayın:
 cd apps/web && node scripts/changelog.mjs && node scripts/i18n-check.mjs --write && node scripts/i18n-check.mjs --missing
 ```
 
+## 16 · 2026-10-18 · SMS ve güvenlik iyileştirmeleri
+- SMS bildirimleri: şirket yöneticisi Ayarlar'da Netgsm ya da İleti Merkezi hesabını bağlar, deneme SMS'i gönderir ve günlük gönderim sınırı koyar. Telefon numaraları yurt dışına aktarılmaz.
+- Çalışanlar Profilim › Bildirimler'den SMS almayı kapatabilir; sessiz saatlerde SMS ertelenir, güvenlik iletileri her zaman gider.
+- Şirket verileri artık veritabanı düzeyinde de ayrılır: her servis kendi en az yetkili kullanıcısıyla bağlanır, bir şirketin kayıtları başka şirketin oturumunda görünmez.
+- Platform › Bakım'da güvenlik durumu kartı: veritabanı yalıtımı, HTTPS, yedekler ve izleme açık mı tek bakışta; kapalıysa tek tıkla açılır.
+- Zamanlanmış işler, servis birden çok kopya çalışsa bile yalnızca bir kopyada yürür; güncelleme servislerin veritabanına gerçekten bağlandığını bekler.
+- Yeni kurulumlarda eksik kalan 1.1 tabloları (ayın çalışanı, etkinlikler, bakım ekranı) eklendi; güncellemeler yalnızca yeni veritabanı değişikliklerini uygular.
+- Android uygulamasında konumla giriş-çıkış kaydı çalışır; büyük vardiya ve zam işlemleri daha hızlı.
+
 ## 15 · 2026-10-16 · Topluluk, günlük işler ve bakım
 - Yapılacaklarım: onay, imza, eğitim, anket, eksik belge ve oylama gibi sizden beklenen her şey tek listede, son tarihe göre sıralı.
 - İzin takvimi: ekibin kim ne zaman izinde olduğunu ayın takviminde görün; köprü günleri önerilir, takvimden doğrudan izin isteyebilirsiniz.

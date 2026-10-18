@@ -6,6 +6,15 @@ export interface ChangelogEntry { id: string; date: string; title: string; items
 
 /** En yeni dalga başta. Metinler arayüz dilinde döner. */
 export const changelog = (): ChangelogEntry[] => [
+  { id: '16', date: '2026-10-18', title: tx('SMS ve güvenlik iyileştirmeleri'), items: [
+    tx('SMS bildirimleri: şirket yöneticisi Ayarlar\'da Netgsm ya da İleti Merkezi hesabını bağlar, deneme SMS\'i gönderir ve günlük gönderim sınırı koyar. Telefon numaraları yurt dışına aktarılmaz.'),
+    tx('Çalışanlar Profilim › Bildirimler\'den SMS almayı kapatabilir; sessiz saatlerde SMS ertelenir, güvenlik iletileri her zaman gider.'),
+    tx('Şirket verileri artık veritabanı düzeyinde de ayrılır: her servis kendi en az yetkili kullanıcısıyla bağlanır, bir şirketin kayıtları başka şirketin oturumunda görünmez.'),
+    tx('Platform › Bakım\'da güvenlik durumu kartı: veritabanı yalıtımı, HTTPS, yedekler ve izleme açık mı tek bakışta; kapalıysa tek tıkla açılır.'),
+    tx('Zamanlanmış işler, servis birden çok kopya çalışsa bile yalnızca bir kopyada yürür; güncelleme servislerin veritabanına gerçekten bağlandığını bekler.'),
+    tx('Yeni kurulumlarda eksik kalan 1.1 tabloları (ayın çalışanı, etkinlikler, bakım ekranı) eklendi; güncellemeler yalnızca yeni veritabanı değişikliklerini uygular.'),
+    tx('Android uygulamasında konumla giriş-çıkış kaydı çalışır; büyük vardiya ve zam işlemleri daha hızlı.'),
+  ] },
   { id: '15', date: '2026-10-16', title: tx('Topluluk, günlük işler ve bakım'), items: [
     tx('Yapılacaklarım: onay, imza, eğitim, anket, eksik belge ve oylama gibi sizden beklenen her şey tek listede, son tarihe göre sıralı.'),
     tx('İzin takvimi: ekibin kim ne zaman izinde olduğunu ayın takviminde görün; köprü günleri önerilir, takvimden doğrudan izin isteyebilirsiniz.'),
