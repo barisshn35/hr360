@@ -84,6 +84,7 @@ public class AiController : AppController
     /// <summary>ml-inference'taki kural tabanlı ayrımcı ifade denetimi (kullanıcının jetonuyla).</summary>
     private async Task<JsonElement?> BiasCheckAsync(string text, CancellationToken ct)
     {
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return null;
         try
         {
             var client = _http.CreateClient();

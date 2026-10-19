@@ -567,14 +567,16 @@ public sealed partial class ChatFeatures
 
     // ------------------------------------------------------------------ BG7 yardım
 
-    public static ChatReply HelpReply(bool en) => ChatReply.Of(ChatService.HelpOf(en), en,
+    public static ChatReply HelpReply(bool en) => ChatReply.Of(ChatService.HelpOf(en), en, new[]
+    {
         ChatButton.Say(en ? "Approvals" : "Onaylarım", en ? "approvals" : "onaylarım"),
         ChatButton.Say(en ? "Balance" : "Bakiye", en ? "balance" : "bakiye"),
         ChatButton.Say(en ? "Request leave" : "İzin al", en ? "request leave" : "izin al"),
-        ChatButton.Say(en ? "My shifts" : "Vardiyam", en ? "myshifts" : "vardiyam"),
+        ChatFeatureCatalog.ModuleOff("shifts") ? null : ChatButton.Say(en ? "My shifts" : "Vardiyam", en ? "myshifts" : "vardiyam"),
         ChatButton.Say(en ? "Book a desk" : "Masa ayır", en ? "desk" : "masa"),
         ChatButton.Say(en ? "Announcements" : "Duyurular", en ? "announcements" : "duyurular"),
-        ChatButton.Say(en ? "Summary" : "Özet", en ? "summary" : "özet"));
+        ChatButton.Say(en ? "Summary" : "Özet", en ? "summary" : "özet"),
+    }.OfType<ChatButton>().ToArray());
 
     /// <summary>Komutun okunur adı (yazım hatası düzeltilince kullanıcıya söylenir).</summary>
     public static string DisplayName(string cmd, bool en) => (cmd, en) switch

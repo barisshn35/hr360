@@ -185,6 +185,8 @@ public class ShiftOptimizerController : ControllerBase
             time_limit_seconds = 10,
             solver = b.Solver is "greedy" or "cp-sat" ? b.Solver : "auto",
         };
+        // Yapay zekâ modülü kapalı: ml-inference'ı beklemeden aynı hata yanıtı.
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return StatusCode(503, new { message = "Model servisine ulaşılamadı" });
         JsonDocument doc;
         try
         {

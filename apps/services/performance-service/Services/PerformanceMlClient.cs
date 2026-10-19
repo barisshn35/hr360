@@ -60,6 +60,8 @@ public class PerformanceMlClient
 
     public async Task<MlAnalyzeResponse?> AnalyzeAsync(object payload, CancellationToken ct)
     {
+        // Yapay zekâ modülü kapalı: öneri ML katmanı olmadan üretilir.
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return null;
         try
         {
             var body = new StringContent(

@@ -113,6 +113,8 @@ public class TravelAndPolicyController : ControllerBase
             case FileSniffer.Verdict.NotAllowed: return BadRequest(new { message = "JPEG, PNG ya da WEBP yükleyin" });
             case FileSniffer.Verdict.Mismatch: return BadRequest(new { message = FileSniffer.MismatchMessage });
         }
+        // Yapay zekâ modülü kapalı: ml-inference'ı beklemeden aynı "kullanılamıyor" yanıtı.
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return StatusCode(503, new { message = "Fiş okuma hizmeti şu an kullanılamıyor", code = "ocr_unavailable" });
         var url = (Environment.GetEnvironmentVariable("ML_INFERENCE_URL") ?? "http://ml-inference:8000").TrimEnd('/') + "/ocr/receipt";
         using var content = new MultipartFormDataContent();
         var sc = new ByteArrayContent(bytes);
@@ -151,6 +153,7 @@ public class TravelAndPolicyController : ControllerBase
     {
         var text = body?.Text?.Trim() ?? "";
         if (text.Length < 2 || text.Length > 8000) return BadRequest(new { message = "Karekod metni gerekli" });
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return StatusCode(503, new { message = "Karekod çözümleme hizmeti şu an kullanılamıyor", code = "einvoice_unavailable" });
         var url = (Environment.GetEnvironmentVariable("ML_INFERENCE_URL") ?? "http://ml-inference:8000").TrimEnd('/') + "/expense/einvoice/parse";
         try
         {

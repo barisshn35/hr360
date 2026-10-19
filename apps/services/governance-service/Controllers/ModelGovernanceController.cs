@@ -26,6 +26,7 @@ public class ModelGovernanceController : AppController
     [HttpPost("retrain")]
     public async Task<IActionResult> Retrain(RetrainInput body, CancellationToken ct)
     {
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return NotFound(new { code = "module_not_installed", module = "ml" });
         var client = _http.CreateClient();
         client.Timeout = TimeSpan.FromMinutes(5);
         using var req = new HttpRequestMessage(HttpMethod.Post, $"{MlBase}/model/retrain")
@@ -56,6 +57,7 @@ public class ModelGovernanceController : AppController
 
     private async Task<(int Status, string Body)> MlAsync(HttpMethod method, string path, object? body, CancellationToken ct, int timeoutSeconds = 60)
     {
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) throw new HttpRequestException("ml modülü bu kurulumda kapalı");
         var client = _http.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         using var req = new HttpRequestMessage(method, $"{MlBase}{path}");

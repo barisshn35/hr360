@@ -15,6 +15,8 @@ internal static class MlHttp
     public static async Task<(int Status, string Body)> SendAsync(IHttpClientFactory http, HttpRequest incoming, HttpMethod method, string path, object? body,
         CancellationToken ct, int timeoutSeconds = 60, bool internalToken = false)
     {
+        // Yapay zekâ modülü kapalı: çağıranlar bunu "servise ulaşılamadı" olarak işler (zaman aşımı yok).
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) throw new HttpRequestException("ml modülü bu kurulumda kapalı");
         var client = http.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         using var req = new HttpRequestMessage(method, $"{Base}{path}");

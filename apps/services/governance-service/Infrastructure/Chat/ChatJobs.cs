@@ -72,7 +72,7 @@ public sealed partial class ChatFeatures
         var r = new Dictionary<string, int>();
         async Task Run(string name, string feature, Func<Task<int>> job)
         {
-            if (app.DisabledFeatures.Contains(feature)) return;
+            if (app.DisabledFeatures.Contains(feature) || ChatFeatureCatalog.ModuleOff(feature)) return;
             try { r[name] = await job(); }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

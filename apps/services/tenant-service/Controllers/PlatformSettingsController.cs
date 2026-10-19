@@ -202,6 +202,9 @@ public partial class PlatformSettingsController : ControllerBase
         termsMd = row.TermsMd,
         faq = PlatformSettingsService.ParseFaq(row.FaqJson),
         searchIndexing = row.SearchIndexing ?? false,
+        // Kurulum bilgisi (ayar değil): açık isteğe bağlı modüller ve kiracılık kipi (arayüz menüsü bununla süzer).
+        modules = HR360.Platform.Modules.EnabledList(),
+        tenancy = HR360.Platform.Modules.Tenancy,
     };
 
     public record SiteRequest(string? OperatorName, string? Address, string? Email, string? Phone, string? Kep, string? VerbisNo,

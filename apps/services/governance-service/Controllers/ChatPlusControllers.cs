@@ -292,7 +292,7 @@ public class ChatBotAdminController : AppController
     public ChatBotAdminController(GovernanceDbContext db, ChatService chat) { _db = db; _chat = chat; }
 
     [HttpGet("features")]
-    public IActionResult Features() => Ok(ChatFeatureCatalog.All.Select(f => new { key = f.Key, label = En ? f.LabelEn : f.Label }));
+    public IActionResult Features() => Ok(ChatFeatureCatalog.Available().Select(f => new { key = f.Key, label = En ? f.LabelEn : f.Label }));
 
     public record FeaturesInput(List<string> Disabled);
 

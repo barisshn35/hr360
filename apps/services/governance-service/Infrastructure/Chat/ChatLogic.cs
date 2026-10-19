@@ -425,4 +425,22 @@ public static class ChatFeatureCatalog
         "anniversary" => "celebrations",
         _ => null,
     };
+
+    /// <summary>Özelliğin bağlı olduğu isteğe bağlı modül (scripts/lib/modules.sh); çekirdek özellikte null.</summary>
+    public static string? ModuleOf(string? feature) => feature switch
+    {
+        "expense" => HR360.Platform.Modules.Expense,
+        "shifts" or "clock" => HR360.Platform.Modules.TimeShift,
+        "payslip" => HR360.Platform.Modules.Compensation,
+        "onboarding" => HR360.Platform.Modules.Onboarding,
+        _ => null,
+    };
+
+    /// <summary>Özelliğin modülü bu kurulumda kapalı mı (komut, düğme ve zamanlanmış iş çalışmaz).</summary>
+    public static bool ModuleOff(string? feature) => ModuleOf(feature) is { } m && !HR360.Platform.Modules.IsEnabled(m);
+
+    public static string ModuleOffText(bool en) => en ? "This module is not enabled in this installation." : "Bu modül bu kurulumda açık değil.";
+
+    /// <summary>Yönetim ekranında listelenen özellikler: modülü kapalı olanlar gösterilmez.</summary>
+    public static IEnumerable<(string Key, string Label, string LabelEn)> Available() => All.Where(f => !ModuleOff(f.Key));
 }

@@ -328,6 +328,8 @@ public class SurveysController : AppController
         var texts = SurveyTopics.Texts(responses, q.Id);
         if (responses.Count < AnonymityThreshold || texts.Count < AnonymityThreshold)
             return Ok(new { questionId = q.Id, available = false, responses = texts.Count, minGroup = AnonymityThreshold });
+        // Yapay zekâ modülü kapalı: ml-inference'ı beklemeden aynı "yapılamıyor" yanıtı.
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return StatusCode(503, new { message = "Konu analizi şu anda yapılamıyor" });
         var http = HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>().CreateClient();
         http.Timeout = TimeSpan.FromSeconds(30);
         try
@@ -583,15 +585,24 @@ public class OffboardingController : AppController
         if (item.Resolution == "Returned") return Conflict(new { message = "Bu zimmet zaten iade edilmiş" });
 
         string? warning = null;
-        var url = (Environment.GetEnvironmentVariable("ONBOARDING_SERVICE_URL") ?? "http://onboarding-service:8080") + $"/api/assets/{item.AssetId}/write-off";
-        var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(new { kind = body.Resolution, note = body.Note.Trim() }) };
-        req.Headers.TryAddWithoutValidation("Authorization", Request.Headers.Authorization.ToString());
-        try
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Onboarding))
         {
-            var res = await _http.CreateClient().SendAsync(req, ct);
-            if (!res.IsSuccessStatusCode) warning = $"Zimmet kaydı güncellenemedi (HTTP {(int)res.StatusCode}); Zimmet ekranından elle kapatın.";
+            // İşe alıştırma (zimmet) modülü kapalı: onboarding-service yok, yalnızca süreçteki kayıt işaretlenir.
+            HttpContext.RequestServices.GetRequiredService<ILogger<OffboardingController>>()
+                .LogInformation("Zimmet kaydı düşülmedi: onboarding modülü kapalı (süreç {CaseId}, zimmet {AssetId})", c.Id, item.AssetId);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException) { warning = "Zimmet servisine ulaşılamadı; Zimmet ekranından elle kapatın."; }
+        else
+        {
+            var url = (Environment.GetEnvironmentVariable("ONBOARDING_SERVICE_URL") ?? "http://onboarding-service:8080") + $"/api/assets/{item.AssetId}/write-off";
+            var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(new { kind = body.Resolution, note = body.Note.Trim() }) };
+            req.Headers.TryAddWithoutValidation("Authorization", Request.Headers.Authorization.ToString());
+            try
+            {
+                var res = await _http.CreateClient().SendAsync(req, ct);
+                if (!res.IsSuccessStatusCode) warning = $"Zimmet kaydı güncellenemedi (HTTP {(int)res.StatusCode}); Zimmet ekranından elle kapatın.";
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException) { warning = "Zimmet servisine ulaşılamadı; Zimmet ekranından elle kapatın."; }
+        }
 
         c.AssetChecks = c.AssetChecks.Select(a => a.AssignmentId == assignmentId
             ? new AssetCheck

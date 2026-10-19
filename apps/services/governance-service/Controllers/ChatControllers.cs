@@ -255,7 +255,7 @@ public class ChatAppsController : AppController
         var me = await MyPersonAsync(ct);
         if (me is null) return BadRequest(new { message = "Hesabınıza bağlı çalışan kaydı yok; deneme mesajı gönderilemez." });
         bool sent;
-        try { sent = await _chat.SendTextToEmployeeAsync(_db, a, me.Id, $"👋 Merhaba {me.Name.Split(' ')[0]}! HR360 bu hesaba bildirim gönderebiliyor.\n{ChatService.Help}", ChatService.PublicOrigin + "/panel", ct); }
+        try { sent = await _chat.SendTextToEmployeeAsync(_db, a, me.Id, $"👋 Merhaba {me.Name.Split(' ')[0]}! HR360 bu hesaba bildirim gönderebiliyor.\n{ChatService.HelpOf(false)}", ChatService.PublicOrigin + "/panel", ct); }
         catch (Exception ex) when (ex is ChatApiException or HttpRequestException)
         {
             a.LastError = ex.Message;

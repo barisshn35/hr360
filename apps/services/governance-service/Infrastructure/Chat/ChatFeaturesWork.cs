@@ -128,6 +128,8 @@ public sealed partial class ChatFeatures
             return Done(ChatReply.Of(L("Hesabınız etkin bir çalışan kaydıyla eşleşmedi.", "Your account is not matched to an active employee record."), en), "unlinked");
         if (!ChatService.Trusted(app, who))
             return Done(ChatReply.Of(ChatService.LinkPrompt(await _chat.LinkUrlAsync(db, who, TimeSpan.FromHours(24), ct), en: en), en), "unverified");
+        if (ChatFeatureCatalog.ModuleOff(ActionFeature(action)))
+            return Done(ChatReply.Of(ChatFeatureCatalog.ModuleOffText(en), en) with { Replace = true }, "module_off");
         if (ActionFeature(action) is { } feature && app.DisabledFeatures.Contains(feature))
             return Done(ChatReply.Of(L("Bu komut şirketinizde kapalı.", "This command is turned off in your company."), en) with { Replace = true }, "disabled");
 
@@ -392,6 +394,8 @@ public sealed partial class ChatFeatures
     /// <summary>Yerel OCR (ml-inference/Tesseract). Görüntü bellekte işlenir; ne burada ne orada saklanır.</summary>
     public async Task<string?> OcrAsync(byte[] image, string contentType, CancellationToken ct)
     {
+        // Yapay zekâ modülü kapalıysa ml-inference yok: beklemeden "okunamadı" yoluna düşülür.
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return null;
         var token = await OcrTokenAsync(ct);
         if (token is null) return null;
         using var content = new MultipartFormDataContent();
@@ -434,6 +438,7 @@ public sealed partial class ChatFeatures
     {
         var en = await _chat.EnAsync(app.TenantSlug, who.EmployeeId, ct);
         string L(string a, string b) => en ? b : a;
+        if (ChatFeatureCatalog.ModuleOff("expense")) return ChatReply.Of(ChatFeatureCatalog.ModuleOffText(en), en);
         if (app.DisabledFeatures.Contains("expense")) return ChatReply.Of(L("Bu komut şirketinizde kapalı.", "This command is turned off in your company."), en);
         if (!DownloadAllowed(app, url)) return ChatReply.Of(L("Bu dosya adresinden indirme yapılamıyor.", "Downloads from this file address are not allowed."), en);
         byte[] bytes;
@@ -529,6 +534,7 @@ public sealed partial class ChatFeatures
     public async Task<ChatReply> ExpenseConfirmAsync(ChatApp app, Guid emp, string value, string? amountText, string? dateText, string? categoryText, bool en, CancellationToken ct)
     {
         string L(string a, string b) => en ? b : a;
+        if (ChatFeatureCatalog.ModuleOff("expense")) return ChatReply.Of(ChatFeatureCatalog.ModuleOffText(en), en) with { Replace = true };
         if (!Guid.TryParse(value, out var id) || await PendingGetAsync(app.TenantSlug, emp, id, ct) is not { Kind: "expense" } p)
             return ChatReply.Of(L("Bu öneri artık geçerli değil; fişi yeniden gönderin.", "This suggestion is no longer valid; send the receipt again."), en) with { Replace = true };
         decimal? amount = amountText is not null ? ReceiptParser.ParseAmount(amountText)

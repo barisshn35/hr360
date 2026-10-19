@@ -7,6 +7,7 @@ using GovernanceService.Data;
 using GovernanceService.Infrastructure;
 using GovernanceService.Models;
 using GovernanceService.Tenancy;
+using HR360.Platform;
 
 namespace GovernanceService.Controllers;
 
@@ -277,19 +278,29 @@ public class SagaController : AppController
         """, r => new Row(r.GetGuid(0), r.GetString(1), r.Ts(2), r.GetString(3), r.GetString(4), r.Str(5), r.GetString(6), r.GuidOrNull(7), r.GuidOrNull(8), r.Str(9)),
         ct, Tenant, applicationId);
 
+    /// <summary>Sagada aşama. İşe alıştırma modülü kapalıysa plan adımı atlanır: çalışan kaydı açılınca tamamdır.</summary>
+    public static string Stage(string status, bool hasEmployee, bool hasPlan, bool onboarding) =>
+        status == "Offer" ? "Offer" : !hasEmployee ? "AwaitingEmployee" : !hasPlan && onboarding ? "AwaitingOnboarding" : "Completed";
+
+    /// <summary>Saga işe alım verisi üzerinde çalışır; işe alım modülü kapalıysa uç yok sayılır (gateway ile aynı yanıt).</summary>
+    public static string? MissingModule() => Modules.IsEnabled(Modules.Recruitment) ? null : Modules.Recruitment;
+
+    private IActionResult ModuleNotInstalled(string module) => NotFound(new { code = "module_not_installed", module });
+
     private static object Shape(Row r)
     {
-        var stage = r.Status == "Offer" ? "Offer" : r.EmployeeId is null ? "AwaitingEmployee" : r.PlanId is null ? "AwaitingOnboarding" : "Completed";
+        var onboarding = Modules.IsEnabled(Modules.Onboarding);
+        var stage = Stage(r.Status, r.EmployeeId is not null, r.PlanId is not null, onboarding);
         var days = r.ChangedAt is null ? 0 : (int)(DateTime.UtcNow - r.ChangedAt.Value).TotalDays;
         return new
         {
             r.ApplicationId, candidate = r.Candidate, email = r.Email, posting = r.Posting, applicationStatus = r.Status, stage,
             steps = new[]
             {
-                new { key = "offer", label = "Teklif", done = true },
-                new { key = "hired", label = "İşe alındı", done = r.Status == "Hired" },
-                new { key = "employee", label = "Çalışan kaydı", done = r.EmployeeId != null },
-                new { key = "onboarding", label = "Onboarding planı", done = r.PlanId != null },
+                new { key = "offer", label = "Teklif", done = true, skipped = false },
+                new { key = "hired", label = "İşe alındı", done = r.Status == "Hired", skipped = false },
+                new { key = "employee", label = "Çalışan kaydı", done = r.EmployeeId != null, skipped = false },
+                new { key = "onboarding", label = "Onboarding planı", done = r.PlanId != null, skipped = !onboarding && r.PlanId == null },
             },
             r.EmployeeId, onboardingPlanId = r.PlanId, onboardingStatus = r.PlanStatus, daysInStage = days,
             stuck = stage is "AwaitingEmployee" or "AwaitingOnboarding" && days >= 2,
@@ -299,6 +310,7 @@ public class SagaController : AppController
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
     {
+        if (MissingModule() is { } m) return ModuleNotInstalled(m);
         var rows = (await LoadAsync(null, ct)).Select(Shape).ToList();
         return Ok(rows);
     }
@@ -308,6 +320,7 @@ public class SagaController : AppController
     [HttpPost("{applicationId:guid}/advance")]
     public async Task<IActionResult> Advance(Guid applicationId, AdvanceInput body, CancellationToken ct)
     {
+        if (MissingModule() is { } m) return ModuleNotInstalled(m);
         var row = (await LoadAsync(applicationId, ct)).FirstOrDefault();
         if (row is null) return NotFound();
         if (row.Status != "Hired") return BadRequest(new { message = "Önce başvuru İşe alım ekranında \"İşe alındı\" yapılmalı." });
@@ -331,7 +344,9 @@ public class SagaController : AppController
         }
         else log.Add("Çalışan kaydı zaten var");
 
-        if (row.PlanId is null)
+        if (row.PlanId is null && !Modules.IsEnabled(Modules.Onboarding))
+            log.Add("Onboarding planı atlandı (işe alıştırma modülü bu kurulumda açık değil)");
+        else if (row.PlanId is null)
         {
             var req = new HttpRequestMessage(HttpMethod.Post, (Environment.GetEnvironmentVariable("ONBOARDING_SERVICE_URL") ?? "http://onboarding-service:8080") + "/api/onboarding-plans")
             { Content = JsonContent.Create(new { employeeId = empId, startDate = start, templateName = "Standart işe giriş", useDefaultTasks = true }) };

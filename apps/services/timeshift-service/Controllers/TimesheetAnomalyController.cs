@@ -78,6 +78,8 @@ public class TimesheetAnomalyController : ControllerBase
         var rows = BuildWeeks(tenant, entries, today);
         if (rows.Count == 0) return Ok(new { available = true, items = Array.Empty<object>(), weeksEvaluated = Array.Empty<string>() });
 
+        // Yapay zekâ modülü kapalı: ml-inference'ı beklemeden aynı hata yanıtı.
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return StatusCode(503, new { message = "Model servisine ulaşılamadı" });
         try
         {
             var client = _http.CreateClient();

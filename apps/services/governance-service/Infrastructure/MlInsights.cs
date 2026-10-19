@@ -13,6 +13,8 @@ public static class MlCall
     public static async Task<(int Status, string? Body)> PostAsync(IHttpClientFactory http, string path, object body,
         string? authorization, TimeSpan timeout, CancellationToken ct)
     {
+        // Yapay zekâ modülü kapalı: ml-inference yok, zaman aşımı beklenmeden hata sonucu.
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return (0, null);
         try
         {
             var client = http.CreateClient();

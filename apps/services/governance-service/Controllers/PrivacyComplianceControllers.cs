@@ -414,6 +414,7 @@ public class PrivacyComplianceController : AppController
         var threshold = await ModelGovernanceController.ThresholdAsync(Db, Tenant, ct) ?? 0.5m;
         async Task<(int Status, JsonElement? Body)> Call(string path)
         {
+            if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) throw new HttpRequestException("ml modülü bu kurulumda kapalı");
             using var req = new HttpRequestMessage(HttpMethod.Post, $"{MlBase}{path}") { Content = JsonContent.Create(new { features = body.Features, threshold }) };
             if (AuthenticationHeaderValue.TryParse(Request.Headers.Authorization.ToString(), out var auth)) req.Headers.Authorization = auth;
             using var res = await client.SendAsync(req, ct);

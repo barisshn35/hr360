@@ -651,7 +651,22 @@ public sealed class ChatService
     public const string HelpEn = "Commands: *approvals* (awaiting your decision) · *balance* (your leave balance) · *request leave* · *cancel leave* · *summary* · *on leave* · *whereabouts* · *pending* · *me*"
         + " · *expense* (send a receipt photo) · *thanks @person message* · *desk* · *my shifts* · *swaps* · *clock in* / *clock out* · *announcements* · *documents* · *payslip* · *hr case* · *forget me*."
         + " You can also ask a question: \"when is the next public holiday?\"";
-    public static string HelpOf(bool en) => en ? HelpEn : Help;
+    public static string HelpOf(bool en) => HelpFor(en ? HelpEn : Help, en);
+
+    /// <summary>Yardım metninden kurulumda kapalı modüllerin komutları çıkarılır (hepsi açıkken metin aynen kalır).</summary>
+    public static string HelpFor(string help, bool en)
+    {
+        (string Feature, string Tr, string En)[] parts =
+        [
+            ("expense", " · *masraf* (fiş fotoğrafı gönderin)", " · *expense* (send a receipt photo)"),
+            ("shifts", " · *vardiyam* · *takas*", " · *my shifts* · *swaps*"),
+            ("clock", " · *geldim* / *çıktım*", " · *clock in* / *clock out*"),
+            ("payslip", " · *bordrom*", " · *payslip*"),
+        ];
+        foreach (var p in parts)
+            if (ChatFeatureCatalog.ModuleOff(p.Feature)) help = help.Replace(en ? p.En : p.Tr, "");
+        return help;
+    }
 
     public async Task<ChatReply> CommandAsync(GovernanceDbContext db, ChatApp app, ChatIdentity who, string? input, CancellationToken ct,
         HrAssistant? assistant = null)
@@ -701,6 +716,10 @@ public sealed class ChatService
         var known = cmd is "" or "help" or "me";
         if (!known && active && !Trusted(app, who))
             return Done(T(LinkPrompt(await LinkUrlAsync(db, who, TimeSpan.FromHours(24), ct), en: en)), "unverified");
+
+        // Kurulumda kapalı modülün komutu (HR360_MODULES).
+        if (ChatFeatureCatalog.ModuleOff(ChatFeatureCatalog.FeatureOf(cmd)))
+            return Done(T(ChatFeatureCatalog.ModuleOffText(en)), "module_off");
 
         // BG20: kiracının bu uygulamada kapattığı komut.
         if (ChatFeatureCatalog.FeatureOf(cmd) is { } feature && app.DisabledFeatures.Contains(feature))

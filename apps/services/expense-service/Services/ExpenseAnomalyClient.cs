@@ -97,6 +97,8 @@ public sealed class ExpenseAnomalyClient
     public async Task<(bool Checked, int Flags)> CheckAsync(string tenant, Guid employeeId, IReadOnlyList<ExpenseItem> items,
         IEnumerable<HistoryRow> history, string? authorization, CancellationToken ct)
     {
+        // Yapay zekâ modülü kapalı: denetim yapılmaz, gönderim sürer.
+        if (!HR360.Platform.Modules.IsEnabled(HR360.Platform.Modules.Ml)) return (false, 0);
         try
         {
             var client = _http.CreateClient();
