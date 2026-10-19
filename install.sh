@@ -90,6 +90,15 @@ Kullanim: ./install.sh [secenekler]
                           (deneme/sunum icin; uretimde kullanmayin). Varsayilan: kurulmaz.
   --no-signup             Herkese acik sirket kaydini kapat (giris ekranindaki "Sirketinizi
                           kaydedin"); sirketleri yalnizca platform.admin olusturur.
+  --edition TUR           full (Tam: tum moduller) | lite (Hafif: cekirdek + puantaj + bordro) |
+                          custom (--modules ile). Varsayilan: sorulur; --yes ile bellek 8 GB'tan
+                          azsa lite, degilse full.
+  --modules LISTE         Acik isteğe bagli moduller (virgullu): recruitment, onboarding, timeshift,
+                          performance, learning, compensation, ml, expense. Sonradan: Platform > Bakim >
+                          Moduller ya da scripts/modules.sh.
+  --tenancy KIP           single (tek sirket; onerilen) | multi (cok sirket: barindirma, holding, buro).
+                          Varsayilan: Hafif'te single, Tam'da sorulur (--yes ile multi).
+  --company AD            Tek sirket kipinde sirketin adi.
   -y, --yes               Hicbir soru sorma; verilmeyenler icin varsayilanlar kullanilir,
                           sirlar rastgele uretilir. Mevcut kurulumda guncelleme yapilir.
   -h, --help              Bu yardim.
@@ -100,7 +109,7 @@ ASSUME_YES=0
 OPT_URL=""; OPT_DOMAIN=""; OPT_HTTP_PORT=""; OPT_EMAIL=""; OPT_TLS=""; OPT_CERT=""; OPT_KEY=""
 OPT_SMTP_FROM=""; OPT_SMTP_HOST=""; OPT_SMTP_PORT=""; OPT_SMTP_USER=""; OPT_SMTP_NAME=""
 OPT_SMTP_PASSWORD="${HR360_SMTP_PASSWORD:-}"; OPT_SMTP_TEST=1; OPT_KC_ADMIN=""
-OPT_DEMO=""; OPT_SIGNUP=""; OPT_MAIL_MODE=""
+OPT_DEMO=""; OPT_SIGNUP=""; OPT_MAIL_MODE=""; OPT_EDITION=""; OPT_MODULES=""; OPT_TENANCY=""; OPT_COMPANY=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --domain) OPT_DOMAIN="${2:-}"; shift 2 ;;
@@ -122,6 +131,10 @@ while [ $# -gt 0 ]; do
     --keycloak-admin) OPT_KC_ADMIN="${2:-}"; shift 2 ;;
     --demo) OPT_DEMO=true; shift ;;
     --no-signup) OPT_SIGNUP=false; shift ;;
+    --edition) OPT_EDITION="${2:-}"; shift 2 ;;
+    --modules) OPT_MODULES="${2:-}"; shift 2 ;;
+    --tenancy) OPT_TENANCY="${2:-}"; shift 2 ;;
+    --company) OPT_COMPANY="${2:-}"; shift 2 ;;
     -y|--yes) ASSUME_YES=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Bilinmeyen secenek: $1 (yardim: ./install.sh --help)"; exit 2 ;;
@@ -138,6 +151,19 @@ if [ -n "$OPT_DOMAIN" ]; then
   OPT_HTTP_PORT=80
 fi
 case "$OPT_TLS" in ""|letsencrypt|self-signed|none|cert) ;; *) echo "Gecersiz --tls: $OPT_TLS"; exit 2 ;; esac
+case "$OPT_EDITION" in ""|full|lite|custom) ;; *) echo "Gecersiz --edition: $OPT_EDITION (full|lite|custom)"; exit 2 ;; esac
+case "$OPT_TENANCY" in ""|single|multi) ;; *) echo "Gecersiz --tenancy: $OPT_TENANCY (single|multi)"; exit 2 ;; esac
+if [ -n "$OPT_MODULES" ]; then
+  [ -z "$OPT_EDITION" ] && OPT_EDITION=custom
+  [ "$OPT_EDITION" = custom ] || { echo "--modules yalnizca --edition custom ile (ya da tek basina) verilir."; exit 2; }
+  for _m in ${OPT_MODULES//,/ }; do
+    case "$_m" in recruitment|onboarding|timeshift|performance|learning|compensation|ml|expense) ;;
+      *) echo "Bilinmeyen modul: $_m"; exit 2 ;; esac
+  done
+fi
+if [ -n "$OPT_COMPANY" ] && ! [[ "$OPT_COMPANY" =~ ^[^\'\"\`\$]{2,80}$ ]]; then
+  echo "Gecersiz sirket adi (2-80 karakter; tirnak ve \$ olmadan)."; exit 2
+fi
 if [ -n "$OPT_EMAIL" ] && ! [[ "$OPT_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$ ]]; then
   echo "Gecersiz e-posta: $OPT_EMAIL"; exit 2
 fi
@@ -490,7 +516,8 @@ fi
 # Kaynak kontrolu: Docker'in kullanabildigi bellek ve bulundugumuz diskteki bos alan.
 mem_bytes="$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo 0)"
 if [ "${mem_bytes:-0}" -gt 0 ] && [ "$mem_bytes" -lt $((7 * 1024 * 1024 * 1024)) ]; then
-  warn "Docker'in kullanabildigi bellek $((mem_bytes / 1024 / 1024 / 1024)) GB; en az 8 GB (onerilen 16 GB) gerekir."
+  warn "Docker'in kullanabildigi bellek $((mem_bytes / 1024 / 1024 / 1024)) GB; Tam kurulum icin en az 8 GB (onerilen 16 GB),"
+  warn "Hafif kurulum (cekirdek + puantaj + bordro) icin en az 6 GB gerekir."
   if [ "$OS_KERNEL" = "Darwin" ] || [ "$IS_WSL" = 1 ]; then
     warn "Docker Desktop: Settings > Resources > Memory (WSL'de ayrica %UserProfile%\\.wslconfig)."
   fi
@@ -618,7 +645,10 @@ if [ -f .env ]; then
       docker compose exec -T postgres psql -U hr360admin -d postgres -c "CREATE DATABASE keycloak OWNER hr360admin;"
     fi
 
-    docker compose up -d --build
+    # shellcheck disable=SC2046
+    docker compose build $( ENV_FILE=.env; . scripts/lib/modules.sh; mod_build_targets )
+    docker compose up -d
+    scripts/modules.sh sync >/dev/null 2>&1 || true
 
     # Guvenlik dalgasi 2A: tenant-service eski kurulumlarda Keycloak yonetim API'sine master
     # yonetici parolasiyla giriyordu. Servis hesabi bir kez olusturulur (anahtar .env'e eklenir,
@@ -770,6 +800,71 @@ if [ -z "$ADMIN_EMAIL" ]; then
     warn "Gecerli bir e-posta adresi girin (ya da bos birakin)."
   done
 fi
+
+# Kurulum turu (moduller) ve sirket kipi. Sonradan Platform > Bakim'dan degistirilebilir.
+LITE_MODULES="timeshift,compensation,expense"
+EDITION="$OPT_EDITION"
+if [ -z "$EDITION" ]; then
+  if [ "$ASSUME_YES" = 1 ]; then
+    if [ "${mem_bytes:-0}" -gt 0 ] && [ "$mem_bytes" -lt $((7 * 1024 * 1024 * 1024)) ]; then EDITION=lite; else EDITION=full; fi
+  else
+    echo ""
+    echo "Kurulum turu:"
+    echo "  [1] Tam    - tum moduller (onerilen bellek 8 GB)"
+    echo "  [2] Hafif  - cekirdek + puantaj + bordro (onerilen bellek 6 GB)"
+    echo "  [3] Ozel   - modulleri tek tek secin"
+    def_ed=1; if [ "${mem_bytes:-0}" -gt 0 ] && [ "$mem_bytes" -lt $((7 * 1024 * 1024 * 1024)) ]; then def_ed=2; fi
+    ask ed_ans "Seciminiz [$def_ed]: "
+    case "${ed_ans:-$def_ed}" in 2) EDITION=lite ;; 3) EDITION=custom ;; *) EDITION=full ;; esac
+  fi
+fi
+case "$EDITION" in
+  full) MODULES_SEL=all ;;
+  lite) MODULES_SEL="$LITE_MODULES" ;;
+  custom)
+    MODULES_SEL="$OPT_MODULES"
+    if [ -z "$OPT_MODULES" ] && [ "$ASSUME_YES" != 1 ]; then
+      MODULES_SEL=""
+      echo "Cekirdek her zaman kurulur: calisanlar, organizasyon, izin, onaylar, bildirimler, belgeler, KVKK."
+      for _m in "timeshift|Puantaj ve vardiya|E" "compensation|Ucret ve bordro|E" "expense|Masraf ve seyahat ekranlari|E" \
+                "recruitment|Ise alim|H" "onboarding|Ise alistirma ve demirbas|H" "performance|Performans|H" \
+                "learning|Egitim|H" "ml|Yapay zeka (ek ~1,8 GB bellek)|H"; do
+        IFS='|' read -r _id _ad _def <<< "$_m"
+        ask _a "  ${_ad} kurulsun mu? [$( [ "$_def" = E ] && echo E/h || echo e/H )]: "
+        _a="${_a:-$_def}"
+        [[ "$_a" =~ ^[eEyY] ]] && MODULES_SEL="${MODULES_SEL:+$MODULES_SEL,}$_id"
+      done
+    fi ;;
+esac
+TENANCY="$OPT_TENANCY"
+if [ -z "$TENANCY" ]; then
+  if [ "$ASSUME_YES" = 1 ]; then
+    if [ "$EDITION" = full ]; then TENANCY=multi; else TENANCY=single; fi
+  else
+    echo ""
+    echo "Sirket kipi:"
+    echo "  [1] Tek sirket  - bu kurulumu yalnizca kendi sirketiniz kullanir (onerilen)"
+    echo "  [2] Cok sirket  - birden cok sirket (barindirma, holding, muhasebe/bordro burosu)"
+    ask ten_ans "Seciminiz [1]: "
+    case "${ten_ans:-1}" in 2) TENANCY=multi ;; *) TENANCY=single ;; esac
+  fi
+fi
+COMPANY_NAME="$OPT_COMPANY"
+if [ "$TENANCY" = single ]; then
+  # Tek sirkette herkese acik sirket kaydi anlamsiz: kapali.
+  OPT_SIGNUP=false
+  _tries=0
+  # Girdi biterse (EOF) ya da 3 gecersiz denemeden sonra varsayilan ad kullanilir; sonsuz dongu olmaz.
+  while [ -z "$COMPANY_NAME" ] && [ "$ASSUME_YES" != 1 ] && [ "$_tries" -lt 3 ]; do
+    _tries=$((_tries + 1))
+    ask COMPANY_NAME "Sirketinizin adi: "
+    if [ -n "$COMPANY_NAME" ] && ! [[ "$COMPANY_NAME" =~ ^[^\'\"\`\$]{2,80}$ ]]; then
+      warn "2-80 karakter girin (tirnak ve \$ olmadan)."; COMPANY_NAME=""
+    fi
+  done
+  COMPANY_NAME="${COMPANY_NAME:-Sirketim}"
+fi
+info "Kurulum: $( case "$EDITION" in full) echo Tam ;; lite) echo Hafif ;; *) echo Ozel ;; esac ) (moduller: ${MODULES_SEL:-yalniz cekirdek}), $( [ "$TENANCY" = single ] && echo "tek sirket: $COMPANY_NAME" || echo "cok sirket" )"
 
 # Demo verisi ve herkese acik sirket kaydi. Uretimde demo onerilmez (varsayilan: Hayir).
 HR360_DEMO="${OPT_DEMO}"
@@ -1086,6 +1181,11 @@ HR360_DEMO=${HR360_DEMO}
 # Herkese acik sirket kaydi (giris ekranindaki "Sirketinizi kaydedin"); install.sh --no-signup = false.
 PUBLIC_SIGNUP_ENABLED=${PUBLIC_SIGNUP_ENABLED}
 
+# Sirket kipi (install.sh --tenancy): single = tek sirket (sirket kurulumda olusur, sirket listesi ve kayit
+# gizli), multi = cok sirket. Tek sirketten cok sirkete Platform > Bakim'dan gecilir.
+HR360_TENANCY=${TENANCY}
+HR360_COMPANY_NAME='${COMPANY_NAME}'
+
 # demo.admin parolasi (yalnizca demo verisi kuruluysa; demo sirketinin yoneticisi).
 DEMO_ADMIN_PASSWORD=${DEMO_ADMIN_PASSWORD}
 # Platform yoneticisi (platform.admin): tum kiracilar, sirket olusturma. Kiraciya bagli degildir.
@@ -1117,6 +1217,8 @@ DKIM_SELECTOR=${DKIM_SELECTOR}
 COMPOSE_PROFILES=mailer
 EOF
 fi
+# Isteğe bagli moduller (HR360_MOD_* + HR360_MODULES): kapalilar derlenmez ve baslatilmaz.
+( ENV_FILE=.env; . scripts/lib/modules.sh; mod_apply_selection "${MODULES_SEL:-none}" )
 info ".env yazildi."
 
 # --- 4) Keycloak realm sablonunu doldur ------------------------------------
@@ -1203,7 +1305,11 @@ done
 scripts/migrate.sh >/dev/null || { echo "Goc betikleri uygulanamadi (scripts/migrate.sh)"; exit 1; }
 
 info "Imajlar build ediliyor ve servisler baslatiliyor (ilk calistirmada birkac dakika surebilir)..."
-docker compose up -d --build
+# Yalnizca acik modullerin imajlari derlenir (scripts/lib/modules.sh).
+# shellcheck disable=SC2046
+docker compose build $( ENV_FILE=.env; . scripts/lib/modules.sh; mod_build_targets )
+docker compose up -d
+scripts/modules.sh sync >/dev/null 2>&1 || true
 
 info "PostgreSQL'in hazir olmasi bekleniyor..."
 pg_tries=0
@@ -1323,7 +1429,11 @@ if [ "$MAIL_MODE" = self ]; then
   echo "  Uyari: yeni bir IP'den ilk gunlerde az sayida e-posta gonderin (isinma); Gmail/Outlook"
   echo "  itibar olusana kadar e-postalari istenmeyen klasorune atabilir."
 fi
-echo "MLflow:           http://localhost:5000   (yalnizca sunucunun kendisinden / SSH tuneliyle)"
+( ENV_FILE=.env; . scripts/lib/modules.sh; mod_enabled ml ) && \
+  echo "MLflow:           http://localhost:5000   (yalnizca sunucunun kendisinden / SSH tuneliyle)"
+echo "Kurulum turu:     $( case "$EDITION" in full) echo Tam ;; lite) echo Hafif ;; *) echo Ozel ;; esac ); acik moduller: $(grep '^HR360_MODULES=' .env | cut -d= -f2- | sed 's/^$/yalniz cekirdek/')"
+echo "                  Degistirmek: Platform > Bakim > Moduller (ya da scripts/modules.sh)"
+echo "Sirket kipi:      $( [ "$TENANCY" = single ] && echo "tek sirket ($COMPANY_NAME)" || echo "cok sirket" )"
 echo ""
 echo "Dogrulama:"
 printf '%s\n' "$verify_out" | sed 's/^/  /'

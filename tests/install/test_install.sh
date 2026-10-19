@@ -223,9 +223,9 @@ check "e-posta yok: platform.admin varsayilan adresi" [ "$(user_email "$d" platf
 
 echo "5) Sorulu kurulum: yanlis parola -> yeniden sorulur -> dogru parola"
 d="$(new_copy ask)"
-# Sira: adres, Keycloak paneli (Enter = alan adinda ayri port), yonetici e-postasi, demo (e),
-# herkese acik kayit (h), HTTPS, e-posta kipi (Enter = 1), gonderen adres...
-answers=$'hr.example.com\n\nadmin@example.com\ne\nh\n\n\nik@sirket.com.tr\n\n\n\nyanlis\n\n1\n\n\n\ndogru\nIK Ekibi\n\n\n\n\n\n\n\n'
+# Sira: adres, Keycloak paneli (Enter = alan adinda ayri port), yonetici e-postasi, kurulum turu (1 = Tam),
+# sirket kipi (2 = cok sirket), demo (e), herkese acik kayit (h), HTTPS, e-posta kipi (Enter = 1), gonderen adres...
+answers=$'hr.example.com\n\nadmin@example.com\n1\n2\ne\nh\n\n\nik@sirket.com.tr\n\n\n\nyanlis\n\n1\n\n\n\ndogru\nIK Ekibi\n\n\n\n\n\n\n\n'
 out="$(printf '%s' "$answers" | run_in ask "$d" FAKE_DNS_A=203.0.113.10 FAKE_LE=ok FAKE_MX=sirket-com-tr.mail.protection.outlook.com \
         FAKE_SMTP_BAD_PASSWORD=yanlis ./install.sh 2>&1)"; rc=$?
 check "kurulum basarili" [ "$rc" = 0 ]
@@ -285,6 +285,24 @@ check "PUBLIC_SIGNUP_ENABLED=false" [ "$(envv "$d" PUBLIC_SIGNUP_ENABLED)" = fal
 check "ozet: demo girisi ve kayit kapali" eval 'grep -q "Demo giris:" <<< "$out" && grep -q "Sirket kaydi:      kapali" <<< "$out"'
 check "HTTPS yok: panel ana adreste (open)" [ "$(envv "$d" KEYCLOAK_ADMIN_MODE)" = open ]
 
+echo "9b) Kurulum turu ve sirket kipi (--edition / --modules / --tenancy / --company)"
+d="$(new_copy lite)"
+out="$(run_in lite "$d" ./install.sh --url http://10.0.0.5 --edition lite --company "Acme Lojistik A.Ş." --yes 2>&1)"; rc=$?
+check "Hafif kurulum basarili" [ "$rc" = 0 ]
+check "Hafif: puantaj, bordro, masraf acik; digerleri 0" eval '[ "$(envv "$d" HR360_MODULES)" = "timeshift,compensation,expense" ] && [ "$(envv "$d" HR360_MOD_RECRUITMENT)" = 0 ] && [ "$(envv "$d" HR360_MOD_ML)" = 0 ] && [ -z "$(envv "$d" HR360_MOD_TIMESHIFT)" ]'
+check "Hafif: tek sirket, ad yazildi, kayit kapali" eval '[ "$(envv "$d" HR360_TENANCY)" = single ] && [ "$(envv "$d" HR360_COMPANY_NAME)" = "'\''Acme Lojistik A.Ş.'\''" ] && [ "$(envv "$d" PUBLIC_SIGNUP_ENABLED)" = false ]'
+check "ozet: kurulum turu ve sirket kipi" eval 'grep -q "Kurulum turu:     Hafif" <<< "$out" && grep -q "Sirket kipi:      tek sirket (Acme Lojistik A.Ş.)" <<< "$out"'
+d="$(new_copy custom)"
+out="$(run_in custom "$d" ./install.sh --url http://10.0.0.5 --modules recruitment,onboarding --tenancy multi --yes 2>&1)"; rc=$?
+check "Ozel: yalniz secilen moduller, cok sirket" eval '[ "$rc" = 0 ] && [ "$(envv "$d" HR360_MODULES)" = "recruitment,onboarding" ] && [ "$(envv "$d" HR360_TENANCY)" = multi ]'
+d="$(new_copy fullyes)"
+out="$(run_in fullyes "$d" ./install.sh --url http://10.0.0.5 --edition full --yes 2>&1)"; rc=$?
+check "Tam + --yes: tum moduller, cok sirket, HR360_MOD_ yok" eval '[ "$rc" = 0 ] && [ "$(envv "$d" HR360_MODULES)" = all ] && [ "$(envv "$d" HR360_TENANCY)" = multi ] && ! grep -q "^HR360_MOD_" "$d/.env"'
+run_in opts "$d" ./install.sh --modules bordro --yes >/dev/null 2>&1; check "bilinmeyen modul reddedilir (2)" [ $? = 2 ]
+run_in opts "$d" ./install.sh --edition mini --yes >/dev/null 2>&1; check "gecersiz --edition reddedilir (2)" [ $? = 2 ]
+run_in opts "$d" ./install.sh --tenancy tek --yes >/dev/null 2>&1; check "gecersiz --tenancy reddedilir (2)" [ $? = 2 ]
+run_in opts "$d" ./install.sh --company 'A"B' --yes >/dev/null 2>&1; check "tirnakli sirket adi reddedilir (2)" [ $? = 2 ]
+
 echo "10) Sunucu kendisi gondersin (--mail-mode=self, denetimler tamam)"
 d="$(new_copy self)"
 out="$(run_in self "$d" FAKE_DNS_A=203.0.113.10 FAKE_LE=ok FAKE_PORT25=ok FAKE_PTR=hr.example.com FAKE_DKIM=MIIBdkimtest \
@@ -314,13 +332,13 @@ check "DKIM okunamazsa uyari, DNS dosyasi yine yazildi" eval 'grep -q "DKIM anah
 
 echo "12) Sorulu kurulum: e-posta menusunden 'sunucu kendisi gondersin'"
 d="$(new_copy selfask)"
-# adres, panel, yonetici e-postasi, demo, kayit, HTTPS, e-posta kipi (2), gonderen (Enter), denetim sonucu (1 = iptal)
-answers=$'hr.example.com\n\nadmin@example.com\n\n\n\n2\n\n1\n\n\n\n\n\n\n\n\n\n'
+# adres, panel, yonetici e-postasi, kurulum turu (1), sirket kipi (2), demo, kayit, HTTPS, e-posta kipi (2), gonderen (Enter), denetim sonucu (1 = iptal)
+answers=$'hr.example.com\n\nadmin@example.com\n1\n2\n\n\n\n2\n\n1\n\n\n\n\n\n\n\n\n\n'
 out="$(printf '%s' "$answers" | run_in selfask "$d" FAKE_DNS_A=203.0.113.10 FAKE_LE=ok ./install.sh 2>&1)"; rc=$?
 check "menu gosterildi" grep -q "2) Sunucu kendisi gondersin (gelismis" <<< "$out"
 check "denetim basarisiz + iptal -> Mailpit" eval '[ "$rc" = 0 ] && [ "$(envv "$d" SMTP_HOST)" = "'\''mailpit'\''" ] && ! grep -q "^MAIL_MODE=" "$d/.env"'
 d="$(new_copy selfask2)"
-answers=$'hr.example.com\n\nadmin@example.com\n\n\n\n2\nik@example.com\n\n\n\n\n\n\n\n\n'
+answers=$'hr.example.com\n\nadmin@example.com\n1\n2\n\n\n\n2\nik@example.com\n\n\n\n\n\n\n\n\n'
 out="$(printf '%s' "$answers" | run_in selfask2 "$d" FAKE_DNS_A=203.0.113.10 FAKE_LE=ok FAKE_PORT25=ok FAKE_PTR=hr.example.com ./install.sh 2>&1)"; rc=$?
 check "denetimler tamam -> sunucunun kendi posta servisi, girilen gonderen" eval '[ "$rc" = 0 ] && [ "$(envv "$d" MAIL_MODE)" = self ] && [ "$(envv "$d" SMTP_FROM_ADDRESS)" = "'\''ik@example.com'\''" ]'
 d="$(new_copy ipask)"

@@ -93,3 +93,14 @@ mod_filter_services() {
   for s in "$@"; do [[ "$off" == *" $s "* ]] || out="$out $s"; done
   echo "${out# }"
 }
+
+# Derlenecek servisler: build bölümü olan ve kapalı olmayan (scale 0 değil) compose servisleri.
+mod_build_targets() {
+  docker compose config --format json 2>/dev/null | python3 -c '
+import json, sys
+try:
+    services = json.load(sys.stdin)["services"]
+except (ValueError, KeyError):
+    sys.exit(0)
+print(" ".join(n for n, s in services.items() if "build" in s and s.get("scale", 1) != 0))'
+}
