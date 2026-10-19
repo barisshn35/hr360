@@ -15,10 +15,14 @@ izinli komutları, doğrulanmış bağımsız değişkenlerle çalıştırır:
   rollback        scripts/update.sh rollback --yes
   restore         scripts/restore.sh backups/ARŞİV --yes [--only-db]
   db-isolation    scripts/db-isolation.sh ensure --recreate (servis rolleri + RLS; yalnızca açar)
+  pitr-enable     scripts/pitr.sh enable
+  pitr-disable    scripts/pitr.sh disable [--purge]
+  pitr-restore    scripts/pitr.sh restore --to "YYYY-AA-GG SS:DD" --yes (İstanbul saati)
+  pitr-cleanup    scripts/pitr.sh cleanup
 
 Sonuç hem veritabanına hem ops-logs/<iş>.json dosyasına yazılır: geri yükleme veritabanını değiştirdiği
-için iş kaydı kaybolursa sonraki turda dosyadan geri yazılır. Her turda sunucu durum özeti
-(sürüm, etiketler, yedekler, zamanlama, disk) platform_ops_status tablosuna yazılır.
+için iş kaydı kaybolursa dosyadan geri yazılır. Her turda sunucu durum özeti
+(sürüm, etiketler, yedekler, zamanlama, disk, anlık geri dönüş) platform_ops_status tablosuna yazılır.
 Tek seferde tek çalıştırıcı (dosya kilidi).
 """
 import datetime as dt
@@ -41,6 +45,9 @@ FINAL = ("Succeeded", "Failed", "Cancelled")
 TAG = re.compile(r"^v\d+\.\d+\.\d+$")
 ARCHIVE = re.compile(r"^hr360-[A-Za-z0-9_.-]+\.tar\.gz(\.enc)?$")
 AT = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+TARGET = re.compile(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", re.ASCII)  # fullmatch: sondaki satır sonu da reddedilir
+# Veritabanını değiştiren işler: sonrasında iş kuyruğu geri dönülen andaki hâlindedir.
+DB_REPLACING = ("restore", "pitr-restore")
 
 
 def now():
@@ -119,6 +126,62 @@ def security():
     }
 
 
+def parse_pitr(rc, out):
+    """scripts/pitr.sh status çıktısı (anahtar=değer satırları) → özet. Betik yoksa ya da postgres
+    çalışmıyorsa durum "unknown"."""
+    p = {"state": "unknown", "enabled": False, "walFiles": None, "walSize": None, "baseSize": None, "bases": [],
+         "oldestRecoverable": None, "lastArchivedWal": None, "lastArchivedAt": None, "failedCount": 0, "lastFailedWal": None,
+         "preRestore": []}
+    if rc != 0:
+        return p
+    states = {"acik": "on", "kapali": "off", "hazir-degil": "not-ready"}
+    for line in out.splitlines():
+        k, sep, v = line.strip().partition("=")
+        if not sep:
+            continue
+        v = v.strip()
+        if k == "durum":
+            p["state"] = states.get(v.split(" ", 1)[0], "unknown")
+        elif k == "wal_dosya" and v.isdigit():
+            p["walFiles"] = int(v)
+        elif k == "wal_boyut":
+            p["walSize"] = v or None
+        elif k == "temel_boyut":
+            p["baseSize"] = v or None
+        elif k == "temel":
+            m = re.match(r"^(\S+) bitis=(\S+)$", v)
+            if m:
+                p["bases"].append({"name": m.group(1), "finishedAt": m.group(2)})
+        elif k == "eski_veri":
+            name, _, size = v.partition(" ")
+            if name:
+                p["preRestore"].append({"name": name, "size": size.strip() or None})
+        elif k == "son_arsiv":
+            wal, _, at = v.partition(" ")
+            p["lastArchivedWal"] = None if wal in ("", "-") else wal
+            p["lastArchivedAt"] = None if at.strip() in ("", "-") else at.strip()
+        elif k == "hata_sayisi":
+            n, _, rest = v.partition(" ")
+            p["failedCount"] = int(n) if n.isdigit() else 0
+            if rest.startswith("son_hata="):
+                p["lastFailedWal"] = rest[len("son_hata="):].strip() or None
+    p["enabled"] = p["state"] == "on"
+    # Geri dönülebilecek en eski an: en eski temel yedeğin bitişi (ISO UTC; metin sırası = zaman sırası).
+    finished = sorted(b["finishedAt"] for b in p["bases"])
+    p["oldestRecoverable"] = finished[0] if finished else None
+    return p
+
+
+def pitr_status():
+    if not os.path.exists(os.path.join(ROOT, "scripts", "pitr.sh")):
+        return parse_pitr(1, "")
+    try:
+        r = subprocess.run(["scripts/pitr.sh", "status"], cwd=ROOT, capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return parse_pitr(1, "")
+    return parse_pitr(r.returncode, r.stdout)
+
+
 def snapshot():
     def read(p):
         try:
@@ -134,7 +197,7 @@ def snapshot():
     return {
         "version": read("VERSION"), "commit": commit, "commitDate": date, "tags": tags(), "backups": backups(),
         "backupStatus": bstatus, "updateStatus": ustatus, "diskFree": usage.free, "diskTotal": usage.total,
-        "host": os.uname().nodename, "runnerAt": now(), "security": security(),
+        "host": os.uname().nodename, "runnerAt": now(), "security": security(), "pitr": pitr_status(),
     }
 
 
@@ -177,6 +240,21 @@ def command(kind, args):
         if not (isinstance(a, str) and ARCHIVE.match(a) and os.path.exists(os.path.join(BACKUPS, a))):
             raise ValueError("geçersiz arşiv")
         return ["scripts/restore.sh", os.path.join("backups", a), "--yes"] + (["--only-db"] if args.get("onlyDb") is True else [])
+    if kind == "pitr-enable":
+        return ["scripts/pitr.sh", "enable"]
+    if kind == "pitr-disable":
+        return ["scripts/pitr.sh", "disable"] + (["--purge"] if args.get("purge") is True else [])
+    if kind == "pitr-restore":
+        t = args.get("target")
+        if not (isinstance(t, str) and TARGET.fullmatch(t)):
+            raise ValueError("geçersiz hedef an")
+        try:
+            dt.datetime.strptime(t, "%Y-%m-%d %H:%M")
+        except ValueError:
+            raise ValueError("geçersiz hedef an") from None
+        return ["scripts/pitr.sh", "restore", "--to", t, "--yes"]
+    if kind == "pitr-cleanup":
+        return ["scripts/pitr.sh", "cleanup"]
     raise ValueError("izinli olmayan iş türü")
 
 
@@ -209,6 +287,16 @@ def reconcile():
     # Kilit bizdeyken çalışan başka çalıştırıcı yoktur: kalan 'Running' işler yarıda kesilmiştir.
     psql("""UPDATE platform_ops_jobs SET "Status" = 'Failed', "FinishedAt" = now(),
             "Output" = coalesce("Output", '') || E'\\n[çalıştırıcı] iş yarıda kesildi' WHERE "Status" = 'Running'""")
+
+
+def after_db_replaced(job):
+    """Geri yükleme / anlık geri dönüş sonrası kuyruk geri dönülen andaki hâlindedir: o anda sırada ya da
+    çalışıyor görünen işler aslında bitmiştir. Dosyadan sonuçlar geri yazılır; bu işten önce istenip hâlâ
+    bekliyor görünen işler (ör. sonradan iptal edilmiş olanlar) yeniden çalıştırılmaz."""
+    reconcile()
+    psql("""UPDATE platform_ops_jobs SET "Status" = 'Cancelled', "FinishedAt" = now(),
+            "Output" = coalesce("Output", '') || E'\\n[çalıştırıcı] veritabanı geri döndürüldü; iş yeniden istenmeli'
+            WHERE "Status" = 'Pending' AND "RequestedAt" < :'reqat'::timestamptz""", reqat=job["requestedAt"])
 
 
 def claim():
@@ -260,6 +348,8 @@ def main():
             if not job:
                 break
             run(job)
+            if job["kind"] in DB_REPLACING:
+                after_db_replaced(job)
             save_snapshot()
     except Exception as e:  # noqa: BLE001 — cron günlüğüne yazılır, bir sonraki turda yeniden denenir
         print(f"{now()} ops-runner: {e}", file=sys.stderr)

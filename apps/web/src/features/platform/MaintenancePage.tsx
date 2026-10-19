@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArchiveRestore, CalendarClock, CheckCircle2, CircleAlert, DownloadCloud, HardDrive, History, Info, LoaderCircle, RefreshCw, ShieldCheck, Undo2, X } from 'lucide-react'
+import { ArchiveRestore, CalendarClock, CheckCircle2, CircleAlert, DownloadCloud, HardDrive, History, Info, LoaderCircle, RefreshCw, Rewind, ShieldCheck, Trash2, Undo2, X } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
@@ -11,18 +11,24 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
 import { useConfirm } from '@/components/ui/Confirm'
 import { useAction } from '@/features/shared/kit'
-import { newerThan, platformOpsApi, type OpsBackup, type OpsJob, type OpsKind, type OpsSecurity, type OpsStatus } from '@/api/platformOps'
+import { newerThan, pitrWindow, platformOpsApi, validPitrTarget, type OpsBackup, type OpsJob, type OpsKind, type OpsPitr, type OpsSecurity, type OpsStatus } from '@/api/platformOps'
 import { formatDateTime, formatRelativeToNow } from '@/lib/format'
-import { tx } from '@/lib/i18n'
+import { appLocale, tx } from '@/lib/i18n'
 
 const KEY = ['platform-ops'] as const
 const RESTORE_CONFIRM = 'GERİ YÜKLE'
 const ROLLBACK_CONFIRM = 'GERİ AL'
+const PITR_CONFIRM = 'GERİ DÖN'
+// Geri dönüş anı sunucuda İstanbul saatiyle yorumlanır; ekranda da o saatle gösterilir.
+const istanbulFmt = new Intl.DateTimeFormat(appLocale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })
+const istanbul = (iso: string | null) => (iso && !Number.isNaN(Date.parse(iso)) ? istanbulFmt.format(new Date(iso)) : '—')
 
 const kindLabels = (): Record<OpsKind, string> => ({
   backup: tx('Yedek al'), 'backup-verify': tx('Yedeği doğrula'), schedule: tx('Yedek zamanla'), unschedule: tx('Zamanlamayı kaldır'),
   'check-updates': tx('Güncellemeleri denetle'), update: tx('Güncelle'), rollback: tx('Önceki sürüme dön'), restore: tx('Yedekten geri yükle'),
   'db-isolation': tx('Veritabanı yalıtımını aç'),
+  'pitr-enable': tx('Anlık geri dönüşü aç'), 'pitr-disable': tx('Anlık geri dönüşü kapat'), 'pitr-restore': tx('Bir ana geri dön'),
+  'pitr-cleanup': tx('Eski veriyi sil'),
 })
 const STATUS: Record<OpsStatus, { tone: 'neutral' | 'info' | 'success' | 'danger'; label: () => string }> = {
   Pending: { tone: 'neutral', label: () => tx('Sırada') }, Running: { tone: 'info', label: () => tx('Çalışıyor') },
@@ -42,13 +48,15 @@ function useEnqueue(success: string, onDone?: () => void) {
 }
 
 /** Yazılı onay isteyen işlem (geri yükleme, geri alma). */
-function TypedConfirm({ title, note, word, children, onConfirm, onClose, pending }: {
+function TypedConfirm({ title, note, word, children, onConfirm, onClose, pending, ready = true }: {
   title: string; note: string; word: string; children?: React.ReactNode; onConfirm: () => void; onClose: () => void; pending: boolean
+  /** Diğer alanlar geçerli mi (ör. geri dönüş anı). */
+  ready?: boolean
 }) {
   const [text, setText] = useState('')
   return (
     <Modal open onClose={onClose} title={title} note={note}
-      footer={<><Button variant="outline" onClick={onClose}>{tx('Vazgeç')}</Button><Button variant="destructive" disabled={text !== word || pending} onClick={onConfirm}>{title}</Button></>}>
+      footer={<><Button variant="outline" onClick={onClose}>{tx('Vazgeç')}</Button><Button variant="destructive" disabled={text !== word || pending || !ready} onClick={onConfirm}>{title}</Button></>}>
       <div className="space-y-4">
         {children}
         <TextField label={tx('Onay için "{0}" yazın', [word])} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" />
@@ -85,6 +93,7 @@ function JobsPanel({ jobs, onOpen }: { jobs: OpsJob[]; onOpen: (id: string) => v
                   <span className="font-medium">{labels[j.kind]}</span>
                   {typeof j.args.ref === 'string' && <span className="ml-1.5 text-muted-foreground">{j.args.ref}</span>}
                   {typeof j.args.archive === 'string' && <span className="ml-1.5 truncate text-muted-foreground">{j.args.archive}</span>}
+                  {typeof j.args.target === 'string' && <span className="ml-1.5 text-muted-foreground">{j.args.target}</span>}
                   <span className="block text-[12px] text-muted-foreground">{formatRelativeToNow(j.requestedAt)}{j.requestedBy ? ` · ${j.requestedBy}` : ''}</span>
                 </button>
                 {j.status === 'Running' && <LoaderCircle className="size-4 animate-spin text-primary" />}
@@ -99,8 +108,104 @@ function JobsPanel({ jobs, onOpen }: { jobs: OpsJob[]; onOpen: (id: string) => v
   )
 }
 
+const PITR_TONE: Record<OpsPitr['state'], 'success' | 'neutral' | 'danger'> = { on: 'success', off: 'neutral', 'not-ready': 'neutral', unknown: 'danger' }
+
+/** Anlık geri dönüş (scripts/pitr.sh): aç/kapat, bir ana dön, geri dönüş öncesi veriyi sil. */
+export function PitrPanel({ pitr, lastJob, disabled, busy, onOpenJob }: {
+  pitr: OpsPitr; lastJob?: OpsJob; disabled: boolean; busy: boolean; onOpenJob: (id: string) => void
+}) {
+  const confirm = useConfirm()
+  const [mode, setMode] = useState<'disable' | 'restore' | null>(null)
+  const [purge, setPurge] = useState(false)
+  const [date, setDate] = useState('')
+  const [time, setTime] = useState('')
+  const close = () => setMode(null)
+  const run = useEnqueue(tx('İş sıraya alındı; çalıştırıcı bir dakika içinde başlatır.'), close)
+  const labels = kindLabels()
+  const w = pitrWindow(pitr.oldestRecoverable)
+  const target = `${date} ${time}`
+  const valid = validPitrTarget(target, w)
+  const stateLabel = { on: tx('Açık'), off: tx('Kapalı'), 'not-ready': tx('Hazır değil'), unknown: tx('Bilinmiyor') }[pitr.state]
+  const off = disabled || run.isPending
+
+  return (
+    <Panel>
+      <PanelHead title={<span className="flex items-center gap-2"><Rewind className="size-4 text-primary" />{tx('Anlık geri dönüş')}</span>}
+        note={tx('Gece yedeği bir güne kadar veri kaybıyla korur; bu özellik açıkken veritabanı son 5 dakikaya kadar herhangi bir ana döndürülebilir. Belgeler ve fotoğraflar geri dönmez.')}
+        action={<StatusBadge tone={PITR_TONE[pitr.state]}>{stateLabel}</StatusBadge>} />
+      <PanelBody className="space-y-4">
+        {pitr.state === 'not-ready' && <InfoNote>{tx('Veritabanı arşivlemeye hazır başlatılmamış; bir sonraki sürüm güncellemesinden sonra açılabilir.')}</InfoNote>}
+        {pitr.state === 'unknown' && <InfoNote>{tx('Durum okunamadı; veritabanı çalışmıyor olabilir.')}</InfoNote>}
+        <dl className="grid gap-3 text-[13px] sm:grid-cols-3">
+          <div><dt className="text-[12px] text-muted-foreground">{tx('Arşiv boyutu')}</dt><dd className="font-medium">{pitr.walSize ?? '—'}{pitr.baseSize ? ` + ${tx('temel yedek {0}', [pitr.baseSize])}` : ''}</dd></div>
+          <div className="sm:col-span-2"><dt className="text-[12px] text-muted-foreground">{tx('Geri dönülebilecek aralık (İstanbul saati)')}</dt>
+            <dd className="font-medium">{pitr.oldestRecoverable ? `${istanbul(pitr.oldestRecoverable)} – ${pitr.lastArchivedAt ? istanbul(pitr.lastArchivedAt) : tx('şimdi')}` : '—'}</dd></div>
+        </dl>
+        {pitr.failedCount > 0 && (
+          <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2.5 text-[13px] leading-relaxed">
+            {tx('Arşivleme hatası: {0} başarısız deneme (son: {1}). Disk doluluğunu ve veritabanı günlüğünü denetleyin; arşivlenemeyen değişikliklere geri dönülemez.', [String(pitr.failedCount), pitr.lastFailedWal ?? '—'])}
+          </p>
+        )}
+        {pitr.preRestore.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3 text-[13px]">
+            <span className="min-w-0 flex-1">{tx('Geri dönüşten önceki veri sunucuda saklanıyor: {0}. Geri dönüşü doğruladıktan sonra silin.', [pitr.preRestore.map((p) => `${p.name}${p.size ? ` (${p.size})` : ''}`).join(', ')])}</span>
+            <Button size="sm" variant="outline" disabled={off || busy} onClick={async () => {
+              if (await confirm({ title: tx('Eski veri silinsin mi?'), note: tx('Geri dönüşten önceki veri kopyaları kalıcı olarak silinir; geri dönüş artık geri alınamaz.'), action: tx('Sil') }))
+                run.mutate({ kind: 'pitr-cleanup' })
+            }}><Trash2 className="size-4" />{tx('Eski veriyi sil')}</Button>
+          </div>
+        )}
+        {lastJob && (
+          <button type="button" onClick={() => onOpenJob(lastJob.id)} className="flex w-full cursor-pointer items-center gap-2 text-left text-[12px] text-muted-foreground">
+            <span className="min-w-0 flex-1">{tx('Son işlem: {0} · {1}', [labels[lastJob.kind], formatRelativeToNow(lastJob.requestedAt)])}</span>
+            {lastJob.status === 'Running' && <LoaderCircle className="size-4 animate-spin text-primary" />}
+            <StatusBadge tone={STATUS[lastJob.status].tone}>{STATUS[lastJob.status].label()}</StatusBadge>
+          </button>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {pitr.state === 'off' && (
+            <Button disabled={off} onClick={async () => {
+              if (await confirm({ title: tx('Anlık geri dönüş açılsın mı?'), note: tx('Veritabanı değişiklikleri sürekli arşivlenir ve ilk temel yedek alınır. Arşiv veritabanı diskinde yer kaplar ve yazma yoğunluğuyla büyür.'), action: tx('Aç'), destructive: false }))
+                run.mutate({ kind: 'pitr-enable' })
+            }}>{tx('Aç')}</Button>
+          )}
+          {w && pitr.bases.length > 0 && (
+            <Button variant="outline" disabled={off || busy} onClick={() => { setDate(w.max.slice(0, 10)); setTime(w.max.slice(11)); setMode('restore') }}>
+              <Rewind className="size-4" />{tx('Bir ana dön')}
+            </Button>
+          )}
+          {pitr.state === 'on' && <Button variant="ghost" disabled={off} onClick={() => { setPurge(false); setMode('disable') }}>{tx('Kapat')}</Button>}
+        </div>
+      </PanelBody>
+
+      {mode === 'disable' && (
+        <Modal open onClose={close} title={tx('Anlık geri dönüş kapatılsın mı?')} note={tx('Yeni değişiklikler arşivlenmez; yalnızca gece yedeğine dönülebilir.')}
+          footer={<><Button variant="outline" onClick={close}>{tx('Vazgeç')}</Button><Button variant="destructive" disabled={run.isPending} onClick={() => run.mutate({ kind: 'pitr-disable', args: { purge } })}>{tx('Anlık geri dönüşü kapat')}</Button></>}>
+          <label className="flex cursor-pointer items-start gap-2 text-[13px]">
+            <Checkbox checked={purge} onCheckedChange={(v) => setPurge(v === true)} className="mt-0.5" />
+            <span>{tx('Arşivi de sil')}<span className="block text-[12px] text-muted-foreground">{tx('Arşiv ve temel yedekler silinir, disk açılır; daha önceki anlara artık geri dönülemez.')}</span></span>
+          </label>
+        </Modal>
+      )}
+      {mode === 'restore' && w && (
+        <TypedConfirm title={tx('Bir ana dön')} word={PITR_CONFIRM} pending={run.isPending} ready={valid} onClose={close}
+          note={tx('Tüm veritabanları seçilen ana döndürülür. O andan sonraki tüm değişiklikler kaybolur; servisler yeniden başlatılır ve uygulama birkaç dakika erişilemez.')}
+          onConfirm={() => run.mutate({ kind: 'pitr-restore', args: { target }, confirm: PITR_CONFIRM })}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField label={tx('Tarih')} type="date" min={w.min.slice(0, 10)} max={w.max.slice(0, 10)} value={date} onChange={(e) => setDate(e.target.value)} />
+            <TextField label={tx('Saat (İstanbul)')} type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          </div>
+          <p className="text-[12px] text-muted-foreground">{tx('Geri dönülebilecek aralık: {0} – {1}', [w.min, w.max])}</p>
+          {!valid && date && time && <p className="text-[12px] text-destructive">{tx('Seçilen an geri dönülebilecek aralığın dışında.')}</p>}
+          <p className="text-[12px] text-muted-foreground">{tx('Belgeler ve fotoğraflar geri dönmez. Mevcut veri sunucuda saklanır; doğruladıktan sonra "Eski veriyi sil" ile silebilirsiniz.')}</p>
+        </TypedConfirm>
+      )}
+    </Panel>
+  )
+}
+
 /** Sunucu güvenlik duruşu: önerilen ayarların açık/kapalı durumu (değerler değil). */
-function SecurityPanel({ sec, disabled, onIsolate }: { sec: OpsSecurity; disabled: boolean; onIsolate: () => void }) {
+function SecurityPanel({ sec, pitr, disabled, onIsolate }: { sec: OpsSecurity; pitr?: OpsPitr; disabled: boolean; onIsolate: () => void }) {
   const [rlsOn, rlsAll] = sec.rlsTables.split('/').map((x) => Number(x) || 0)
   const isolated = !sec.dbIsolationOff && sec.dbRoles >= 15 && rlsAll > 0 && rlsOn === rlsAll
   const items: { ok: boolean; title: string; note: string; action?: React.ReactNode }[] = [
@@ -111,6 +216,8 @@ function SecurityPanel({ sec, disabled, onIsolate }: { sec: OpsSecurity; disable
     { ok: sec.tls, title: tx('HTTPS'), note: sec.tls ? tx('Trafik şifreli.') : tx('Uygulama şifresiz HTTP ile sunuluyor.') },
     { ok: sec.backupScheduled, title: tx('Otomatik yedek'), note: sec.backupScheduled ? tx('Günlük yedek zamanlanmış.') : tx('Zamanlanmış yedek yok; "Otomatik yedek" bölümünden zamanlayın.') },
     { ok: sec.backupEncrypted, title: tx('Yedek şifreleme'), note: sec.backupEncrypted ? tx('Yedekler şifreli alınır.') : tx('Yedekler şifresiz.') },
+    ...(pitr ? [{ ok: pitr.enabled, title: tx('Anlık geri dönüş'),
+      note: pitr.enabled ? tx('Açık: veritabanı son 5 dakikaya kadar herhangi bir ana döndürülebilir.') : tx('Kapalı: yalnızca gece yedeğine dönülebilir; "Anlık geri dönüş" bölümünden açın.') }] : []),
     { ok: sec.backupOffsite, title: tx('Sunucu dışı yedek kopyası'), note: sec.backupOffsite ? tx('Yedekler ayrıca dış depoya gönderilir.') : tx('Yedekler yalnızca bu sunucuda; sunucu kaybında yedek de kaybolur.') },
     { ok: sec.redisPassword, title: tx('Önbellek parolası'), note: sec.redisPassword ? tx('Önbellek parolayla korunuyor.') : tx('Önbellek parolasız.') },
     { ok: sec.monitoring, title: tx('İzleme ve alarmlar'), note: sec.monitoring ? tx('Ölçümler toplanıyor, alarmlar açık.') : tx('İzleme kapalı; servis çökmesi ya da disk dolması bildirilmez.') },
@@ -236,7 +343,9 @@ export function MaintenancePage() {
         </PanelBody>
       </Panel>
 
-      {s?.security && <SecurityPanel sec={s.security} disabled={disabled || busy} onIsolate={async () => {
+      {s?.pitr && <PitrPanel pitr={s.pitr} lastJob={jobs.data?.find((j) => j.kind.startsWith('pitr-'))} disabled={disabled} busy={busy} onOpenJob={setOutput} />}
+
+      {s?.security && <SecurityPanel sec={s.security} pitr={s.pitr} disabled={disabled || busy} onIsolate={async () => {
         if (await confirm({ title: tx('Veritabanı yalıtımı açılsın mı?'), note: tx('Her servis kendi rolüne geçer ve satır düzeyi güvenlik açılır. Servisler yeniden başlatılır; uygulama bir dakika kadar erişilemez olabilir.'), action: tx('Aç'), destructive: false }))
           run.mutate({ kind: 'db-isolation' })
       }} />}

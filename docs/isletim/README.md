@@ -26,7 +26,7 @@ ve testler. Kurulum, güncelleme ve yedekleme özeti ana [README](../../README.m
 | Gece yedeği + haftalık geri yükleme testi | `scripts/backup.sh schedule --at 03:15 --keep 30 --verify-weekly`, kaldırmak için `unschedule`, durum `scripts/backup.sh status` |
 | Yedeği doğrula (geçici veritabanına geri yükler) | `scripts/backup.sh verify [arşiv]` |
 | Yedekten dön | `scripts/restore.sh backups/hr360-….tar.gz[.enc] [--with-env] [--only-db] [--yes]` |
-| Anlık geri dönüş (PITR: veritabanını geçmişteki bir dakikaya döndür) | `scripts/pitr.sh enable / status / disable [--purge]`; dönüş `scripts/pitr.sh restore --to "2026-10-19 14:05" --yes` (İstanbul saati), sonra `scripts/pitr.sh cleanup`. Ayrıntı aşağıda |
+| Anlık geri dönüş (PITR: veritabanını geçmişteki bir dakikaya döndür) | Arayüzden: **Platform › Bakım › Anlık geri dönüş** (aç/kapat, bir ana dön, eski veriyi sil). Sunucudan: `scripts/pitr.sh enable / status / disable [--purge]`; dönüş `scripts/pitr.sh restore --to "2026-10-19 14:05" --yes` (İstanbul saati), sonra `scripts/pitr.sh cleanup`. Ayrıntı aşağıda |
 
 Tüm ortam değişkenlerinin açıklamalı listesi: [.env.example](../../.env.example).
 
@@ -95,7 +95,7 @@ yeniden denenir. Paylaşımlı ya da kara listedeki bir IP'de bu kip uygun deği
 
 ## Anlık geri dönüş (PITR)
 
-Gece yedeği (`scripts/backup.sh`) bir günlük veri kaybına kadar korur. Yanlışlıkla toplu silme ya
+Arayüz: **Platform › Bakım › Anlık geri dönüş** (aşağıdaki işlemler bakım çalıştırıcısı üzerinden). Gece yedeği (`scripts/backup.sh`) bir günlük veri kaybına kadar korur. Yanlışlıkla toplu silme ya
 da hatalı bir içe aktarma gibi durumlarda veritabanını o işlemden **hemen önceki dakikaya** döndürmek
 için PostgreSQL WAL arşivi kullanılır:
 

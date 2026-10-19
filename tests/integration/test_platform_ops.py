@@ -2,7 +2,7 @@
 """Arayüzden bakım işleri: /api/tenant/platform/ops + scripts/ops-runner.py.
 
 Denetlenenler: yalnızca platform yöneticisi; iş türü ve bağımsız değişken doğrulaması (bilinmeyen
-tür, bilinmeyen etiket/yedek, yazılı onay); bekleyen iş iptali; yıkıcı iş sürmekte olan iş varken
+tür, bilinmeyen etiket/yedek, yazılı onay, anlık geri dönüş anı); bekleyen iş iptali; yıkıcı iş sürmekte olan iş varken
 kuyruğa alınmaz; çalıştırıcı izinli işi çalıştırıp çıktıyı yazar; istekler denetim kaydına girer.
 Gerçek güncelleme / geri yükleme / geri alma ÇALIŞTIRILMAZ (yalnızca doğrulama ve iptal).
 Test işleri, çıktı dosyaları sonda silinir.
@@ -58,6 +58,27 @@ try:
     check("PO2: yazılı onaysız geri alma reddedilir", code == 400, code)
     code, _ = api("platform", "POST", f"{B}/jobs", {"kind": "schedule", "args": {"at": "25:00", "keep": 14}})
     check("PO2: geçersiz saat reddedilir", code == 400, code)
+
+    # Anlık geri dönüş: yalnızca reddedilen istekler (canlı çalıştırıcı kuyruğa giren işi gerçekten çalıştırır).
+    pitr = st["snapshot"].get("pitr") or {}
+    check("PO6: durum özetinde anlık geri dönüş var", pitr.get("state") in ("on", "off", "not-ready", "unknown"), pitr.get("state"))
+    code, _ = api("platform", "POST", f"{B}/jobs", {"kind": "pitr-base", "args": {}})
+    check("PO6: izinli olmayan pitr türü reddedilir", code == 400, code)
+    for bad in ("2026-10-19", "2026-10-19T10:00", "2026-10-19 10:00:00", "2026-10-19 10:00; reboot", "$(id)", "2026-02-30 10:00", "2026-10-19 10:00\n"):
+        code, _ = api("platform", "POST", f"{B}/jobs", {"kind": "pitr-restore", "args": {"target": bad}, "confirm": "GERİ DÖN"})
+        check(f"PO6: geçersiz geri dönüş anı reddedilir ({bad!r})", code == 400, code)
+    code, _ = api("platform", "POST", f"{B}/jobs", {"kind": "pitr-restore", "args": {"target": 202610191000}, "confirm": "GERİ DÖN"})
+    check("PO6: metin olmayan an reddedilir", code == 400, code)
+    code, _ = api("platform", "POST", f"{B}/jobs", {"kind": "pitr-restore", "args": {"target": "2099-01-01 10:00"}, "confirm": "GERİ DÖN"})
+    check("PO6: gelecekteki an reddedilir", code == 400, code)
+    code, _ = api("platform", "POST", f"{B}/jobs", {"kind": "pitr-restore", "args": {"target": "2000-01-01 10:00"}, "confirm": "GERİ DÖN"})
+    check("PO6: geri dönülebilecek aralık dışı reddedilir", code == 400, code)
+    code, _ = api("platform", "POST", f"{B}/jobs", {"kind": "pitr-restore", "args": {"target": "2026-10-19 10:00"}})
+    check("PO6: yazılı onaysız geri dönüş reddedilir", code == 400, code)
+    code, _ = api("platform", "POST", f"{B}/jobs", {"kind": "pitr-restore", "args": {"target": "2026-10-19 10:00"}, "confirm": "GERİ YÜKLE"})
+    check("PO6: yanlış onay sözcüğü reddedilir", code == 400, code)
+    code, _ = api("ik", "POST", f"{B}/jobs", {"kind": "pitr-disable", "args": {"purge": True}})
+    check("PO6: İK anlık geri dönüşü kapatamaz", code == 403, code)
 
     code, j1 = api("platform", "POST", f"{B}/jobs", {"kind": "check-updates", "args": {}})
     check("PO3: iş kuyruğa alınır", code == 200 and j1["status"] == "Pending", (code, j1))

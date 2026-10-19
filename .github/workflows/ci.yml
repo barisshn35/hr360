@@ -195,6 +195,8 @@ jobs:
         run: tests/install/test_secrets.sh
       - name: Veritabani rolleri (uretilen GRANT listesi koda uygun)
         run: python3 tests/support/test_db_roles.py
+      - name: Bakim calistiricisi (izinli komutlar, PITR durum ozeti)
+        run: python3 tests/support/test_ops_runner.py
       - name: SQL semasi (bos Postgres'e uygulanir)
         run: |
           docker run -d --name pg -e POSTGRES_PASSWORD=ci -e POSTGRES_USER=hr360admin -e POSTGRES_DB=hr360_operational postgres:18-alpine

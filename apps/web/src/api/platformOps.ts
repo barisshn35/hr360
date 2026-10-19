@@ -4,6 +4,7 @@ import { apiFetch } from './client'
 const B = '/api/tenant/platform/ops'
 
 export type OpsKind = 'backup' | 'backup-verify' | 'schedule' | 'unschedule' | 'check-updates' | 'update' | 'rollback' | 'restore' | 'db-isolation'
+  | 'pitr-enable' | 'pitr-disable' | 'pitr-restore' | 'pitr-cleanup'
 export type OpsStatus = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Cancelled'
 
 export interface OpsBackup { name: string; size: number; createdAt: string; encrypted: boolean; manifest: boolean }
@@ -21,6 +22,23 @@ export interface OpsSecurity {
   monitoring: boolean
   publicSignup: boolean
 }
+/** Anlık geri dönüş (scripts/pitr.sh status). Zamanlar ISO UTC; boyutlar "180M" gibi. Eski çalıştırıcıda yoktur. */
+export interface OpsPitr {
+  state: 'on' | 'off' | 'not-ready' | 'unknown'
+  enabled: boolean
+  walFiles: number | null
+  walSize: string | null
+  baseSize: string | null
+  bases: { name: string; finishedAt: string }[]
+  /** Geri dönülebilecek en eski an: en eski temel yedeğin bitişi. */
+  oldestRecoverable: string | null
+  lastArchivedWal: string | null
+  lastArchivedAt: string | null
+  failedCount: number
+  lastFailedWal: string | null
+  /** Geri dönüşten önceki veri dizini kopyaları (silinene kadar disk kaplar). */
+  preRestore: { name: string; size: string | null }[]
+}
 export interface OpsSnapshot {
   version: string | null
   commit: string
@@ -34,6 +52,7 @@ export interface OpsSnapshot {
   host: string
   runnerAt: string
   security?: OpsSecurity
+  pitr?: OpsPitr
 }
 export interface OpsJob {
   id: string
@@ -64,4 +83,27 @@ export function newerThan(a: string, b: string | null | undefined): boolean {
   const x = semver(a), y = semver(b)
   for (let i = 0; i < 3; i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0)
   return false
+}
+
+const TZ = 'Europe/Istanbul'
+const istanbulParts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+
+/** Anı İstanbul saatiyle "YYYY-AA-GG SS:DD" yazar (geri dönüş hedefi bu biçimde ve bu saatte gönderilir). */
+export function istanbulMinute(d: Date): string {
+  const p = Object.fromEntries(istanbulParts.formatToParts(d).map((x) => [x.type, x.value]))
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`
+}
+
+/** Geri dönülebilecek aralık (İstanbul saati, dakika): en eski temel yedeğin bitişinden sonraki ilk dakika … şimdiki dakika. */
+export function pitrWindow(oldestRecoverable: string | null, now = new Date()): { min: string; max: string } | null {
+  const t = oldestRecoverable ? Date.parse(oldestRecoverable) : NaN
+  if (Number.isNaN(t)) return null
+  const min = istanbulMinute(new Date(Math.floor(t / 60_000) * 60_000 + 60_000))
+  const max = istanbulMinute(now)
+  return min <= max ? { min, max } : null
+}
+
+/** Hedef bu aralıkta ve sunucunun beklediği biçimde mi (sunucu ayrıca doğrular). */
+export function validPitrTarget(target: string, w: { min: string; max: string } | null): boolean {
+  return !!w && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(target) && target >= w.min && target <= w.max
 }
