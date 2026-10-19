@@ -143,7 +143,8 @@ jobs:
         # .env.example'dan; orada olmayan degiskenler (sir/parola) sahte degerle eklenir.
         run: |
           cp .env.example .env
-          grep -oE '\$\{[A-Z0-9_]+' docker-compose.yml | cut -c3- | sort -u | while read -r v; do
+          # HR360_MOD_* sayıdır (compose scale) ve tanımsızken modül açıktır: sahte değer verilmez.
+          grep -oE '\$\{[A-Z0-9_]+' docker-compose.yml | cut -c3- | sort -u | grep -v '^HR360_MOD_' | while read -r v; do
             grep -q "^$v=" .env || echo "$v=ci" >> .env
           done
       - name: docker compose config (tum profiller)
