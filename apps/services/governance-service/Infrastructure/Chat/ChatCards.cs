@@ -54,8 +54,11 @@ public static class ChatCards
                 arr.Add(new JsonObject { ["type"] = "Action.OpenUrl", ["title"] = b.Label, ["url"] = b.Url });
             else
             {
-                var a = new JsonObject { ["type"] = "Action.Submit", ["title"] = b.Label,
-                    ["data"] = new JsonObject { ["hr360"] = "x", ["a"] = b.Action, ["v"] = ButtonStamp.Encode(b.Value, now) } };
+                var a = new JsonObject
+                {
+                    ["type"] = "Action.Submit", ["title"] = b.Label,
+                    ["data"] = new JsonObject { ["hr360"] = "x", ["a"] = b.Action, ["v"] = ButtonStamp.Encode(b.Value, now) }
+                };
                 if (b.Style == "primary") a["style"] = "positive";
                 if (b.Style == "danger") a["style"] = "destructive";
                 arr.Add(a);

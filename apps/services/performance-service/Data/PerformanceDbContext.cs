@@ -66,7 +66,7 @@ public class PerformanceDbContext : DbContext, ITenantAwareContext
         modelBuilder.Entity<Review>().ToTable("performance_reviews");
         modelBuilder.Entity<Review>().Property(r => r.Type).HasConversion<string>();
         modelBuilder.Entity<Review>().HasIndex(r => new { r.CycleId, r.EmployeeId });
-    
+
         // --- Yapilandirilabilir degerlendirme modeli ---
 
         modelBuilder.Entity<MetricDefinition>().ConfigureTenantColumn();

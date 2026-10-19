@@ -391,7 +391,16 @@ public class ProfileController : AppController
             var s = (value ?? "").Replace('İ', 'i').Replace('I', 'i').ToLowerInvariant();
             return string.Concat(s.Select(ch => ch switch
             {
-                'ı' => 'i', 'ş' => 's', 'ğ' => 'g', 'ü' => 'u', 'ö' => 'o', 'ç' => 'c', 'â' => 'a', 'î' => 'i', 'û' => 'u', _ => ch,
+                'ı' => 'i',
+                'ş' => 's',
+                'ğ' => 'g',
+                'ü' => 'u',
+                'ö' => 'o',
+                'ç' => 'c',
+                'â' => 'a',
+                'î' => 'i',
+                'û' => 'u',
+                _ => ch,
             }));
         }
         var term = Fold(q?.Trim());

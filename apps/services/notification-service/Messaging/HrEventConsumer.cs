@@ -17,7 +17,8 @@ public class HrEventConsumer : KafkaConsumerBase
 
     public HrEventConsumer(IServiceProvider services, ILogger<HrEventConsumer> logger)
         : base(services, logger, "notification-service",
-               "hr360.employee.events", "hr360.workflow.events") { }
+               "hr360.employee.events", "hr360.workflow.events")
+    { }
 
     protected override string ConsumerName => "notification-service";
 
@@ -33,90 +34,90 @@ public class HrEventConsumer : KafkaConsumerBase
         switch (eventType)
         {
             case "employee.hired":
-            {
-                var e = JsonSerializer.Deserialize<HiredPayload>(payload, JsonOpts);
-                if (e is null) break;
-                var lang = await LangOfAsync(db, e.TenantSlug, e.EmployeeId, ct);
-                var (subject, body) = NotificationTexts.Hired(lang, e.FirstName, e.LastName, e.HireDate);
-                db.Notifications.Add(new Notification
                 {
-                    // Arka plan tuketicisinde TenantContext doldurulmadigi icin
-                    // StampTenant() bu alani yazamiyor; olayin kendi TenantSlug'i atanir.
-                    TenantSlug = e.TenantSlug,
-                    RecipientEmployeeId = e.EmployeeId,
-                    RecipientEmail = e.Email,
-                    Channel = NotificationChannel.Email,
-                    TemplateCode = "employee.hired",
-                    Subject = subject,
-                    Body = body,
-                    Language = lang,
-                });
-                break;
-            }
+                    var e = JsonSerializer.Deserialize<HiredPayload>(payload, JsonOpts);
+                    if (e is null) break;
+                    var lang = await LangOfAsync(db, e.TenantSlug, e.EmployeeId, ct);
+                    var (subject, body) = NotificationTexts.Hired(lang, e.FirstName, e.LastName, e.HireDate);
+                    db.Notifications.Add(new Notification
+                    {
+                        // Arka plan tuketicisinde TenantContext doldurulmadigi icin
+                        // StampTenant() bu alani yazamiyor; olayin kendi TenantSlug'i atanir.
+                        TenantSlug = e.TenantSlug,
+                        RecipientEmployeeId = e.EmployeeId,
+                        RecipientEmail = e.Email,
+                        Channel = NotificationChannel.Email,
+                        TemplateCode = "employee.hired",
+                        Subject = subject,
+                        Body = body,
+                        Language = lang,
+                    });
+                    break;
+                }
 
             case "employee.assigned":
-            {
-                var e = JsonSerializer.Deserialize<AssignedPayload>(payload, JsonOpts);
-                if (e is null) break;
-                var lang = await LangOfAsync(db, e.TenantSlug, e.EmployeeId, ct);
-                var (subject, body) = NotificationTexts.Assigned(lang, e.FirstName, e.EffectiveFrom, e.PositionTitle);
-                db.Notifications.Add(new Notification
                 {
-                    TenantSlug = e.TenantSlug,
-                    RecipientEmployeeId = e.EmployeeId,
-                    RecipientEmail = e.Email,
-                    Channel = NotificationChannel.Email,
-                    TemplateCode = "employee.assigned",
-                    Subject = subject,
-                    Body = body,
-                    Language = lang,
-                });
-                break;
-            }
+                    var e = JsonSerializer.Deserialize<AssignedPayload>(payload, JsonOpts);
+                    if (e is null) break;
+                    var lang = await LangOfAsync(db, e.TenantSlug, e.EmployeeId, ct);
+                    var (subject, body) = NotificationTexts.Assigned(lang, e.FirstName, e.EffectiveFrom, e.PositionTitle);
+                    db.Notifications.Add(new Notification
+                    {
+                        TenantSlug = e.TenantSlug,
+                        RecipientEmployeeId = e.EmployeeId,
+                        RecipientEmail = e.Email,
+                        Channel = NotificationChannel.Email,
+                        TemplateCode = "employee.assigned",
+                        Subject = subject,
+                        Body = body,
+                        Language = lang,
+                    });
+                    break;
+                }
 
             case "workflow.submitted":
-            {
-                var e = JsonSerializer.Deserialize<SubmittedPayload>(payload, JsonOpts);
-                if (e is null) break;
-                var lang = await LangOfAsync(db, e.TenantSlug, e.ApproverEmployeeId, ct);
-                var (subject, body) = NotificationTexts.Submitted(lang, e.ApproverFirstName, e.RequesterName, e.WorkflowType, e.SlaDueAt,
-                    e.Escalated, e.OnBehalfOfEmployeeId is not null, hasLink: e.ActionToken is not null);
-                db.Notifications.Add(new Notification
                 {
-                    TenantSlug = e.TenantSlug,
-                    RecipientEmployeeId = e.ApproverEmployeeId,
-                    RecipientEmail = e.ApproverEmail,
-                    Channel = NotificationChannel.Email,
-                    TemplateCode = "workflow.submitted",
-                    Subject = subject,
-                    Body = body,
-                    Language = lang,
-                    // Tek kullanımlık karar sayfası (e-posta tarayıcıları açsa da karar vermez; sayfada ayrıca onay istenir).
-                    ActionUrl = e.ActionToken is null ? null : $"{PublicOrigin}/onay-eposta?t={Uri.EscapeDataString(e.ActionToken)}",
-                    ActionLabel = e.ActionToken is null ? null : (lang == "en" ? "Review and decide" : "İncele ve karar ver"),
-                });
-                break;
-            }
+                    var e = JsonSerializer.Deserialize<SubmittedPayload>(payload, JsonOpts);
+                    if (e is null) break;
+                    var lang = await LangOfAsync(db, e.TenantSlug, e.ApproverEmployeeId, ct);
+                    var (subject, body) = NotificationTexts.Submitted(lang, e.ApproverFirstName, e.RequesterName, e.WorkflowType, e.SlaDueAt,
+                        e.Escalated, e.OnBehalfOfEmployeeId is not null, hasLink: e.ActionToken is not null);
+                    db.Notifications.Add(new Notification
+                    {
+                        TenantSlug = e.TenantSlug,
+                        RecipientEmployeeId = e.ApproverEmployeeId,
+                        RecipientEmail = e.ApproverEmail,
+                        Channel = NotificationChannel.Email,
+                        TemplateCode = "workflow.submitted",
+                        Subject = subject,
+                        Body = body,
+                        Language = lang,
+                        // Tek kullanımlık karar sayfası (e-posta tarayıcıları açsa da karar vermez; sayfada ayrıca onay istenir).
+                        ActionUrl = e.ActionToken is null ? null : $"{PublicOrigin}/onay-eposta?t={Uri.EscapeDataString(e.ActionToken)}",
+                        ActionLabel = e.ActionToken is null ? null : (lang == "en" ? "Review and decide" : "İncele ve karar ver"),
+                    });
+                    break;
+                }
 
             case "workflow.approved":
             case "workflow.rejected":
-            {
-                var e = JsonSerializer.Deserialize<WorkflowPayload>(payload, JsonOpts);
-                if (e is null) break;
-                var lang = await LangOfAsync(db, e.TenantSlug, e.RequesterEmployeeId, ct);
-                var (subject, body) = NotificationTexts.Decided(lang, e.Approved, e.Subject ?? e.WorkflowType, e.Comment);
-                db.Notifications.Add(new Notification
                 {
-                    TenantSlug = e.TenantSlug,
-                    RecipientEmployeeId = e.RequesterEmployeeId,
-                    Channel = NotificationChannel.InApp,
-                    TemplateCode = eventType,
-                    Subject = subject,
-                    Body = body,
-                    Language = lang,
-                });
-                break;
-            }
+                    var e = JsonSerializer.Deserialize<WorkflowPayload>(payload, JsonOpts);
+                    if (e is null) break;
+                    var lang = await LangOfAsync(db, e.TenantSlug, e.RequesterEmployeeId, ct);
+                    var (subject, body) = NotificationTexts.Decided(lang, e.Approved, e.Subject ?? e.WorkflowType, e.Comment);
+                    db.Notifications.Add(new Notification
+                    {
+                        TenantSlug = e.TenantSlug,
+                        RecipientEmployeeId = e.RequesterEmployeeId,
+                        Channel = NotificationChannel.InApp,
+                        TemplateCode = eventType,
+                        Subject = subject,
+                        Body = body,
+                        Language = lang,
+                    });
+                    break;
+                }
         }
     }
 

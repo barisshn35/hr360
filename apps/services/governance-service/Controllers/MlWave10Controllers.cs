@@ -185,8 +185,11 @@ public class TenantTrainingController : AppController
             WHERE "TenantSlug" = $1 AND "ModelName" = $2
             """, ct, Tenant, Model, JsonSerializer.Serialize(result));
         await ComplianceAudit.WriteAsync(Db, Tenant, "AttritionModel", entityId ?? Model, action,
-            new { tenantData = true, result.candidateVersion, result.awaitingApproval, result.promoted, trainRows = train.Rows.Count, trainLeavers = train.Leavers,
-                  evalRows = eval.Rows.Count, evalLeavers = eval.Leavers, trainSnapshot = t1, evalSnapshot = t2 }, Me.UserId, Me.Name, ct);
+            new
+            {
+                tenantData = true, result.candidateVersion, result.awaitingApproval, result.promoted, trainRows = train.Rows.Count, trainLeavers = train.Leavers,
+                evalRows = eval.Rows.Count, evalLeavers = eval.Leavers, trainSnapshot = t1, evalSnapshot = t2
+            }, Me.UserId, Me.Name, ct);
         return Ok(result);
     }
 }
@@ -249,8 +252,11 @@ public class GrowthRecommendationsController : AppController
         var people = (await People.ListAsync(Tenant, ct)).ToDictionary(p => p.Id);
         var payload = new
         {
-            me = new { skills, position = me.Position, gaps = gaps.Select(g => new { g.id, g.name, required = Math.Clamp(g.required, 1, 5), current = Math.Clamp(g.current, 0, 5) }),
-                       completed_course_ids = completed },
+            me = new
+            {
+                skills, position = me.Position, gaps = gaps.Select(g => new { g.id, g.name, required = Math.Clamp(g.required, 1, 5), current = Math.Clamp(g.current, 0, 5) }),
+                completed_course_ids = completed
+            },
             postings = postings.Select(p => new { id = p.Id.ToString(), title = p.Title.Length > 300 ? p.Title[..300] : p.Title, text = p.Text.Length > 50000 ? p.Text[..50000] : p.Text }),
             mentors = mentors.Select(m => new { id = m.Id.ToString(), offers = m.Offers.Take(50), free_slots = Math.Clamp(m.Capacity - m.Active, 0, 20) }),
             courses = courses.Select(c => new

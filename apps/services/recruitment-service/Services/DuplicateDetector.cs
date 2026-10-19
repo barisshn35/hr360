@@ -51,7 +51,15 @@ public static class DuplicateDetector
         {
             var c = ch switch
             {
-                'ı' => 'i', 'ğ' => 'g', 'ü' => 'u', 'ş' => 's', 'ö' => 'o', 'ç' => 'c', 'â' => 'a', 'î' => 'i', 'û' => 'u',
+                'ı' => 'i',
+                'ğ' => 'g',
+                'ü' => 'u',
+                'ş' => 's',
+                'ö' => 'o',
+                'ç' => 'c',
+                'â' => 'a',
+                'î' => 'i',
+                'û' => 'u',
                 _ => ch,
             };
             sb.Append(char.IsLetter(c) ? c : ' ');

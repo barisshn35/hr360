@@ -510,7 +510,12 @@ public class MobilityController : AppController
 
     private static string StatusLabel(string s) => s switch
     {
-        "Submitted" => "Alındı", "Reviewing" => "İnceleniyor", "Interview" => "Görüşme", "Accepted" => "Kabul edildi",
-        "Rejected" => "Olumsuz", "Withdrawn" => "Geri çekildi", _ => s,
+        "Submitted" => "Alındı",
+        "Reviewing" => "İnceleniyor",
+        "Interview" => "Görüşme",
+        "Accepted" => "Kabul edildi",
+        "Rejected" => "Olumsuz",
+        "Withdrawn" => "Geri çekildi",
+        _ => s,
     };
 }

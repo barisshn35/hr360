@@ -323,8 +323,11 @@ public sealed partial class ChatFeatures
                 dist = Enumerable.Range(1, 5).Select(i => scores.Count(s => s == i)).ToArray();
                 avg = scores.Count == 0 ? null : Math.Round(scores.Average(), 2);
             }
-            list.Add(new { id = p.Id, question = p.Q, sendAt = p.Send, closesAt = p.Close, status = p.St, sentCount = p.Sent, createdAt = p.At,
-                responses = p.N, hidden = p.N < NlReport.MinGroup, threshold = NlReport.MinGroup, distribution = dist, average = avg });
+            list.Add(new
+            {
+                id = p.Id, question = p.Q, sendAt = p.Send, closesAt = p.Close, status = p.St, sentCount = p.Sent, createdAt = p.At,
+                responses = p.N, hidden = p.N < NlReport.MinGroup, threshold = NlReport.MinGroup, distribution = dist, average = avg
+            });
         }
         return list;
     }

@@ -41,7 +41,8 @@ public class AccountProvisioningController : AppController
     private static IActionResult Disabled() => new ObjectResult(new
     {
         message = "Hesap açma/kapatma bu kurulumda kapalı (ACCOUNT_PROVISIONING_ENABLED).", code = "feature_disabled",
-    }) { StatusCode = 409 };
+    })
+    { StatusCode = 409 };
 
     private static IActionResult MigrationMissing() =>
         new ObjectResult(new { message = "Bu özellik için veritabanı güncellemesi (2026-10-25_account_provisioning.sql) uygulanmalı.", code = "migration_missing" }) { StatusCode = 503 };
@@ -197,12 +198,12 @@ public class AccountProvisioningController : AppController
                 ORDER BY CASE q."Status" WHEN 'Pending' THEN 0 WHEN 'Failed' THEN 1 WHEN 'Processing' THEN 2 ELSE 3 END, q."CreatedAt" DESC
                 LIMIT 300
                 """, r => new
-                {
-                    id = r.GetGuid(0), employeeId = r.GetGuid(1), employeeName = r.Str(2), employeeStatus = r.Str(3), hireDate = r.Date(4),
-                    provider = r.GetString(5), action = r.GetString(6), status = r.GetString(7), source = r.GetString(8), accountEmail = r.GetString(9),
-                    note = r.Str(10), error = r.Str(11), requestedByName = r.Str(12), decidedByName = r.Str(13), decidedAt = r.Ts(14),
-                    attempts = r.GetInt32(15), createdAt = r.GetFieldValue<DateTime>(16), completedAt = r.Ts(17),
-                }, ct, Tenant, filter);
+            {
+                id = r.GetGuid(0), employeeId = r.GetGuid(1), employeeName = r.Str(2), employeeStatus = r.Str(3), hireDate = r.Date(4),
+                provider = r.GetString(5), action = r.GetString(6), status = r.GetString(7), source = r.GetString(8), accountEmail = r.GetString(9),
+                note = r.Str(10), error = r.Str(11), requestedByName = r.Str(12), decidedByName = r.Str(13), decidedAt = r.Ts(14),
+                attempts = r.GetInt32(15), createdAt = r.GetFieldValue<DateTime>(16), completedAt = r.Ts(17),
+            }, ct, Tenant, filter);
             return Ok(rows);
         }
         catch (Npgsql.PostgresException e) when (e.SqlState == "42P01") { return MigrationMissing(); }
@@ -253,8 +254,11 @@ public class AccountProvisioningController : AppController
         var req = (await Db.QueryAsync("""
             SELECT "EmployeeId", "Provider", "Action", "Status", "Source", "AccountEmail", "RequestedBy"
             FROM governance_provisioning_requests WHERE "TenantSlug" = $1 AND "Id" = $2
-            """, r => new { EmployeeId = r.GetGuid(0), Provider = r.GetString(1), Action = r.GetString(2), Status = r.GetString(3),
-                Source = r.GetString(4), AccountEmail = r.GetString(5), RequestedBy = r.Str(6) }, ct, Tenant, id)).FirstOrDefault();
+            """, r => new
+        {
+            EmployeeId = r.GetGuid(0), Provider = r.GetString(1), Action = r.GetString(2), Status = r.GetString(3),
+            Source = r.GetString(4), AccountEmail = r.GetString(5), RequestedBy = r.Str(6)
+        }, ct, Tenant, id)).FirstOrDefault();
         if (req is null) return NotFound();
         if (req.Status is not ("Pending" or "Failed")) return Conflict(new { message = "İstek zaten sonuçlanmış." });
         var me = await MyPersonAsync(ct);

@@ -176,8 +176,11 @@ public static class SeveranceCalculator
 
     public static string ReasonTr(string reason) => reason switch
     {
-        "Resignation" => "İstifa", "Termination" => "İşveren feshi", "Retirement" => "Emeklilik",
-        "ContractEnd" => "Belirli süreli sözleşmenin sona ermesi", _ => "Diğer",
+        "Resignation" => "İstifa",
+        "Termination" => "İşveren feshi",
+        "Retirement" => "Emeklilik",
+        "ContractEnd" => "Belirli süreli sözleşmenin sona ermesi",
+        _ => "Diğer",
     };
 
     /// <summary>

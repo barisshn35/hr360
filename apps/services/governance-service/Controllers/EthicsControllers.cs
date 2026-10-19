@@ -246,12 +246,12 @@ public class EthicsController : AppController
             FROM governance_ethics_reports r WHERE r."TenantSlug" = $1 AND ($2::text IS NULL OR r."Status" = $2)
             ORDER BY r."Status" = 'Closed', r."ReceivedOn" DESC LIMIT 500
             """, r => new
-            {
-                id = r.GetGuid(0), category = r.GetString(1), categoryLabel = EthicsCode.Categories.GetValueOrDefault(r.GetString(1), r.GetString(1)),
-                status = r.GetString(2), receivedOn = r.GetFieldValue<DateOnly>(3), updatedAt = r.GetFieldValue<DateTime>(4), hasContact = r.GetBoolean(5),
-                messages = Convert.ToInt32(r.GetValue(6)),
-                awaitingReply = r.IsDBNull(7) ? r.GetString(2) == "Received" : r.GetBoolean(7) && r.GetString(2) != "Closed",
-            }, ct, Tenant, status);
+        {
+            id = r.GetGuid(0), category = r.GetString(1), categoryLabel = EthicsCode.Categories.GetValueOrDefault(r.GetString(1), r.GetString(1)),
+            status = r.GetString(2), receivedOn = r.GetFieldValue<DateOnly>(3), updatedAt = r.GetFieldValue<DateTime>(4), hasContact = r.GetBoolean(5),
+            messages = Convert.ToInt32(r.GetValue(6)),
+            awaitingReply = r.IsDBNull(7) ? r.GetString(2) == "Received" : r.GetBoolean(7) && r.GetString(2) != "Closed",
+        }, ct, Tenant, status);
         return Ok(rows);
     }
 
@@ -263,11 +263,11 @@ public class EthicsController : AppController
             SELECT "Id","Category","Description","Status","Outcome","ReceivedOn","ContactEnc" IS NOT NULL,"ClosedAt"
             FROM governance_ethics_reports WHERE "TenantSlug" = $1 AND "Id" = $2
             """, r => new
-            {
-                id = r.GetGuid(0), category = r.GetString(1), categoryLabel = EthicsCode.Categories.GetValueOrDefault(r.GetString(1), r.GetString(1)),
-                description = r.GetString(2), status = r.GetString(3), outcome = r.Str(4), receivedOn = r.GetFieldValue<DateOnly>(5),
-                hasContact = r.GetBoolean(6), closedAt = r.Ts(7),
-            }, ct, Tenant, id)).FirstOrDefault();
+        {
+            id = r.GetGuid(0), category = r.GetString(1), categoryLabel = EthicsCode.Categories.GetValueOrDefault(r.GetString(1), r.GetString(1)),
+            description = r.GetString(2), status = r.GetString(3), outcome = r.Str(4), receivedOn = r.GetFieldValue<DateOnly>(5),
+            hasContact = r.GetBoolean(6), closedAt = r.Ts(7),
+        }, ct, Tenant, id)).FirstOrDefault();
         if (head is null) return NotFound();
         var messages = await Db.QueryAsync("""
             SELECT "FromReporter","Author","Body","CreatedOn" FROM governance_ethics_messages WHERE "TenantSlug" = $1 AND "ReportId" = $2 ORDER BY "Seq"

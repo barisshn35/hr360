@@ -41,9 +41,15 @@ public static class ExpensePolicies
 
     public static string Label(ExpenseCategory c) => c switch
     {
-        ExpenseCategory.Travel => "Seyahat", ExpenseCategory.Meal => "Yemek", ExpenseCategory.Accommodation => "Konaklama",
-        ExpenseCategory.Transport => "Ulaşım", ExpenseCategory.Supplies => "Malzeme", ExpenseCategory.Training => "Eğitim",
-        ExpenseCategory.Mileage => "Kilometre", ExpenseCategory.PerDiem => "Harcırah", _ => "Diğer",
+        ExpenseCategory.Travel => "Seyahat",
+        ExpenseCategory.Meal => "Yemek",
+        ExpenseCategory.Accommodation => "Konaklama",
+        ExpenseCategory.Transport => "Ulaşım",
+        ExpenseCategory.Supplies => "Malzeme",
+        ExpenseCategory.Training => "Eğitim",
+        ExpenseCategory.Mileage => "Kilometre",
+        ExpenseCategory.PerDiem => "Harcırah",
+        _ => "Diğer",
     };
 
     /// <summary>Harcırah günü: gidiş ve dönüş dahil takvim günü.</summary>

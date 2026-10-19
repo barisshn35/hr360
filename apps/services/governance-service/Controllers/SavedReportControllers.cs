@@ -81,8 +81,11 @@ public class SavedReportsController : AppController
             new NlReport.Options(body.DepartmentId, body.From, body.To, body.Compare, Suppress: true, AllowSalary: Me.IsHr));
         if (!result.Understood) return BadRequest(new { message = result.Interpretation, code = "not_understood" });
         if (result.PersonLevel && schedule != "None")
-            return BadRequest(new { message = L("Kişi bazındaki raporlar zamanlanamaz; yalnızca toplu (departman/ay/tür) raporlar zamanlanabilir.",
-                "Person-level reports cannot be scheduled; only aggregate (department/month/type) reports can."), code = "person_level_not_schedulable" });
+            return BadRequest(new
+            {
+                message = L("Kişi bazındaki raporlar zamanlanamaz; yalnızca toplu (departman/ay/tür) raporlar zamanlanabilir.",
+                "Person-level reports cannot be scheduled; only aggregate (department/month/type) reports can."), code = "person_level_not_schedulable"
+            });
         if (body.Pinned == true && Convert.ToInt32(await Db.ScalarAsync("SELECT count(*)::int FROM governance_saved_reports WHERE \"TenantSlug\" = $1 AND \"OwnerUserId\" = $2 AND \"Pinned\"", ct, Tenant, Me.UserId)) >= MaxPinned)
             return BadRequest(new { message = L($"Panoya en fazla {MaxPinned} rapor sabitlenebilir.", $"At most {MaxPinned} reports can be pinned."), code = "too_many_pinned" });
         var me = await MyPersonAsync(ct);
@@ -113,8 +116,11 @@ public class SavedReportsController : AppController
         if (BadSchedule(schedule, body.Time, day) is { } bad) return bad;
         var time = body.Time is null ? r.ScheduleTime : ReportSchedule.ParseTime(body.Time)!.Value.ToString("HH:mm");
         if (r.PersonLevel && schedule != "None")
-            return BadRequest(new { message = L("Kişi bazındaki raporlar zamanlanamaz; yalnızca toplu (departman/ay/tür) raporlar zamanlanabilir.",
-                "Person-level reports cannot be scheduled; only aggregate (department/month/type) reports can."), code = "person_level_not_schedulable" });
+            return BadRequest(new
+            {
+                message = L("Kişi bazındaki raporlar zamanlanamaz; yalnızca toplu (departman/ay/tür) raporlar zamanlanabilir.",
+                "Person-level reports cannot be scheduled; only aggregate (department/month/type) reports can."), code = "person_level_not_schedulable"
+            });
         var pinned = body.Pinned ?? r.Pinned;
         if (pinned && !r.Pinned && Convert.ToInt32(await Db.ScalarAsync("SELECT count(*)::int FROM governance_saved_reports WHERE \"TenantSlug\" = $1 AND \"OwnerUserId\" = $2 AND \"Pinned\"", ct, Tenant, Me.UserId)) >= MaxPinned)
             return BadRequest(new { message = L($"Panoya en fazla {MaxPinned} rapor sabitlenebilir.", $"At most {MaxPinned} reports can be pinned."), code = "too_many_pinned" });

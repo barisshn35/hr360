@@ -65,20 +65,20 @@ public sealed class PayrollAnomalyClient
     /// <summary>ML isteğinin gövdesi (saf; birim testli). Pusula sırası = "id".</summary>
     public static object BuildRequest(string tenant, int year, int month, IReadOnlyList<Payslip> slips,
         IReadOnlyDictionary<Guid, string?> grades, IEnumerable<PayslipHistoryRow> history) => new
-    {
-        period = $"{year:D4}-{month:D2}",
-        items = slips.Select((s, n) => new
         {
-            id = n.ToString(),
-            employee = Pseudonym(tenant, s.EmployeeId.ToString("N")),
-            group = grades.TryGetValue(s.EmployeeId, out var g) && !string.IsNullOrWhiteSpace(g) ? Pseudonym(tenant, "grade:" + g.Trim().ToUpperInvariant()) : null,
-            overtime_hours = s.OvertimeHours,
-            additions = s.Additions,
-            deductions = s.Deductions,
-            gross = s.Gross,
-            unpaid_days = Math.Clamp(s.UnpaidDays, 0, 30),
-        }),
-        history = history
+            period = $"{year:D4}-{month:D2}",
+            items = slips.Select((s, n) => new
+            {
+                id = n.ToString(),
+                employee = Pseudonym(tenant, s.EmployeeId.ToString("N")),
+                group = grades.TryGetValue(s.EmployeeId, out var g) && !string.IsNullOrWhiteSpace(g) ? Pseudonym(tenant, "grade:" + g.Trim().ToUpperInvariant()) : null,
+                overtime_hours = s.OvertimeHours,
+                additions = s.Additions,
+                deductions = s.Deductions,
+                gross = s.Gross,
+                unpaid_days = Math.Clamp(s.UnpaidDays, 0, 30),
+            }),
+            history = history
             .Where(h => h.Year * 12 + h.Month < year * 12 + month)
             .Select(h => new
             {
@@ -90,7 +90,7 @@ public sealed class PayrollAnomalyClient
                 gross = Math.Max(0, h.Gross),
                 unpaid_days = Math.Clamp(h.UnpaidDays, 0, 30),
             }),
-    };
+        };
 
     /// <summary>ML yanıtındaki işaretleri pusulalara yazar (sıra = istek sırası). Yazılan işaret sayısını döner.</summary>
     public static int ApplyFlags(IReadOnlyList<Payslip> slips, JsonElement response)

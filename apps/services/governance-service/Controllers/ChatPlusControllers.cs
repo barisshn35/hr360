@@ -207,9 +207,12 @@ public class ChatStepUpController : AppController
 
     private static string KindLabel(string kind, bool en) => (kind, en) switch
     {
-        ("stepup:payslip", false) => "Bordro özeti", ("stepup:payslip", true) => "Payslip summary",
-        ("stepup:bulk", false) => "Toplu onay", ("stepup:bulk", true) => "Bulk approval",
-        ("stepup:decide", false) => "Ücretle ilgili onay", ("stepup:decide", true) => "Pay-related approval",
+        ("stepup:payslip", false) => "Bordro özeti",
+        ("stepup:payslip", true) => "Payslip summary",
+        ("stepup:bulk", false) => "Toplu onay",
+        ("stepup:bulk", true) => "Bulk approval",
+        ("stepup:decide", false) => "Ücretle ilgili onay",
+        ("stepup:decide", true) => "Pay-related approval",
         _ => kind,
     };
 

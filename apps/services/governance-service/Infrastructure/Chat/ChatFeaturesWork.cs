@@ -62,12 +62,12 @@ public sealed partial class ChatFeatures
                 return await StepUpAsync(app, emp, "payslip", new { }, L("Son bordro özetinizi görüntüleme", "View your latest payslip summary"), en, ct);
             case "hrcase": return await HrCaseOfferAsync(app, emp, rc.Args, en, ct);
             case "forget":
-            {
-                var n = await ForgetAsync(tenant, emp, ct);
-                await CountAsync(app, "context", "forget", ct);
-                return ChatReply.Of(L($"🧹 Asistan konuşma geçmişiniz silindi ({n / 2} soru). Bundan sonraki sorular yine 30 gün hatırlanır; istediğinizde *geçmişimi sil* yazabilirsiniz.",
-                    $"🧹 Your assistant conversation history was deleted ({n / 2} question(s)). New questions are remembered for 30 days; type *forget me* any time."), en);
-            }
+                {
+                    var n = await ForgetAsync(tenant, emp, ct);
+                    await CountAsync(app, "context", "forget", ct);
+                    return ChatReply.Of(L($"🧹 Asistan konuşma geçmişiniz silindi ({n / 2} soru). Bundan sonraki sorular yine 30 gün hatırlanır; istediğinizde *geçmişimi sil* yazabilirsiniz.",
+                        $"🧹 Your assistant conversation history was deleted ({n / 2} question(s)). New questions are remembered for 30 days; type *forget me* any time."), en);
+                }
             case "anniversary": return await AnniversaryAsync(tenant, emp, rc.Args, en, ct);
             case "code": return await CodeAsync(db, app, who, rc.Args, en, ct);
         }
@@ -115,7 +115,8 @@ public sealed partial class ChatFeatures
             await CountAsync(app, "button", "expired", ct);
             return Done(ChatReply.Of(L($"⌛ Bu düğmenin süresi doldu ({app.ButtonTtlDays} günden eski). Güncel hâli için komutu yeniden yazın ya da *yardım* deyin.",
                 $"⌛ This button has expired (older than {app.ButtonTtlDays} days). Type the command again or say *help*."), en,
-                ChatButton.Say(L("Yardım", "Help"), L("yardım", "help"))) with { Replace = true }, "expired");
+                ChatButton.Say(L("Yardım", "Help"), L("yardım", "help"))) with
+            { Replace = true }, "expired");
         }
         if (action == "say") return Done(await _chat.CommandAsync(db, app, who, value, ct, assistant), "ok");
         if (action == "cancel")
@@ -235,7 +236,8 @@ public sealed partial class ChatFeatures
         var r = await _chat.DecideAsync(db, app, who, wf, step, parts[2] == "a", ct);
         if (r.StepUp is { } stepUp) return stepUp;
         return ChatReply.Of((r.Ok ? (parts[2] == "a" ? "✅ " : "⛔ ") : "⚠️ ") + r.Message, en, ChatButton.Link(en ? "Open in HR360" : "HR360'ta aç", ChatService.WorkflowUrl(wf)))
-            with { Replace = r.Ok };
+            with
+        { Replace = r.Ok };
     }
 
     /// <summary>Toplu onay; <paramref name="type"/> doluysa yalnızca o türdeki talepler ("tüm izinleri onayla").</summary>
@@ -249,7 +251,8 @@ public sealed partial class ChatFeatures
                 ? $"You are about to approve *{items.Count}* request(s) ({string.Join(", ", byType)}). Are you sure?"
                 : $"*{items.Count}* talebi ({string.Join(", ", byType)}) onaylamak üzeresiniz. Emin misiniz?", en,
             new ChatButton(en ? $"Yes, approve {items.Count}" : $"Evet, {items.Count} talebi onayla", "approveall_yes", id.ToString(), "primary"),
-            new ChatButton(en ? "Cancel" : "Vazgeç", "cancel", id.ToString())) with { Replace = true };
+            new ChatButton(en ? "Cancel" : "Vazgeç", "cancel", id.ToString())) with
+        { Replace = true };
     }
 
     private async Task<ChatReply> ApproveAllConfirmAsync(ChatApp app, Guid emp, string value, bool en, CancellationToken ct)
@@ -329,7 +332,8 @@ public sealed partial class ChatFeatures
                 ? $"Your {HrAssistant.LeaveLabel(r.Type, true)} request {r.S:dd.MM} – {r.E:dd.MM} will be cancelled. Are you sure?"
                 : $"{r.S:dd.MM} – {r.E:dd.MM} {HrAssistant.LeaveLabel(r.Type)} talebiniz iptal edilecek. Emin misiniz?", en,
             new ChatButton(en ? "Yes, cancel it" : "Evet, iptal et", "leave_cancel_yes", id.ToString(), "danger"),
-            new ChatButton(en ? "No" : "Vazgeç", "cancel")) with { Replace = true };
+            new ChatButton(en ? "No" : "Vazgeç", "cancel")) with
+        { Replace = true };
     }
 
     /// <summary>
@@ -356,7 +360,8 @@ public sealed partial class ChatFeatures
         DateOnly.TryParseExact(r.Str("startDate"), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var s);
         DateOnly.TryParseExact(r.Str("endDate"), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var e);
         return ChatReply.Of(en ? $"✅ Your leave request {s:dd.MM} – {e:dd.MM} was cancelled." : $"✅ {s:dd.MM} – {e:dd.MM} izin talebiniz iptal edildi.", en,
-            ChatButton.Link(en ? "Leave in HR360" : "Panelde aç", $"{Origin}/panel/izin")) with { Replace = true };
+            ChatButton.Link(en ? "Leave in HR360" : "Panelde aç", $"{Origin}/panel/izin")) with
+        { Replace = true };
     }
 
     // ================================================================== B6 fişten masraf
@@ -554,7 +559,8 @@ public sealed partial class ChatFeatures
         return ChatReply.Of(en
                 ? $"✅ Draft expense claim created: {amount.Value.ToString("N2", CultureInfo.GetCultureInfo("en-GB"))} TL ({ReceiptParser.CategoryLabel(category, true)}, {date:dd.MM.yyyy}). Review and submit it in HR360."
                 : $"✅ Taslak masraf beyanı oluşturuldu: {amount.Value.ToString("N2", Tr)} TL ({ReceiptParser.CategoryLabel(category, false)}, {date:dd.MM.yyyy}). HR360'ta kontrol edip onaya gönderin.", en,
-            ChatButton.Link(en ? "Open in HR360" : "Panelde aç", $"{Origin}/panel/masraf")) with { Replace = true };
+            ChatButton.Link(en ? "Open in HR360" : "Panelde aç", $"{Origin}/panel/masraf")) with
+        { Replace = true };
     }
 
     /// <summary>Slack "Düzelt" penceresi için öneri (yalnızca sahibine).</summary>
@@ -713,7 +719,8 @@ public sealed partial class ChatFeatures
         var id = r.Str("id");
         var code = r.Str("code");
         return ChatReply.Of(en ? $"✅ Desk *{code}* is booked for {day:dd.MM.yyyy} (09:00–18:00)." : $"✅ *{code}* masası {day:dd.MM.yyyy} için ayrıldı (09:00–18:00).", en,
-            new ChatButton(en ? "Cancel booking" : "Rezervasyonu iptal et", "desk_cancel", id ?? "", "danger")) with { Replace = true };
+            new ChatButton(en ? "Cancel booking" : "Rezervasyonu iptal et", "desk_cancel", id ?? "", "danger")) with
+        { Replace = true };
     }
 
     private async Task<ChatReply> DeskCancelAsync(ChatApp app, string tenant, Guid emp, string value, bool en, CancellationToken ct)
@@ -806,7 +813,8 @@ public sealed partial class ChatFeatures
                 ? ChatReply.Of(en ? "This request is no longer awaiting your answer." : "Bu talep artık yanıtınızı beklemiyor.", en) with { Replace = true }
                 : ChatReply.Of(r.Message!, en);
         return ChatReply.Of(accept ? (en ? "✅ You accepted the swap; it now awaits manager approval." : "✅ Takası kabul ettiniz; yönetici onayı bekleniyor.")
-            : (en ? "You declined the swap." : "Takası reddettiniz."), en) with { Replace = true };
+            : (en ? "You declined the swap." : "Takası reddettiniz."), en) with
+        { Replace = true };
     }
 
     /// <summary>
@@ -821,7 +829,8 @@ public sealed partial class ChatFeatures
             new { tenantSlug = tenant, employeeId = emp, swapId = id, approve, platform = app.Platform }, en, ct);
         if (r.Ok)
             return ChatReply.Of(approve ? (en ? "✅ Swap approved; the schedule was updated." : "✅ Takas onaylandı; program güncellendi.")
-                : (en ? "⛔ Swap rejected." : "⛔ Takas reddedildi."), en) with { Replace = true };
+                : (en ? "⛔ Swap rejected." : "⛔ Takas reddedildi."), en) with
+            { Replace = true };
         return r.Status switch
         {
             400 when r.Str("code") == "rule_violation" =>
@@ -901,9 +910,12 @@ public sealed partial class ChatFeatures
 
     private static string StatusLabel(string s, bool en) => (s, en) switch
     {
-        ("Issued", false) => "hazır", ("Issued", true) => "ready",
-        ("Pending", false) => "İK onayında", ("Pending", true) => "awaiting HR",
-        ("Rejected", false) => "reddedildi", ("Rejected", true) => "rejected",
+        ("Issued", false) => "hazır",
+        ("Issued", true) => "ready",
+        ("Pending", false) => "İK onayında",
+        ("Pending", true) => "awaiting HR",
+        ("Rejected", false) => "reddedildi",
+        ("Rejected", true) => "rejected",
         _ => s,
     };
 
@@ -926,9 +938,11 @@ public sealed partial class ChatFeatures
             return ChatReply.Of(en
                     ? $"✅ Your *{t.Name}* is ready. Download it in HR360 (sign-in required). Third parties can verify it at the verification page with code *{code}*."
                     : $"✅ *{t.Name}* belgeniz hazır. HR360'tan (giriş yaparak) indirebilirsiniz. Üçüncü kişiler *{code}* koduyla doğrulama sayfasından doğrulayabilir.", en,
-                panel, ChatButton.Link(en ? "Verification page" : "Doğrulama sayfası", $"{Origin}/belge-dogrula/{code}")) with { Replace = true };
+                panel, ChatButton.Link(en ? "Verification page" : "Doğrulama sayfası", $"{Origin}/belge-dogrula/{code}")) with
+            { Replace = true };
         return ChatReply.Of(en ? $"✅ Your *{t.Name}* request was sent to HR. You will be notified when it is ready; download it in HR360."
-            : $"✅ *{t.Name}* talebiniz İK'ya iletildi. Hazır olunca bildirilecek; HR360'tan indirirsiniz.", en, panel) with { Replace = true };
+            : $"✅ *{t.Name}* talebiniz İK'ya iletildi. Hazır olunca bildirilecek; HR360'tan indirirsiniz.", en, panel) with
+        { Replace = true };
     }
 
     // ================================================================== B17 giriş-çıkış
@@ -1008,7 +1022,8 @@ public sealed partial class ChatFeatures
         }
         await CountAsync(app, "hrcase", "created", ct);
         return ChatReply.Of(en ? "✅ Your HR case was opened; HR will get back to you." : "✅ İK vakanız açıldı; İK size dönecek.", en,
-            ChatButton.Link(en ? "My HR cases" : "Panelde aç", $"{Origin}/panel/ik-vakalari")) with { Replace = true };
+            ChatButton.Link(en ? "My HR cases" : "Panelde aç", $"{Origin}/panel/ik-vakalari")) with
+        { Replace = true };
     }
 
     // ================================================================== B11 yıldönümü izni

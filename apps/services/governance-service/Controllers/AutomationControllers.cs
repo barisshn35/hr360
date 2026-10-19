@@ -333,8 +333,11 @@ public class WebhooksController : AppController
             : CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(sig),
                 Encoding.UTF8.GetBytes("sha256=" + Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(body))).ToLowerInvariant()));
         var q = Inbox.GetOrAdd(token, _ => new ConcurrentQueue<object>());
-        q.Enqueue(new { receivedAt = DateTime.UtcNow, @event = Request.Headers["X-HR360-Event"].FirstOrDefault(), signatureValid = valid,
-            body = body.Length > 4000 ? body[..4000] : body });
+        q.Enqueue(new
+        {
+            receivedAt = DateTime.UtcNow, @event = Request.Headers["X-HR360-Event"].FirstOrDefault(), signatureValid = valid,
+            body = body.Length > 4000 ? body[..4000] : body
+        });
         while (q.Count > 50) q.TryDequeue(out _);
         return Ok(new { received = true });
     }
@@ -694,8 +697,11 @@ public class PublicApiController : ControllerBase
         var rows = await _sql.QueryAsync("""
             SELECT "Id", "EmployeeId", "Type", "StartDate", "EndDate", "Days", "Status" FROM leave_requests
             WHERE "TenantSlug" = $1 AND "StartDate" <= $3 AND "EndDate" >= $2 AND "Status" IN ('Approved','Submitted') ORDER BY "StartDate"
-            """, r => new { id = r.GetGuid(0), employeeId = r.GetGuid(1), type = r.GetString(2), startDate = r.GetFieldValue<DateOnly>(3),
-                endDate = r.GetFieldValue<DateOnly>(4), days = r.GetDecimal(5), status = r.GetString(6) }, ct, tenant, f, t);
+            """, r => new
+        {
+            id = r.GetGuid(0), employeeId = r.GetGuid(1), type = r.GetString(2), startDate = r.GetFieldValue<DateOnly>(3),
+            endDate = r.GetFieldValue<DateOnly>(4), days = r.GetDecimal(5), status = r.GetString(6)
+        }, ct, tenant, f, t);
         return Ok(new { data = rows });
     }
 
@@ -750,11 +756,23 @@ public static class HookSamples
             data[f] = f switch
             {
                 _ when f.EndsWith("Id") => "00000000-0000-4000-8000-000000000001",
-                "FirstName" => "Örnek", "LastName" => "Çalışan", "RequesterName" => "Örnek Çalışan", "Email" => "ornek.calisan@example.com",
-                "HireDate" or "StartDate" or "EffectiveFrom" or "EffectiveDate" => "2026-01-05", "EndDate" => "2026-01-09",
-                "SignedAt" => "2026-01-05T09:30:00.000Z", "Days" => 5, "Type" => "Annual", "Method" => "OTP-InApp",
-                "DocumentType" => "DocumentRequest", "TemplateName" => "Çalışma belgesi", "DocumentSha256" => new string('0', 64),
-                "OldStatus" => "Active", "NewStatus" => "OnLeave", "PositionTitle" => "Örnek pozisyon", "WorkflowType" => "Leave",
+                "FirstName" => "Örnek",
+                "LastName" => "Çalışan",
+                "RequesterName" => "Örnek Çalışan",
+                "Email" => "ornek.calisan@example.com",
+                "HireDate" or "StartDate" or "EffectiveFrom" or "EffectiveDate" => "2026-01-05",
+                "EndDate" => "2026-01-09",
+                "SignedAt" => "2026-01-05T09:30:00.000Z",
+                "Days" => 5,
+                "Type" => "Annual",
+                "Method" => "OTP-InApp",
+                "DocumentType" => "DocumentRequest",
+                "TemplateName" => "Çalışma belgesi",
+                "DocumentSha256" => new string('0', 64),
+                "OldStatus" => "Active",
+                "NewStatus" => "OnLeave",
+                "PositionTitle" => "Örnek pozisyon",
+                "WorkflowType" => "Leave",
                 "Subject" => "Örnek talep",
                 _ => "örnek",
             };

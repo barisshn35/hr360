@@ -86,8 +86,11 @@ public class TimesheetAnomalyController : ControllerBase
             {
                 Content = JsonContent.Create(new
                 {
-                    weeks = rows.Select(r => new { employee = r.Employee, week = r.Week, worked_hours = Math.Min(168, r.WorkedHours),
-                        days_worked = Math.Min(7, r.DaysWorked), missing_punches = Math.Min(14, r.MissingPunches) }),
+                    weeks = rows.Select(r => new
+                    {
+                        employee = r.Employee, week = r.Week, worked_hours = Math.Min(168, r.WorkedHours),
+                        days_worked = Math.Min(7, r.DaysWorked), missing_punches = Math.Min(14, r.MissingPunches)
+                    }),
                     recent,
                 }),
             };

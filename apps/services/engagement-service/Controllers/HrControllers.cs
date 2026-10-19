@@ -594,8 +594,11 @@ public class OffboardingController : AppController
         catch (Exception ex) when (ex is not OperationCanceledException) { warning = "Zimmet servisine ulaşılamadı; Zimmet ekranından elle kapatın."; }
 
         c.AssetChecks = c.AssetChecks.Select(a => a.AssignmentId == assignmentId
-            ? new AssetCheck { AssignmentId = a.AssignmentId, AssetId = a.AssetId, AssetTag = a.AssetTag, Label = a.Label, Resolution = body.Resolution,
-                Note = body.Note.Trim(), ResolvedBy = Me.Name, ResolvedAt = DateTime.UtcNow }
+            ? new AssetCheck
+            {
+                AssignmentId = a.AssignmentId, AssetId = a.AssetId, AssetTag = a.AssetTag, Label = a.Label, Resolution = body.Resolution,
+                Note = body.Note.Trim(), ResolvedBy = Me.Name, ResolvedAt = DateTime.UtcNow
+            }
             : a).ToList();
         _db.Entry(c).Property(x => x.AssetChecks).IsModified = true;
         await _db.SaveChangesAsync(ct);
@@ -905,12 +908,18 @@ public class OffboardingController : AppController
         {
             employee = emp.Name, hireDate = emp.HireDate, c.LastWorkingDay, c.Reason,
             tenureYears = r.TenureYears, grossMonthly = gross, severanceCeiling = ceiling, severanceCeilingMissing = r.SeveranceCeilingMissing,
-            severance = new { eligible = r.SeveranceEligible,
+            severance = new
+            {
+                eligible = r.SeveranceEligible,
                 gross = r.SeveranceCeilingMissing ? (decimal?)null : r.Severance, stampTax = r.SeveranceCeilingMissing ? (decimal?)null : r.SeveranceStampTax,
                 net = r.SeveranceCeilingMissing ? (decimal?)null : r.SeveranceNet,
-                basis = "4857 s. Kanun geçici 6 / 1475 s. Kanun m.14 — her tam yıl için 30 günlük brüt ücret (tavanla sınırlı); gelir vergisinden istisna, yalnızca damga vergisi." },
-            notice = new { weeks = r.NoticeWeeks, applies = r.NoticeApplies, gross = r.Notice,
-                basis = "4857 s. İş Kanunu m.17 — işveren bildirimsiz feshederse ihbar süresine ait ücret; gelir ve damga vergisine tabidir." },
+                basis = "4857 s. Kanun geçici 6 / 1475 s. Kanun m.14 — her tam yıl için 30 günlük brüt ücret (tavanla sınırlı); gelir vergisinden istisna, yalnızca damga vergisi."
+            },
+            notice = new
+            {
+                weeks = r.NoticeWeeks, applies = r.NoticeApplies, gross = r.Notice,
+                basis = "4857 s. İş Kanunu m.17 — işveren bildirimsiz feshederse ihbar süresine ait ücret; gelir ve damga vergisine tabidir."
+            },
             unusedLeave = new { days = remainingLeave, gross = r.LeavePay, basis = "4857 s. İş Kanunu m.59 — kullanılmayan yıllık izin ücreti." },
             totalGross = r.TotalGross,
             disclaimer = "Tahmini hesaptır; kesin tutar bordro ve hukuk birimince ek ödemeler, yan haklar ve vergi dilimleri dikkate alınarak belirlenir.",

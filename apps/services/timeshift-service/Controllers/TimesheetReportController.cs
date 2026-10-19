@@ -217,8 +217,11 @@ public class TimesheetReportController : ControllerBase
                     overtimeRequest = req is null ? null : new { req.Id, req.Status, req.Hours },
                 });
             }
-            totals.Add(new { employeeId = p.Id, name = p.FullName, department = p.Department, lateMinutes = late, lateDays, earlyLeaveMinutes = early,
-                workedMinutes = worked, overtimeMinutes = overtime, absentDays = absent });
+            totals.Add(new
+            {
+                employeeId = p.Id, name = p.FullName, department = p.Department, lateMinutes = late, lateDays, earlyLeaveMinutes = early,
+                workedMinutes = worked, overtimeMinutes = overtime, absentDays = absent
+            });
         }
 
         return Ok(new

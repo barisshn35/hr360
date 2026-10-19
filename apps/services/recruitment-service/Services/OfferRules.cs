@@ -51,16 +51,16 @@ public static class OfferRules
 
     public static Dictionary<string, string> Values(string candidateName, string position, decimal gross, string currency,
         DateOnly start, string? benefits, DateOnly expires, string company, DateOnly today) => new()
-    {
-        ["adayAdi"] = candidateName,
-        ["pozisyon"] = position,
-        ["brutMaas"] = Money(gross, currency),
-        ["baslangicTarihi"] = Date(start),
-        ["yanHaklar"] = string.IsNullOrWhiteSpace(benefits) ? "Şirket politikası kapsamındaki standart yan haklar" : benefits.Trim(),
-        ["sonGecerlilik"] = Date(expires),
-        ["sirketAdi"] = company,
-        ["bugun"] = Date(today),
-    };
+        {
+            ["adayAdi"] = candidateName,
+            ["pozisyon"] = position,
+            ["brutMaas"] = Money(gross, currency),
+            ["baslangicTarihi"] = Date(start),
+            ["yanHaklar"] = string.IsNullOrWhiteSpace(benefits) ? "Şirket politikası kapsamındaki standart yan haklar" : benefits.Trim(),
+            ["sonGecerlilik"] = Date(expires),
+            ["sirketAdi"] = company,
+            ["bugun"] = Date(today),
+        };
 
     /// <summary>Şablonu doğrular: boş olamaz, 20.000 karakteri aşamaz, bilinmeyen yer tutucu içeremez.</summary>
     public static string? ValidateTemplate(string? body)

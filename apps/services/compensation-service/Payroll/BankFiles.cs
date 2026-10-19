@@ -82,45 +82,52 @@ public static class BankFiles
         switch (template)
         {
             case "ornek-a":
-            {
-                var sb = new StringBuilder("SIRA;AD SOYAD;IBAN;TUTAR;DOVIZ;ACIKLAMA;ODEME TARIHI\r\n");
-                foreach (var l in lines)
-                    sb.Append($"{l.Seq};{Ascii(l.Name).Replace(";", " ")};{l.Iban};{l.Amount.ToString("0.00", Inv).Replace('.', ',')};{l.Currency};{Ascii(desc).Replace(";", " ")};{payDate:dd.MM.yyyy}\r\n");
-                sb.Append($"TOPLAM;{lines.Count};;{total.ToString("0.00", Inv).Replace('.', ',')};TRY;;\r\n");
-                return new(Bytes(sb.ToString(), "iso-8859-9"), name + "-ornek-a.csv", "text/csv", lines.Count, warnings);
-            }
-            case "ornek-b":
-            {
-                var sb = new StringBuilder();
-                sb.Append('H').Append(Fix(Ascii(b.CompanyCode ?? ""), 10)).Append(payDate.ToString("yyyyMMdd", Inv))
-                  .Append(Fix((b.DebitIban ?? "").Replace(" ", "").ToUpperInvariant(), 26)).Append(lines.Count.ToString(Inv).PadLeft(6, '0'))
-                  .Append(Kurus(total, 15)).Append("\r\n");
-                foreach (var l in lines)
-                    sb.Append('D').Append(l.Seq.ToString(Inv).PadLeft(6, '0')).Append(Fix(l.Iban, 26)).Append(Fix(Ascii(l.Name), 40))
-                      .Append(Kurus(l.Amount, 15)).Append(Fix(l.Currency, 3)).Append(Fix(Ascii(desc), 30)).Append("\r\n");
-                sb.Append('T').Append(lines.Count.ToString(Inv).PadLeft(6, '0')).Append(Kurus(total, 15)).Append("\r\n");
-                return new(Bytes(sb.ToString(), "iso-8859-9"), name + "-ornek-b.txt", "text/plain", lines.Count, warnings);
-            }
-            default:
-            {
-                var c = b.Custom ?? new BankCustomLayout();
-                var d = c.Delimiter;
-                string Clean(string v) => (c.Ascii ? Ascii(v) : v).Replace(d, " ").Replace("\r", " ").Replace("\n", " ");
-                string Amt(decimal v) => c.DecimalSeparator == "," ? v.ToString("0.00", Inv).Replace('.', ',') : v.ToString("0.00", Inv);
-                string Val(Line l, string key) => key switch
                 {
-                    "name" => Clean(l.Name), "iban" => l.Iban, "amount" => Amt(l.Amount), "currency" => l.Currency,
-                    "description" => Clean(desc), "date" => payDate.ToString(c.DateFormat, Inv), "tckn" => l.Tckn ?? "",
-                    "employeeNo" => l.EmployeeNo, "seq" => l.Seq.ToString(Inv), _ => "",
-                };
-                var sb = new StringBuilder();
-                if (c.Header) sb.Append(string.Join(d, c.Columns.Select(k => k.ToUpperInvariant()))).Append("\r\n");
-                foreach (var l in lines) sb.Append(string.Join(d, c.Columns.Select(k => Val(l, k)))).Append("\r\n");
-                if (c.TotalsLine)
-                    sb.Append(string.Join(d, c.Columns.Select((k, i) => k == "amount" ? Amt(total) : i == 0 ? "TOPLAM" : k == "seq" ? lines.Count.ToString(Inv) : ""))).Append("\r\n");
-                if (c.Columns.Contains("tckn")) warnings.Add("Dosya T.C. kimlik numarası içeriyor; yalnızca banka gerçekten istiyorsa kullanın (KVKK veri en aza indirme).");
-                return new(Bytes(sb.ToString(), c.Encoding), name + (d == "\t" ? ".txt" : ".csv"), d == "\t" ? "text/plain" : "text/csv", lines.Count, warnings);
-            }
+                    var sb = new StringBuilder("SIRA;AD SOYAD;IBAN;TUTAR;DOVIZ;ACIKLAMA;ODEME TARIHI\r\n");
+                    foreach (var l in lines)
+                        sb.Append($"{l.Seq};{Ascii(l.Name).Replace(";", " ")};{l.Iban};{l.Amount.ToString("0.00", Inv).Replace('.', ',')};{l.Currency};{Ascii(desc).Replace(";", " ")};{payDate:dd.MM.yyyy}\r\n");
+                    sb.Append($"TOPLAM;{lines.Count};;{total.ToString("0.00", Inv).Replace('.', ',')};TRY;;\r\n");
+                    return new(Bytes(sb.ToString(), "iso-8859-9"), name + "-ornek-a.csv", "text/csv", lines.Count, warnings);
+                }
+            case "ornek-b":
+                {
+                    var sb = new StringBuilder();
+                    sb.Append('H').Append(Fix(Ascii(b.CompanyCode ?? ""), 10)).Append(payDate.ToString("yyyyMMdd", Inv))
+                      .Append(Fix((b.DebitIban ?? "").Replace(" ", "").ToUpperInvariant(), 26)).Append(lines.Count.ToString(Inv).PadLeft(6, '0'))
+                      .Append(Kurus(total, 15)).Append("\r\n");
+                    foreach (var l in lines)
+                        sb.Append('D').Append(l.Seq.ToString(Inv).PadLeft(6, '0')).Append(Fix(l.Iban, 26)).Append(Fix(Ascii(l.Name), 40))
+                          .Append(Kurus(l.Amount, 15)).Append(Fix(l.Currency, 3)).Append(Fix(Ascii(desc), 30)).Append("\r\n");
+                    sb.Append('T').Append(lines.Count.ToString(Inv).PadLeft(6, '0')).Append(Kurus(total, 15)).Append("\r\n");
+                    return new(Bytes(sb.ToString(), "iso-8859-9"), name + "-ornek-b.txt", "text/plain", lines.Count, warnings);
+                }
+            default:
+                {
+                    var c = b.Custom ?? new BankCustomLayout();
+                    var d = c.Delimiter;
+                    string Clean(string v) => (c.Ascii ? Ascii(v) : v).Replace(d, " ").Replace("\r", " ").Replace("\n", " ");
+                    string Amt(decimal v) => c.DecimalSeparator == "," ? v.ToString("0.00", Inv).Replace('.', ',') : v.ToString("0.00", Inv);
+                    string Val(Line l, string key) => key switch
+                    {
+                        "name" => Clean(l.Name),
+                        "iban" => l.Iban,
+                        "amount" => Amt(l.Amount),
+                        "currency" => l.Currency,
+                        "description" => Clean(desc),
+                        "date" => payDate.ToString(c.DateFormat, Inv),
+                        "tckn" => l.Tckn ?? "",
+                        "employeeNo" => l.EmployeeNo,
+                        "seq" => l.Seq.ToString(Inv),
+                        _ => "",
+                    };
+                    var sb = new StringBuilder();
+                    if (c.Header) sb.Append(string.Join(d, c.Columns.Select(k => k.ToUpperInvariant()))).Append("\r\n");
+                    foreach (var l in lines) sb.Append(string.Join(d, c.Columns.Select(k => Val(l, k)))).Append("\r\n");
+                    if (c.TotalsLine)
+                        sb.Append(string.Join(d, c.Columns.Select((k, i) => k == "amount" ? Amt(total) : i == 0 ? "TOPLAM" : k == "seq" ? lines.Count.ToString(Inv) : ""))).Append("\r\n");
+                    if (c.Columns.Contains("tckn")) warnings.Add("Dosya T.C. kimlik numarası içeriyor; yalnızca banka gerçekten istiyorsa kullanın (KVKK veri en aza indirme).");
+                    return new(Bytes(sb.ToString(), c.Encoding), name + (d == "\t" ? ".txt" : ".csv"), d == "\t" ? "text/plain" : "text/csv", lines.Count, warnings);
+                }
         }
     }
 }

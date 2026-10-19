@@ -427,10 +427,10 @@ public class LibraryController : AppController
             SELECT "Id","VersionNo","Title","Body","ExternalUrl","StorageKey","ChangeNote","PublishedBy","PublishedAt"
             FROM governance_library_versions WHERE "TenantSlug" = $1 AND "DocumentId" = $2 ORDER BY "VersionNo" DESC
             """, r => new
-            {
-                id = r.GetGuid(0), versionNo = r.GetInt32(1), title = r.GetString(2), body = r.GetString(3), externalUrl = r.Str(4),
-                storageKey = r.Str(5), changeNote = r.Str(6), publishedBy = r.GetString(7), publishedAt = r.GetFieldValue<DateTime>(8),
-            }, ct, Tenant, id);
+        {
+            id = r.GetGuid(0), versionNo = r.GetInt32(1), title = r.GetString(2), body = r.GetString(3), externalUrl = r.Str(4),
+            storageKey = r.Str(5), changeNote = r.Str(6), publishedBy = r.GetString(7), publishedAt = r.GetFieldValue<DateTime>(8),
+        }, ct, Tenant, id);
         var current = versions.FirstOrDefault(v => v.id == d.CurrentVersionId);
         var mine = (await Acks.MineAsync(Db, Tenant, Acks.LibraryDocument, Me.UserId, ct)).Where(a => a.SubjectId == id).OrderByDescending(a => a.Version).FirstOrDefault();
         return Ok(new
@@ -452,10 +452,10 @@ public class LibraryController : AppController
             SELECT "VersionNo","Title","Body","ExternalUrl","StorageKey","ChangeNote","PublishedBy","PublishedAt"
             FROM governance_library_versions WHERE "TenantSlug" = $1 AND "DocumentId" = $2 AND "VersionNo" = $3
             """, r => new
-            {
-                versionNo = r.GetInt32(0), title = r.GetString(1), body = r.GetString(2), externalUrl = r.Str(3), storageKey = r.Str(4),
-                changeNote = r.Str(5), publishedBy = r.GetString(6), publishedAt = r.GetFieldValue<DateTime>(7),
-            }, ct, Tenant, id, no)).FirstOrDefault();
+        {
+            versionNo = r.GetInt32(0), title = r.GetString(1), body = r.GetString(2), externalUrl = r.Str(3), storageKey = r.Str(4),
+            changeNote = r.Str(5), publishedBy = r.GetString(6), publishedAt = r.GetFieldValue<DateTime>(7),
+        }, ct, Tenant, id, no)).FirstOrDefault();
         return v is null ? NotFound() : Ok(v);
     }
 
@@ -488,10 +488,10 @@ public class LibraryController : AppController
               AND {VisibleSql}
             ORDER BY rank DESC, d."Title" LIMIT 30
             """, r => new
-            {
-                id = r.GetGuid(0), title = r.GetString(1), category = r.GetString(2), categoryLabel = Categories.GetValueOrDefault(r.GetString(2), r.GetString(2)),
-                version = r.GetInt32(3), snippet = r.GetString(4), rank = r.GetFloat(5), requiresAck = r.GetBoolean(6),
-            }, ct, Tenant, s.Hr, s.Mgr, s.Dept, q);
+        {
+            id = r.GetGuid(0), title = r.GetString(1), category = r.GetString(2), categoryLabel = Categories.GetValueOrDefault(r.GetString(2), r.GetString(2)),
+            version = r.GetInt32(3), snippet = r.GetString(4), rank = r.GetFloat(5), requiresAck = r.GetBoolean(6),
+        }, ct, Tenant, s.Hr, s.Mgr, s.Dept, q);
         return Ok(rows);
     }
 

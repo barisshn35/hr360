@@ -450,11 +450,14 @@ public sealed class Dispatcher
         // (Power Automate) webhook'u Adaptive Card ekli "message" bekler.
         object body = kind == "Teams"
             ? Chat.ChatFormat.TeamsWebhookMessage(text, type)
-            : new { text = $"*HR360* — {text}", blocks = new object[]
+            : new
+            {
+                text = $"*HR360* — {text}", blocks = new object[]
             {
                 new { type = "section", text = new { type = "mrkdwn", text = $"*HR360* · {text}" } },
                 new { type = "context", elements = new object[] { new { type = "mrkdwn", text = $"`{type}`" } } },
-            } };
+            }
+            };
         return await PostJsonAsync(url, body, null, ct);
     }
 

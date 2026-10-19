@@ -123,8 +123,11 @@ public class WorkflowRouting
         if (v is null) return false; // koşul alanı yoksa koşullu adım atlanır
         return s.ConditionOp switch
         {
-            ">" => v > s.ConditionValue, ">=" => v >= s.ConditionValue,
-            "<" => v < s.ConditionValue, "<=" => v <= s.ConditionValue, _ => true,
+            ">" => v > s.ConditionValue,
+            ">=" => v >= s.ConditionValue,
+            "<" => v < s.ConditionValue,
+            "<=" => v <= s.ConditionValue,
+            _ => true,
         };
     }
 

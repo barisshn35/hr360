@@ -109,17 +109,20 @@ public class KvkkWave10Controller : AppController
     private IActionResult? ValidateItem(VerbisItemInput b)
     {
         if (VerbisInventory.Validate(b.Module, b.Activity, b.Purpose, b.LegalBasis, b.Retention, b.DataCategories, b.Subjects) is { } err)
-            return BadRequest(new { message = L(err, err switch
+            return BadRequest(new
             {
-                var s when s.StartsWith("Modül") => "Module is required (max 120 characters).",
-                var s when s.StartsWith("İşleme faaliyeti") => "Processing activity is required (max 300 characters).",
-                var s when s.StartsWith("İşleme amacı") => "Purpose is required.",
-                var s when s.StartsWith("Hukuki") => "Legal basis is required (KVKK art. 5 / 6).",
-                var s when s.StartsWith("Saklama") => "Retention period is required.",
-                var s when s.Contains("veri kategorisi") => "At least one data category is required.",
-                var s when s.Contains("ilgili kişi") => "At least one data subject group is required.",
-                _ => "Text fields must be at most 4000 characters.",
-            }) });
+                message = L(err, err switch
+                {
+                    var s when s.StartsWith("Modül") => "Module is required (max 120 characters).",
+                    var s when s.StartsWith("İşleme faaliyeti") => "Processing activity is required (max 300 characters).",
+                    var s when s.StartsWith("İşleme amacı") => "Purpose is required.",
+                    var s when s.StartsWith("Hukuki") => "Legal basis is required (KVKK art. 5 / 6).",
+                    var s when s.StartsWith("Saklama") => "Retention period is required.",
+                    var s when s.Contains("veri kategorisi") => "At least one data category is required.",
+                    var s when s.Contains("ilgili kişi") => "At least one data subject group is required.",
+                    _ => "Text fields must be at most 4000 characters.",
+                })
+            });
         if (b.RetentionCategory is { Length: > 0 } rc && !Retention.Categories.ContainsKey(rc))
             return BadRequest(new { message = L("Bilinmeyen saklama politikası.", "Unknown retention policy.") });
         if ((b.TransferProviders ?? new()).Any(k => PrivacyCatalog.Providers.All(p => p.Key != k)))
@@ -159,11 +162,19 @@ public class KvkkWave10Controller : AppController
         if (before is null) return NotFound();
         var after = before with
         {
-            Module = body.Module.Trim(), Activity = body.Activity.Trim(), Subjects = VerbisInventory.CleanList(body.Subjects),
-            DataCategories = VerbisInventory.CleanList(body.DataCategories), Purpose = body.Purpose.Trim(), LegalBasis = body.LegalBasis.Trim(),
-            Special = body.Special, Retention = body.Retention.Trim(), RetentionCategory = string.IsNullOrWhiteSpace(body.RetentionCategory) ? null : body.RetentionCategory,
-            Recipients = VerbisInventory.CleanList(body.Recipients), TransferProviders = VerbisInventory.CleanList(body.TransferProviders),
-            Measures = body.Measures?.Trim() ?? "", IsActive = body.IsActive,
+            Module = body.Module.Trim(),
+            Activity = body.Activity.Trim(),
+            Subjects = VerbisInventory.CleanList(body.Subjects),
+            DataCategories = VerbisInventory.CleanList(body.DataCategories),
+            Purpose = body.Purpose.Trim(),
+            LegalBasis = body.LegalBasis.Trim(),
+            Special = body.Special,
+            Retention = body.Retention.Trim(),
+            RetentionCategory = string.IsNullOrWhiteSpace(body.RetentionCategory) ? null : body.RetentionCategory,
+            Recipients = VerbisInventory.CleanList(body.Recipients),
+            TransferProviders = VerbisInventory.CleanList(body.TransferProviders),
+            Measures = body.Measures?.Trim() ?? "",
+            IsActive = body.IsActive,
         };
         await Db.ExecuteAsync("""
             UPDATE governance_privacy_inventory SET "Module" = $3, "Activity" = $4, "Subjects" = $5, "DataCategories" = $6, "Purpose" = $7, "LegalBasis" = $8,
@@ -443,10 +454,10 @@ public class KvkkWave10Controller : AppController
                 SELECT "Category","SourceTable","SourceColumn",left("KeyHash",12),"Status","Detail","Attempts","CreatedAt","ProcessedAt"
                 FROM governance_storage_deletions WHERE "TenantSlug" = $1 ORDER BY "CreatedAt" DESC LIMIT 100
                 """, r => new
-                {
-                    category = r.GetString(0), table = r.GetString(1), column = r.GetString(2), keyHash = r.GetString(3), status = r.GetString(4),
-                    detail = r.Str(5), attempts = r.GetInt32(6), createdAt = r.GetFieldValue<DateTime>(7), processedAt = r.Ts(8),
-                }, ct, Tenant);
+            {
+                category = r.GetString(0), table = r.GetString(1), column = r.GetString(2), keyHash = r.GetString(3), status = r.GetString(4),
+                detail = r.Str(5), attempts = r.GetInt32(6), createdAt = r.GetFieldValue<DateTime>(7), processedAt = r.Ts(8),
+            }, ct, Tenant);
         }
         catch (Npgsql.PostgresException e) when (e.SqlState == "42P01") { return MigrationMissing(); }
 
@@ -468,11 +479,11 @@ public class KvkkWave10Controller : AppController
             SELECT "Id","Category","Action","Affected","Trigger","Actor","RanAt","Details"::text FROM governance_destruction_logs
             WHERE "TenantSlug" = $1 ORDER BY "RanAt" DESC LIMIT 20
             """, r => new
-            {
-                id = r.GetGuid(0), category = r.GetString(1), label = Retention.LabelOf(r.GetString(1), En),
-                action = r.GetString(2), affected = r.GetInt32(3), trigger = r.GetString(4), actor = r.GetString(5), ranAt = r.GetFieldValue<DateTime>(6),
-                details = r.Str(7) is { } d ? JsonDocument.Parse(d).RootElement.Clone() : (JsonElement?)null,
-            }, ct, Tenant);
+        {
+            id = r.GetGuid(0), category = r.GetString(1), label = Retention.LabelOf(r.GetString(1), En),
+            action = r.GetString(2), affected = r.GetInt32(3), trigger = r.GetString(4), actor = r.GetString(5), ranAt = r.GetFieldValue<DateTime>(6),
+            details = r.Str(7) is { } d ? JsonDocument.Parse(d).RootElement.Clone() : (JsonElement?)null,
+        }, ct, Tenant);
 
         return Ok(new
         {

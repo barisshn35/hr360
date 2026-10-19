@@ -112,8 +112,14 @@ public class CalendarController : AppController
 
     private static string LeaveLabel(string t) => t switch
     {
-        "Annual" => "Yıllık", "Sick" => "Hastalık", "Unpaid" => "Ücretsiz", "Maternity" => "Doğum", "Paternity" => "Babalık",
-        "Marriage" => "Evlilik", "Bereavement" => "Vefat", _ => t,
+        "Annual" => "Yıllık",
+        "Sick" => "Hastalık",
+        "Unpaid" => "Ücretsiz",
+        "Maternity" => "Doğum",
+        "Paternity" => "Babalık",
+        "Marriage" => "Evlilik",
+        "Bereavement" => "Vefat",
+        _ => t,
     };
 
     private static string Esc(string s) => s.Replace("\\", "\\\\").Replace(",", "\\,").Replace(";", "\\;").Replace("\n", "\\n");

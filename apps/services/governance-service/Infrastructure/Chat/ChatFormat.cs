@@ -105,16 +105,31 @@ public static class ChatFormat
         var blocks = new JsonArray();
         if (balanceLines.Count > 0)
             blocks.Add(new JsonObject { ["type"] = "context", ["elements"] = new JsonArray { new JsonObject { ["type"] = "mrkdwn", ["text"] = string.Join("\n", balanceLines) } } });
-        blocks.Add(new JsonObject { ["type"] = "input", ["block_id"] = "type", ["label"] = PlainText(T(en, "İzin türü", "Leave type")),
-            ["element"] = new JsonObject { ["type"] = "static_select", ["action_id"] = "v", ["initial_option"] = Opt("Annual"),
-                ["options"] = new JsonArray(LeaveTypes.Select(t => (JsonNode)Opt(t)).ToArray()) } });
-        blocks.Add(new JsonObject { ["type"] = "input", ["block_id"] = "start", ["label"] = PlainText(T(en, "Başlangıç", "Start date")),
-            ["element"] = new JsonObject { ["type"] = "datepicker", ["action_id"] = "v", ["initial_date"] = today } });
-        blocks.Add(new JsonObject { ["type"] = "input", ["block_id"] = "end", ["label"] = PlainText(T(en, "Bitiş", "End date")),
-            ["element"] = new JsonObject { ["type"] = "datepicker", ["action_id"] = "v", ["initial_date"] = today } });
-        blocks.Add(new JsonObject { ["type"] = "input", ["block_id"] = "reason", ["optional"] = true, ["label"] = PlainText(T(en, "Açıklama", "Note")),
+        blocks.Add(new JsonObject
+        {
+            ["type"] = "input", ["block_id"] = "type", ["label"] = PlainText(T(en, "İzin türü", "Leave type")),
+            ["element"] = new JsonObject
+            {
+                ["type"] = "static_select", ["action_id"] = "v", ["initial_option"] = Opt("Annual"),
+                ["options"] = new JsonArray(LeaveTypes.Select(t => (JsonNode)Opt(t)).ToArray())
+            }
+        });
+        blocks.Add(new JsonObject
+        {
+            ["type"] = "input", ["block_id"] = "start", ["label"] = PlainText(T(en, "Başlangıç", "Start date")),
+            ["element"] = new JsonObject { ["type"] = "datepicker", ["action_id"] = "v", ["initial_date"] = today }
+        });
+        blocks.Add(new JsonObject
+        {
+            ["type"] = "input", ["block_id"] = "end", ["label"] = PlainText(T(en, "Bitiş", "End date")),
+            ["element"] = new JsonObject { ["type"] = "datepicker", ["action_id"] = "v", ["initial_date"] = today }
+        });
+        blocks.Add(new JsonObject
+        {
+            ["type"] = "input", ["block_id"] = "reason", ["optional"] = true, ["label"] = PlainText(T(en, "Açıklama", "Note")),
             ["hint"] = PlainText(T(en, "Sağlık bilgisi yazmayın; rapor gerekiyorsa İK'ya iletin.", "Do not include health details; send any medical report to HR.")),
-            ["element"] = new JsonObject { ["type"] = "plain_text_input", ["action_id"] = "v", ["max_length"] = 500 } });
+            ["element"] = new JsonObject { ["type"] = "plain_text_input", ["action_id"] = "v", ["max_length"] = 500 }
+        });
         return new JsonObject
         {
             ["type"] = "modal", ["callback_id"] = "hr360_leave",
@@ -180,12 +195,21 @@ public static class ChatFormat
         if (status is null)
         {
             // Reddederken isteğe bağlı gerekçe: yalnızca HR360'ta saklanır, sohbete yazılmaz.
-            body.Add(new JsonObject { ["type"] = "Input.Text", ["id"] = "reason", ["isMultiline"] = true, ["maxLength"] = 500,
-                ["placeholder"] = T(en, "Reddetme gerekçesi (isteğe bağlı)", "Reason for rejection (optional)") });
-            actions.Add(new JsonObject { ["type"] = "Action.Submit", ["title"] = T(en, "Onayla", "Approve"), ["style"] = "positive",
-                ["data"] = new JsonObject { ["hr360"] = "decide", ["decision"] = "approve", ["wf"] = p.WorkflowId.ToString(), ["step"] = p.StepId.ToString() } });
-            actions.Add(new JsonObject { ["type"] = "Action.Submit", ["title"] = T(en, "Reddet", "Reject"), ["style"] = "destructive",
-                ["data"] = new JsonObject { ["hr360"] = "decide", ["decision"] = "reject", ["wf"] = p.WorkflowId.ToString(), ["step"] = p.StepId.ToString() } });
+            body.Add(new JsonObject
+            {
+                ["type"] = "Input.Text", ["id"] = "reason", ["isMultiline"] = true, ["maxLength"] = 500,
+                ["placeholder"] = T(en, "Reddetme gerekçesi (isteğe bağlı)", "Reason for rejection (optional)")
+            });
+            actions.Add(new JsonObject
+            {
+                ["type"] = "Action.Submit", ["title"] = T(en, "Onayla", "Approve"), ["style"] = "positive",
+                ["data"] = new JsonObject { ["hr360"] = "decide", ["decision"] = "approve", ["wf"] = p.WorkflowId.ToString(), ["step"] = p.StepId.ToString() }
+            });
+            actions.Add(new JsonObject
+            {
+                ["type"] = "Action.Submit", ["title"] = T(en, "Reddet", "Reject"), ["style"] = "destructive",
+                ["data"] = new JsonObject { ["hr360"] = "decide", ["decision"] = "reject", ["wf"] = p.WorkflowId.ToString(), ["step"] = p.StepId.ToString() }
+            });
         }
         actions.Add(new JsonObject { ["type"] = "Action.OpenUrl", ["title"] = T(en, "HR360'ta aç", "Open in HR360"), ["url"] = ChatService.WorkflowUrl(p.WorkflowId) });
         return Card(body, actions);
@@ -207,8 +231,11 @@ public static class ChatFormat
         var today = DateTime.UtcNow.AddHours(3).ToString("yyyy-MM-dd");
         var body = new JsonArray { Text(T(en, "İzin talebi", "Leave request"), bold: true) };
         foreach (var l in balanceLines) body.Add(Text(Md(l), subtle: true));
-        body.Add(new JsonObject { ["type"] = "Input.ChoiceSet", ["id"] = "type", ["label"] = T(en, "İzin türü", "Leave type"), ["value"] = "Annual",
-            ["choices"] = new JsonArray(LeaveTypes.Select(t => (JsonNode)new JsonObject { ["title"] = ChatService.LeaveTypeLabel(t, en), ["value"] = t }).ToArray()) });
+        body.Add(new JsonObject
+        {
+            ["type"] = "Input.ChoiceSet", ["id"] = "type", ["label"] = T(en, "İzin türü", "Leave type"), ["value"] = "Annual",
+            ["choices"] = new JsonArray(LeaveTypes.Select(t => (JsonNode)new JsonObject { ["title"] = ChatService.LeaveTypeLabel(t, en), ["value"] = t }).ToArray())
+        });
         body.Add(new JsonObject { ["type"] = "Input.Date", ["id"] = "start", ["label"] = T(en, "Başlangıç", "Start date"), ["value"] = today });
         body.Add(new JsonObject { ["type"] = "Input.Date", ["id"] = "end", ["label"] = T(en, "Bitiş", "End date"), ["value"] = today });
         body.Add(new JsonObject { ["type"] = "Input.Text", ["id"] = "reason", ["label"] = T(en, "Açıklama (sağlık bilgisi yazmayın)", "Note (no health details)"), ["maxLength"] = 500 });
@@ -222,8 +249,11 @@ public static class ChatFormat
         var body = new JsonArray(Md(text).Split('\n').Select(l => (JsonNode)Text(l)).ToArray());
         body.Add(new JsonObject { ["type"] = "Input.Text", ["id"] = "amount", ["label"] = T(en, "Tutar (TL)", "Amount (TRY)"), ["value"] = d.Amount?.ToString("0.00", CultureInfo.InvariantCulture) ?? "" });
         body.Add(new JsonObject { ["type"] = "Input.Date", ["id"] = "date", ["label"] = T(en, "Harcama tarihi", "Expense date"), ["value"] = (d.Date ?? DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3))).ToString("yyyy-MM-dd") });
-        body.Add(new JsonObject { ["type"] = "Input.ChoiceSet", ["id"] = "category", ["label"] = T(en, "Kategori", "Category"), ["value"] = d.Category,
-            ["choices"] = new JsonArray(ReceiptParser.Categories.Select(c => (JsonNode)new JsonObject { ["title"] = ReceiptParser.CategoryLabel(c, en), ["value"] = c }).ToArray()) });
+        body.Add(new JsonObject
+        {
+            ["type"] = "Input.ChoiceSet", ["id"] = "category", ["label"] = T(en, "Kategori", "Category"), ["value"] = d.Category,
+            ["choices"] = new JsonArray(ReceiptParser.Categories.Select(c => (JsonNode)new JsonObject { ["title"] = ReceiptParser.CategoryLabel(c, en), ["value"] = c }).ToArray())
+        });
         var actions = new JsonArray
         {
             new JsonObject { ["type"] = "Action.Submit", ["title"] = T(en, "Taslak oluştur", "Create draft"), ["style"] = "positive",

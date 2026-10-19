@@ -382,25 +382,25 @@ public static class RetentionPlans
         switch (category)
         {
             case "TerminatedEmployees":
-            {
-                var rows = employeeId is null
-                    ? await sql.QueryAsync("""
+                {
+                    var rows = employeeId is null
+                        ? await sql.QueryAsync("""
                         SELECT e."Id", e."KeycloakUserId" FROM employee_employees e
                         WHERE e."TenantSlug" = $1 AND e."Status" = 'Terminated' AND e."Email" NOT LIKE 'anon-%'
                           AND coalesce((SELECT max(a."EffectiveTo") FROM employee_assignments a WHERE a."EmployeeId" = e."Id"), e."CreatedAt"::date)
                               < (now() - make_interval(months => $2))::date
                         """, r => (Id: r.GetGuid(0), User: r.Str(1)), ct, tenant, months)
-                    : await sql.QueryAsync("""
+                        : await sql.QueryAsync("""
                         SELECT e."Id", e."KeycloakUserId" FROM employee_employees e WHERE e."TenantSlug" = $1 AND e."Id" = $2 AND e."Status" = 'Terminated'
                         """, r => (Id: r.GetGuid(0), User: r.Str(1)), ct, tenant, employeeId.Value);
-                var ids = rows.Select(r => r.Id).ToArray();
-                var users = rows.Where(r => !string.IsNullOrEmpty(r.User)).Select(r => r.User!).ToArray();
-                return new RetentionPlan(category, "Anonymize", ids.Length, new object?[] { tenant, ids, users },
-                    ids.Length == 0 ? Array.Empty<RetentionStep>() : EmployeeSteps, EmployeeStorage, EmployeeRetained);
-            }
+                    var ids = rows.Select(r => r.Id).ToArray();
+                    var users = rows.Where(r => !string.IsNullOrEmpty(r.User)).Select(r => r.User!).ToArray();
+                    return new RetentionPlan(category, "Anonymize", ids.Length, new object?[] { tenant, ids, users },
+                        ids.Length == 0 ? Array.Empty<RetentionStep>() : EmployeeSteps, EmployeeStorage, EmployeeRetained);
+                }
             case "RejectedCandidates":
-            {
-                var ids = (await sql.QueryAsync("""
+                {
+                    var ids = (await sql.QueryAsync("""
                     SELECT c."Id" FROM recruitment_candidates c
                     WHERE c."TenantSlug" = $1 AND c."AnonymizedAt" IS NULL AND c."Email" NOT LIKE 'anon-%'
                       AND NOT EXISTS (
@@ -408,10 +408,10 @@ public static class RetentionPlans
                         AND (a."Status" NOT IN ('Rejected','Withdrawn') OR coalesce(a."StatusChangedAt", a."AppliedAt") > now() - make_interval(months => $2)))
                       AND c."CreatedAt" < now() - make_interval(months => $2)
                     """, r => r.GetGuid(0), ct, tenant, months)).ToArray();
-                var steps = action == "Delete" ? CandidateDeleteSteps : CandidateAnonymizeSteps;
-                return new RetentionPlan(category, action, ids.Length, new object?[] { tenant, ids },
-                    ids.Length == 0 ? Array.Empty<RetentionStep>() : steps, CandidateStorage, Array.Empty<RetainedTable>());
-            }
+                    var steps = action == "Delete" ? CandidateDeleteSteps : CandidateAnonymizeSteps;
+                    return new RetentionPlan(category, action, ids.Length, new object?[] { tenant, ids },
+                        ids.Length == 0 ? Array.Empty<RetentionStep>() : steps, CandidateStorage, Array.Empty<RetainedTable>());
+                }
             default:
                 return new RetentionPlan(category, action, -1, new object?[] { tenant, months }, SimpleSteps(category),
                     Array.Empty<StorageRef>(), Array.Empty<RetainedTable>());

@@ -223,19 +223,41 @@ public sealed class HrAssistant(Sql db, PeopleDirectory people, GovernanceDbCont
 
     public static string LeaveLabel(string t, bool en = false) => en ? t switch
     {
-        "Annual" => "Annual leave", "Sick" => "Sick leave", "Unpaid" => "Unpaid leave", "Maternity" => "Maternity leave", "Paternity" => "Paternity leave",
-        "Marriage" => "Marriage leave", "Bereavement" => "Bereavement leave", _ => t,
+        "Annual" => "Annual leave",
+        "Sick" => "Sick leave",
+        "Unpaid" => "Unpaid leave",
+        "Maternity" => "Maternity leave",
+        "Paternity" => "Paternity leave",
+        "Marriage" => "Marriage leave",
+        "Bereavement" => "Bereavement leave",
+        _ => t,
     } : t switch
     {
-        "Annual" => "Yıllık izin", "Sick" => "Hastalık izni", "Unpaid" => "Ücretsiz izin", "Maternity" => "Doğum izni", "Paternity" => "Babalık izni",
-        "Marriage" => "Evlilik izni", "Bereavement" => "Vefat izni", _ => t,
+        "Annual" => "Yıllık izin",
+        "Sick" => "Hastalık izni",
+        "Unpaid" => "Ücretsiz izin",
+        "Maternity" => "Doğum izni",
+        "Paternity" => "Babalık izni",
+        "Marriage" => "Evlilik izni",
+        "Bereavement" => "Vefat izni",
+        _ => t,
     };
 
     public static string ExpenseLabel(string s, bool en = false) => en ? s switch
     {
-        "Draft" => "draft", "Submitted" => "in approval", "Approved" => "approved", "Rejected" => "rejected", "Paid" => "paid", _ => s,
+        "Draft" => "draft",
+        "Submitted" => "in approval",
+        "Approved" => "approved",
+        "Rejected" => "rejected",
+        "Paid" => "paid",
+        _ => s,
     } : s switch
     {
-        "Draft" => "taslak", "Submitted" => "onayda", "Approved" => "onaylandı", "Rejected" => "reddedildi", "Paid" => "ödendi", _ => s,
+        "Draft" => "taslak",
+        "Submitted" => "onayda",
+        "Approved" => "onaylandı",
+        "Rejected" => "reddedildi",
+        "Paid" => "ödendi",
+        _ => s,
     };
 }

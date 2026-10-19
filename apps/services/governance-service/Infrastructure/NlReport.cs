@@ -266,7 +266,12 @@ public static class NlReport
         {
             var by = groupBy switch
             {
-                "department" => " by department", "month" => " by month", "type" => " by type", "person" => " per person (top 10)", "posting" => " by posting", _ => "",
+                "department" => " by department",
+                "month" => " by month",
+                "type" => " by type",
+                "person" => " per person (top 10)",
+                "posting" => " by posting",
+                _ => "",
             };
             interpretation = isCurrent ? $"{label}{by} (current)" : $"{label}{by}, {periodLabel}";
             if (deptName is not null) interpretation += $" — {deptName} department";
@@ -276,7 +281,12 @@ public static class NlReport
         {
             var groupText = groupBy switch
             {
-                "department" => "departmanlara göre ", "month" => "aylara göre ", "type" => "türe göre ", "person" => "kişi bazında (ilk 10) ", "posting" => "ilanlara göre ", _ => "",
+                "department" => "departmanlara göre ",
+                "month" => "aylara göre ",
+                "type" => "türe göre ",
+                "person" => "kişi bazında (ilk 10) ",
+                "posting" => "ilanlara göre ",
+                _ => "",
             };
             interpretation = isCurrent ? $"{Capitalize(groupText)}{label} (güncel)" : $"{periodLabel} {groupText}{label}";
             if (deptName is not null) interpretation += $" — {deptName} departmanı";
@@ -465,8 +475,12 @@ public static class NlReport
         }
         string First() => groupBy switch
         {
-            "department" => L("Departman", "Department"), "month" => L("Ay", "Month"), "type" => L("Tür", "Type"), "person" => L("Çalışan", "Employee"),
-            "posting" => L("İlan", "Posting"), _ => L("Ölçüt", "Measure"),
+            "department" => L("Departman", "Department"),
+            "month" => L("Ay", "Month"),
+            "type" => L("Tür", "Type"),
+            "person" => L("Çalışan", "Employee"),
+            "posting" => L("İlan", "Posting"),
+            _ => L("Ölçüt", "Measure"),
         };
         var chart = groupBy switch { "month" => "line", "none" => "number", _ => "bar" };
 
@@ -492,17 +506,17 @@ public static class NlReport
                     "learning_enrollments n JOIN employee_employees e ON e.\"Id\" = n.\"EmployeeId\" AND n.\"Status\" = 'Completed' JOIN learning_courses co ON co.\"Id\" = n.\"CourseId\"",
                     "n.\"CompletedAt\"::date", L("tamamlanan eğitim", "Completed trainings"), "co.\"Category\""), chart, L("tamamlanan eğitimler", "completed trainings"), 2);
             case "funnel":
-            {
-                var key = groupBy switch
                 {
-                    "posting" => "a.\"Title\"",
-                    "month" => "date_trunc('month', a.\"AppliedAt\")::date",
-                    "department" => $"coalesce(d.\"Name\", '{unassigned}')",
-                    _ => $"'{L("Tüm ilanlar", "All postings")}'",
-                };
-                var join = groupBy == "department" ? "LEFT JOIN organization_departments d ON d.\"Id\" = a.\"DepartmentId\"" : "";
-                var tail = groupBy switch { "none" => "", "month" => "GROUP BY 1 ORDER BY 1", _ => "GROUP BY 1 ORDER BY 2 DESC" };
-                var fsql = $"""
+                    var key = groupBy switch
+                    {
+                        "posting" => "a.\"Title\"",
+                        "month" => "date_trunc('month', a.\"AppliedAt\")::date",
+                        "department" => $"coalesce(d.\"Name\", '{unassigned}')",
+                        _ => $"'{L("Tüm ilanlar", "All postings")}'",
+                    };
+                    var join = groupBy == "department" ? "LEFT JOIN organization_departments d ON d.\"Id\" = a.\"DepartmentId\"" : "";
+                    var tail = groupBy switch { "none" => "", "month" => "GROUP BY 1 ORDER BY 1", _ => "GROUP BY 1 ORDER BY 2 DESC" };
+                    var fsql = $"""
                     WITH a AS (
                         SELECT a."Status", a."AppliedAt", p."Title", p."DepartmentId",
                                EXISTS (SELECT 1 FROM recruitment_interviews i WHERE i."ApplicationId" = a."Id") AS iv,
@@ -518,12 +532,12 @@ public static class NlReport
                            count(*)
                     FROM a {join} {tail}
                     """;
-                return (new[]
-                {
+                    return (new[]
+                    {
                     First(), L("Başvuru", "Applications"), L("Ön eleme+", "Screening+"), L("Mülakat+", "Interview+"), L("Teklif+", "Offer+"),
                     L("İşe alınan", "Hired"), L("Reddedilen/çekilen", "Rejected/withdrawn"),
                 }, fsql, groupBy == "none" ? "funnel" : groupBy == "month" ? "line" : "bar", L("işe alım hunisi", "recruitment funnel"), 7);
-            }
+                }
             case "performance":
                 const string latest = "(SELECT DISTINCT ON (\"EmployeeId\") * FROM performance_snapshots WHERE \"TenantSlug\" = $1 ORDER BY \"EmployeeId\", \"CapturedAt\" DESC) s JOIN employee_employees e ON e.\"Id\" = s.\"EmployeeId\"";
                 var perf = groupBy switch

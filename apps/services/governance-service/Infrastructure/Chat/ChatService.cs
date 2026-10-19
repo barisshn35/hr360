@@ -122,20 +122,40 @@ public sealed class ChatService
 
     public static string TypeLabel(string? type, bool en = false) => en ? type switch
     {
-        "LeaveRequest" => "leave", "ExpenseClaim" => "expense", "PositionChange" => "position change",
-        "AssetRequest" => "asset", "Overtime" => "overtime", "DocumentRequest" => "document", "Travel" => "travel", "OfferApproval" => "offer", _ => "approval",
+        "LeaveRequest" => "leave",
+        "ExpenseClaim" => "expense",
+        "PositionChange" => "position change",
+        "AssetRequest" => "asset",
+        "Overtime" => "overtime",
+        "DocumentRequest" => "document",
+        "Travel" => "travel",
+        "OfferApproval" => "offer",
+        _ => "approval",
     } : type switch
     {
-        "LeaveRequest" => "izin", "ExpenseClaim" => "masraf", "PositionChange" => "pozisyon değişikliği",
-        "AssetRequest" => "zimmet", "Overtime" => "fazla mesai", "DocumentRequest" => "belge", "Travel" => "seyahat", "OfferApproval" => "teklif", _ => "onay",
+        "LeaveRequest" => "izin",
+        "ExpenseClaim" => "masraf",
+        "PositionChange" => "pozisyon değişikliği",
+        "AssetRequest" => "zimmet",
+        "Overtime" => "fazla mesai",
+        "DocumentRequest" => "belge",
+        "Travel" => "seyahat",
+        "OfferApproval" => "teklif",
+        _ => "onay",
     };
 
     public static string LeaveTypeLabel(string t, bool en) => HrAssistant.LeaveLabel(t, en);
 
     public static string LeaveLabel(string type) => type switch
     {
-        "Annual" => "Yıllık", "Sick" => "Hastalık", "Unpaid" => "Ücretsiz", "Maternity" => "Doğum", "Paternity" => "Babalık",
-        "Marriage" => "Evlilik", "Bereavement" => "Vefat", _ => type,
+        "Annual" => "Yıllık",
+        "Sick" => "Hastalık",
+        "Unpaid" => "Ücretsiz",
+        "Maternity" => "Doğum",
+        "Paternity" => "Babalık",
+        "Marriage" => "Evlilik",
+        "Bereavement" => "Vefat",
+        _ => type,
     };
 
     public static string WorkflowUrl(Guid id) => $"{PublicOrigin}/panel/onaylar/{id}";
@@ -467,8 +487,11 @@ public sealed class ChatService
             }
             var ts = await _slack.PostAsync(SecretBox.Unprotect(app.SlackBotTokenEnc)!, id.ConversationId,
                 ChatFormat.ApprovalFallback(p, en), ChatFormat.SlackApproval(p, null, en), ct);
-            db.ChatMessages.Add(new ChatMessage { TenantSlug = app.TenantSlug, AppId = app.Id, Platform = "Slack", WorkflowRequestId = p.WorkflowId,
-                StepId = p.StepId, RecipientEmployeeId = approverId, ConversationId = id.ConversationId, MessageId = ts, Subject = p.Subject });
+            db.ChatMessages.Add(new ChatMessage
+            {
+                TenantSlug = app.TenantSlug, AppId = app.Id, Platform = "Slack", WorkflowRequestId = p.WorkflowId,
+                StepId = p.StepId, RecipientEmployeeId = approverId, ConversationId = id.ConversationId, MessageId = ts, Subject = p.Subject
+            });
         }
         else
         {
@@ -482,8 +505,11 @@ public sealed class ChatService
                 return;
             }
             var activityId = await _teams.PostActivityAsync(token, id.ServiceUrl!, id.ConversationId!, ChatFormat.TeamsActivity(ChatFormat.TeamsApprovalCard(p, null, en), ChatFormat.ApprovalFallback(p, en)), ct);
-            db.ChatMessages.Add(new ChatMessage { TenantSlug = app.TenantSlug, AppId = app.Id, Platform = "Teams", WorkflowRequestId = p.WorkflowId,
-                StepId = p.StepId, RecipientEmployeeId = approverId, ConversationId = id.ConversationId!, ServiceUrl = id.ServiceUrl, MessageId = activityId ?? "", Subject = p.Subject });
+            db.ChatMessages.Add(new ChatMessage
+            {
+                TenantSlug = app.TenantSlug, AppId = app.Id, Platform = "Teams", WorkflowRequestId = p.WorkflowId,
+                StepId = p.StepId, RecipientEmployeeId = approverId, ConversationId = id.ConversationId!, ServiceUrl = id.ServiceUrl, MessageId = activityId ?? "", Subject = p.Subject
+            });
         }
         app.LastActivityAt = DateTime.UtcNow;
         app.LastError = null;
@@ -582,8 +608,11 @@ public sealed class ChatService
         client.Timeout = TimeSpan.FromSeconds(10);
         using var req = new HttpRequestMessage(HttpMethod.Post, $"{WorkflowBase}/api/internal/workflows/{wfId}/steps/{stepId}/decide")
         {
-            Content = JsonContent.Create(new { tenantSlug = app.TenantSlug, actorEmployeeId = who.EmployeeId, decision = approve ? "Approved" : "Rejected", channel = app.Platform,
-                comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim()[..Math.Min(500, comment.Trim().Length)] }),
+            Content = JsonContent.Create(new
+            {
+                tenantSlug = app.TenantSlug, actorEmployeeId = who.EmployeeId, decision = approve ? "Approved" : "Rejected", channel = app.Platform,
+                comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim()[..Math.Min(500, comment.Trim().Length)]
+            }),
         };
         req.Headers.Add("X-Internal-Token", token);
         using var res = await client.SendAsync(req, ct);
@@ -709,88 +738,92 @@ public sealed class ChatService
                     return ChatFeatures.HelpReply(en);
 
                 case "approvals":
-                {
-                    if (who.EmployeeId is null) return T(notLinked);
-                    var items = new List<PendingApproval>();
-                    foreach (var p in await MyPendingAsync(tenant, who.EmployeeId.Value, 5, ct)) items.Add(await Features.EnrichAsync(tenant, Shape(app, p, en), en, ct));
-                    var total = items.Count < 5 ? items.Count : await MyPendingCountAsync(tenant, who.EmployeeId.Value, ct);
-                    if (items.Count == 0) return T(L("Karar bekleyen talebiniz yok. 🎉", "Nothing is awaiting your decision. 🎉"));
-                    // BG5: özet + "Tümünü onayla (n)" (onay adımı ve ek doğrulamayla).
-                    var groups = (await MyPendingAsync(tenant, who.EmployeeId.Value, 50, ct)).GroupBy(i => i.Type).ToList();
-                    var summary = string.Join(", ", groups.Select(g => $"{g.Count()} {TypeLabel(g.Key, en)}"));
-                    List<ChatButton>? buttons = null;
-                    if (total >= 2)
                     {
-                        buttons = new() { new ChatButton(L($"✅ Tümünü onayla ({Math.Min(total, 50)})", $"✅ Approve all ({Math.Min(total, 50)})"), "approveall", "", "primary") };
-                        // Birden çok tür varsa türe göre toplu onay da sunulur ("tüm izinleri onayla").
-                        if (groups.Count > 1)
-                            buttons.AddRange(groups.Where(g => g.Count() >= 2).Select(g => new ChatButton(
-                                L($"Tüm {TypeLabel(g.Key, false)} taleplerini onayla ({g.Count()})", $"Approve all {TypeLabel(g.Key, true)} ({g.Count()})"), "approveall", g.Key)));
+                        if (who.EmployeeId is null) return T(notLinked);
+                        var items = new List<PendingApproval>();
+                        foreach (var p in await MyPendingAsync(tenant, who.EmployeeId.Value, 5, ct)) items.Add(await Features.EnrichAsync(tenant, Shape(app, p, en), en, ct));
+                        var total = items.Count < 5 ? items.Count : await MyPendingCountAsync(tenant, who.EmployeeId.Value, ct);
+                        if (items.Count == 0) return T(L("Karar bekleyen talebiniz yok. 🎉", "Nothing is awaiting your decision. 🎉"));
+                        // BG5: özet + "Tümünü onayla (n)" (onay adımı ve ek doğrulamayla).
+                        var groups = (await MyPendingAsync(tenant, who.EmployeeId.Value, 50, ct)).GroupBy(i => i.Type).ToList();
+                        var summary = string.Join(", ", groups.Select(g => $"{g.Count()} {TypeLabel(g.Key, en)}"));
+                        List<ChatButton>? buttons = null;
+                        if (total >= 2)
+                        {
+                            buttons = new() { new ChatButton(L($"✅ Tümünü onayla ({Math.Min(total, 50)})", $"✅ Approve all ({Math.Min(total, 50)})"), "approveall", "", "primary") };
+                            // Birden çok tür varsa türe göre toplu onay da sunulur ("tüm izinleri onayla").
+                            if (groups.Count > 1)
+                                buttons.AddRange(groups.Where(g => g.Count() >= 2).Select(g => new ChatButton(
+                                    L($"Tüm {TypeLabel(g.Key, false)} taleplerini onayla ({g.Count()})", $"Approve all {TypeLabel(g.Key, true)} ({g.Count()})"), "approveall", g.Key)));
+                        }
+                        return new(total > items.Count
+                            ? L($"Karar bekleyen *{total}* talebiniz var ({summary}); en yeni {items.Count} tanesi aşağıda. Tümü: {PublicOrigin}/panel/onaylar",
+                                $"*{total}* requests are awaiting your decision ({summary}); the newest {items.Count} are below. All: {PublicOrigin}/panel/onaylar")
+                            : L($"Karar bekleyen *{items.Count}* talebiniz var ({summary}):", $"*{items.Count}* request(s) awaiting your decision ({summary}):"), items)
+                        { En = en, Buttons = buttons };
                     }
-                    return new(total > items.Count
-                        ? L($"Karar bekleyen *{total}* talebiniz var ({summary}); en yeni {items.Count} tanesi aşağıda. Tümü: {PublicOrigin}/panel/onaylar",
-                            $"*{total}* requests are awaiting your decision ({summary}); the newest {items.Count} are below. All: {PublicOrigin}/panel/onaylar")
-                        : L($"Karar bekleyen *{items.Count}* talebiniz var ({summary}):", $"*{items.Count}* request(s) awaiting your decision ({summary}):"), items) { En = en, Buttons = buttons };
-                }
 
                 case "balance":
-                {
-                    if (who.EmployeeId is null) return T(notLinked);
-                    var lines = await BalanceLinesAsync(tenant, who.EmployeeId.Value, today.Year, en, ct);
-                    if (lines.Count == 0) return T(L($"{today.Year} için tanımlı izin bakiyeniz yok.", $"You have no leave balance defined for {today.Year}."));
-                    return ChatReply.Of(L($"*{today.Year} izin bakiyeniz*\n", $"*Your {today.Year} leave balance*\n") + string.Join("\n", lines), en,
-                        ChatButton.Say(L("İzin al", "Request leave"), L("izin al", "request leave")), ChatButton.Link(L("Panelde aç", "Open in HR360"), $"{PublicOrigin}/panel/izin"));
-                }
+                    {
+                        if (who.EmployeeId is null) return T(notLinked);
+                        var lines = await BalanceLinesAsync(tenant, who.EmployeeId.Value, today.Year, en, ct);
+                        if (lines.Count == 0) return T(L($"{today.Year} için tanımlı izin bakiyeniz yok.", $"You have no leave balance defined for {today.Year}."));
+                        return ChatReply.Of(L($"*{today.Year} izin bakiyeniz*\n", $"*Your {today.Year} leave balance*\n") + string.Join("\n", lines), en,
+                            ChatButton.Say(L("İzin al", "Request leave"), L("izin al", "request leave")), ChatButton.Link(L("Panelde aç", "Open in HR360"), $"{PublicOrigin}/panel/izin"));
+                    }
 
                 case "leave":
-                {
-                    if (who.EmployeeId is null) return T(notLinked);
-                    var lines = await BalanceLinesAsync(tenant, who.EmployeeId.Value, today.Year, en, ct);
-                    return new(L("İzin talebi oluşturmak için formu açın.", "Open the form to request leave."), Array.Empty<PendingApproval>())
+                    {
+                        if (who.EmployeeId is null) return T(notLinked);
+                        var lines = await BalanceLinesAsync(tenant, who.EmployeeId.Value, today.Year, en, ct);
+                        return new(L("İzin talebi oluşturmak için formu açın.", "Open the form to request leave."), Array.Empty<PendingApproval>())
                         { En = en, Form = ChatForm.Leave, FormLines = lines };
-                }
+                    }
 
                 case "home":
                     if (who.EmployeeId is null) return T(notLinked);
                     return T(await HomeTextAsync(tenant, who.EmployeeId.Value, en, ct));
 
                 case "onleave":
-                {
-                    if (who.EmployeeId is null) return T(notLinked);
-                    // KVKK veri en aza indirme: adlar yalnızca yöneticiye ve yalnızca kendi ekibi için;
-                    // diğer çalışanlara toplam sayı. İzin türü hiçbir zaman yazılmaz.
-                    var onLeave = await _sql.QueryAsync("""
+                    {
+                        if (who.EmployeeId is null) return T(notLinked);
+                        // KVKK veri en aza indirme: adlar yalnızca yöneticiye ve yalnızca kendi ekibi için;
+                        // diğer çalışanlara toplam sayı. İzin türü hiçbir zaman yazılmaz.
+                        var onLeave = await _sql.QueryAsync("""
                         SELECT l."EmployeeId", e."FirstName" || ' ' || e."LastName", l."EndDate" FROM leave_requests l JOIN employee_employees e ON e."Id" = l."EmployeeId"
                         WHERE l."TenantSlug" = $1 AND l."Status" = 'Approved' AND l."StartDate" <= $2 AND l."EndDate" >= $2 ORDER BY 2
                         """, r => (Id: r.GetGuid(0), Name: r.GetString(1), End: r.GetFieldValue<DateOnly>(2)), ct, tenant, today);
-                    var team = (await _people.TeamOfAsync(tenant, who.EmployeeId.Value, ct)).Select(p => p.Id).ToHashSet();
-                    if (team.Count == 0)
-                        return T(onLeave.Count == 0 ? L("Bugün izinde olan kimse yok.", "Nobody is on leave today.")
-                            : L($"Bugün şirkette *{onLeave.Count}* kişi izinde.", $"*{onLeave.Count}* people are on leave today."));
-                    var mine = onLeave.Where(x => team.Contains(x.Id)).Select(x => en ? $"• {x.Name} (until {x.End:dd.MM})" : $"• {x.Name} ({x.End:dd.MM}'e kadar)").ToList();
-                    return T((mine.Count == 0 ? L("Bugün ekibinizden izinde olan yok.", "Nobody from your team is on leave today.")
-                            : L($"*Ekibinizden bugün izinde ({mine.Count}):*\n", $"*On leave today from your team ({mine.Count}):*\n") + string.Join("\n", mine))
-                        + (onLeave.Count > mine.Count ? L($"\nŞirket genelinde toplam {onLeave.Count} kişi izinde.", $"\n{onLeave.Count} people are on leave company-wide.") : ""));
-                }
+                        var team = (await _people.TeamOfAsync(tenant, who.EmployeeId.Value, ct)).Select(p => p.Id).ToHashSet();
+                        if (team.Count == 0)
+                            return T(onLeave.Count == 0 ? L("Bugün izinde olan kimse yok.", "Nobody is on leave today.")
+                                : L($"Bugün şirkette *{onLeave.Count}* kişi izinde.", $"*{onLeave.Count}* people are on leave today."));
+                        var mine = onLeave.Where(x => team.Contains(x.Id)).Select(x => en ? $"• {x.Name} (until {x.End:dd.MM})" : $"• {x.Name} ({x.End:dd.MM}'e kadar)").ToList();
+                        return T((mine.Count == 0 ? L("Bugün ekibinizden izinde olan yok.", "Nobody from your team is on leave today.")
+                                : L($"*Ekibinizden bugün izinde ({mine.Count}):*\n", $"*On leave today from your team ({mine.Count}):*\n") + string.Join("\n", mine))
+                            + (onLeave.Count > mine.Count ? L($"\nŞirket genelinde toplam {onLeave.Count} kişi izinde.", $"\n{onLeave.Count} people are on leave company-wide.") : ""));
+                    }
 
                 case "whereabouts":
-                {
-                    var modes = await _sql.QueryAsync("SELECT \"Mode\", count(*) FROM engagement_presence WHERE \"TenantSlug\" = $1 AND \"Date\" = $2 GROUP BY 1",
-                        r => (Mode: r.GetString(0), N: r.GetInt64(1)), ct, tenant, today);
-                    string M(string m) => m switch
                     {
-                        "Office" => L("Ofiste", "In the office"), "Remote" => L("Uzaktan", "Remote"), "Travel" => L("Seyahatte", "Travelling"),
-                        "Off" => L("Çalışmıyor", "Off"), _ => m,
-                    };
-                    return T(modes.Count == 0 ? L("Bugün için çalışma yeri bildiren olmadı.", "Nobody has shared where they work today.")
-                        : L("*Bugün:* ", "*Today:* ") + string.Join(" · ", modes.Select(m => $"{M(m.Mode)} {m.N}")));
-                }
+                        var modes = await _sql.QueryAsync("SELECT \"Mode\", count(*) FROM engagement_presence WHERE \"TenantSlug\" = $1 AND \"Date\" = $2 GROUP BY 1",
+                            r => (Mode: r.GetString(0), N: r.GetInt64(1)), ct, tenant, today);
+                        string M(string m) => m switch
+                        {
+                            "Office" => L("Ofiste", "In the office"),
+                            "Remote" => L("Uzaktan", "Remote"),
+                            "Travel" => L("Seyahatte", "Travelling"),
+                            "Off" => L("Çalışmıyor", "Off"),
+                            _ => m,
+                        };
+                        return T(modes.Count == 0 ? L("Bugün için çalışma yeri bildiren olmadı.", "Nobody has shared where they work today.")
+                            : L("*Bugün:* ", "*Today:* ") + string.Join(" · ", modes.Select(m => $"{M(m.Mode)} {m.N}")));
+                    }
 
                 case "pending":
-                {
-                    var pending = Convert.ToInt64(await _sql.ScalarAsync("SELECT count(*) FROM workflow_requests WHERE \"TenantSlug\" = $1 AND \"Status\" = 'Pending'", ct, tenant));
-                    return T(L($"Şirkette onay bekleyen *{pending}* talep var.", $"*{pending}* requests are awaiting approval company-wide."));
-                }
+                    {
+                        var pending = Convert.ToInt64(await _sql.ScalarAsync("SELECT count(*) FROM workflow_requests WHERE \"TenantSlug\" = $1 AND \"Status\" = 'Pending'", ct, tenant));
+                        return T(L($"Şirkette onay bekleyen *{pending}* talep var.", $"*{pending}* requests are awaiting approval company-wide."));
+                    }
 
                 case "me":
                     if (who.EmployeeId is null)
@@ -863,8 +896,10 @@ public sealed class ChatService
     private static string ReportText(NlReport.Result r) =>
         string.Join("\n", r.Rows.Take(8).Select(row => "• " + string.Join(" · ", row.Select(c => c switch
         {
-            decimal d => d.ToString("0.##", CultureInfo.InvariantCulture), double d => d.ToString("0.##", CultureInfo.InvariantCulture),
-            null => "—", var x => x.ToString(),
+            decimal d => d.ToString("0.##", CultureInfo.InvariantCulture),
+            double d => d.ToString("0.##", CultureInfo.InvariantCulture),
+            null => "—",
+            var x => x.ToString(),
         })))) + (r.Rows.Count > 8 ? $"\n… (+{r.Rows.Count - 8})" : "");
 
     private static bool LooksEnglish(string? s) =>
@@ -987,7 +1022,9 @@ public sealed class ChatService
             var en = await EnAsync(app.TenantSlug, who.EmployeeId, ct);
             blocks.Add(new JsonObject { ["type"] = "header", ["text"] = new JsonObject { ["type"] = "plain_text", ["text"] = "HR360" } });
             blocks.Add(Section(await HomeTextAsync(app.TenantSlug, who.EmployeeId.Value, en, ct)));
-            blocks.Add(new JsonObject { ["type"] = "actions", ["elements"] = new JsonArray
+            blocks.Add(new JsonObject
+            {
+                ["type"] = "actions", ["elements"] = new JsonArray
             {
                 new JsonObject { ["type"] = "button", ["action_id"] = ChatFormat.LeaveFormAction, ["style"] = "primary", ["value"] = "leave",
                     ["text"] = new JsonObject { ["type"] = "plain_text", ["text"] = en ? "Request leave" : "İzin talebi oluştur" } },
@@ -995,7 +1032,8 @@ public sealed class ChatService
                     ["text"] = new JsonObject { ["type"] = "plain_text", ["text"] = en ? "Approvals" : "Onay kutusu" } },
                 new JsonObject { ["type"] = "button", ["action_id"] = "hr360_open", ["url"] = $"{PublicOrigin}/panel",
                     ["text"] = new JsonObject { ["type"] = "plain_text", ["text"] = en ? "Open HR360" : "HR360'ı aç" } },
-            } });
+            }
+            });
         }
         return new JsonObject { ["type"] = "home", ["blocks"] = blocks };
     }

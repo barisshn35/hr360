@@ -687,8 +687,11 @@ public class SlackEndpointsController : ControllerBase
                 if (result.Ok && !tracked)
                 {
                     // Komut yanıtındaki (kayıtlı olmayan) kart: sonuçla değiştirilir.
-                    await RespondAsync(responseUrl, new { replace_original = true, text = result.Message,
-                        blocks = ChatFormat.SlackText($"{(approve ? "✅" : "⛔")} {result.Message}", ChatService.WorkflowUrl(wfId)) }, bg);
+                    await RespondAsync(responseUrl, new
+                    {
+                        replace_original = true, text = result.Message,
+                        blocks = ChatFormat.SlackText($"{(approve ? "✅" : "⛔")} {result.Message}", ChatService.WorkflowUrl(wfId))
+                    }, bg);
                 }
                 else if (!result.Ok)
                     await RespondAsync(responseUrl, new { response_type = "ephemeral", replace_original = false, text = "⚠️ " + result.Message }, bg);

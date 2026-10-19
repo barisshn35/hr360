@@ -381,13 +381,27 @@ public static class PrivacyCatalogEn
 
     public static ProcessingActivity Translate(ProcessingActivity a) => a with
     {
-        Module = T(a.Module), Activity = T(a.Activity), Subjects = T(a.Subjects), DataCategories = T(a.DataCategories),
-        Purpose = T(a.Purpose), LegalBasis = T(a.LegalBasis), Retention = T(a.Retention), Recipients = T(a.Recipients), Measures = T(a.Measures),
+        Module = T(a.Module),
+        Activity = T(a.Activity),
+        Subjects = T(a.Subjects),
+        DataCategories = T(a.DataCategories),
+        Purpose = T(a.Purpose),
+        LegalBasis = T(a.LegalBasis),
+        Retention = T(a.Retention),
+        Recipients = T(a.Recipients),
+        Measures = T(a.Measures),
     };
 
     public static VerbisInventory.Item Translate(VerbisInventory.Item i) => i with
     {
-        Module = T(i.Module), Activity = T(i.Activity), Subjects = T(i.Subjects), DataCategories = T(i.DataCategories),
-        Purpose = T(i.Purpose), LegalBasis = T(i.LegalBasis), Retention = T(i.Retention), Recipients = T(i.Recipients), Measures = T(i.Measures),
+        Module = T(i.Module),
+        Activity = T(i.Activity),
+        Subjects = T(i.Subjects),
+        DataCategories = T(i.DataCategories),
+        Purpose = T(i.Purpose),
+        LegalBasis = T(i.LegalBasis),
+        Retention = T(i.Retention),
+        Recipients = T(i.Recipients),
+        Measures = T(i.Measures),
     };
 }

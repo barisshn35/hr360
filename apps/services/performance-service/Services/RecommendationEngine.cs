@@ -223,7 +223,7 @@ public class RecommendationEngine
 
         return new ActionRecommendation(
             s.EmployeeId, action, Label(action), Math.Round(confidence, 2),
-            Summarize(action, score, s), 
+            Summarize(action, score, s),
             factors.OrderByDescending(f => Math.Abs(f.Contribution)).ToList(),
             cautions);
     }

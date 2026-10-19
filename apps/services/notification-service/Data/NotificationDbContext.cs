@@ -45,8 +45,8 @@ public class NotificationDbContext : DbContext, ITenantAwareContext
         modelBuilder.Entity<Notification>().Property(n => n.Status).HasConversion<string>();
         modelBuilder.Entity<Notification>()
             .HasIndex(n => new { n.RecipientEmployeeId, n.Status });
-    
-                // Kafka idempotency tablosu - TUM tuketici servisler bu ORTAK tabloyu
+
+        // Kafka idempotency tablosu - TUM tuketici servisler bu ORTAK tabloyu
         // paylasir (Consumer sutunu hangi servisin isledigini ayirt eder).
         // TenantSlug yok, tenant filtrelerine dahil edilmemeli.
         modelBuilder.Entity<ProcessedEvent>().ToTable("messaging_processed_events");

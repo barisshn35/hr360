@@ -74,7 +74,8 @@ public static class WebhookTargetGuard
                 throw;
             }
         },
-    }) { Timeout = TimeSpan.FromSeconds(5) };
+    })
+    { Timeout = TimeSpan.FromSeconds(5) };
 
     /* ------------------------------------------------------------------ REST hook (açık API) */
 
@@ -218,5 +219,6 @@ public static class WebhookTargetGuard
                 throw;
             }
         },
-    }) { Timeout = TimeSpan.FromSeconds(5) };
+    })
+    { Timeout = TimeSpan.FromSeconds(5) };
 }

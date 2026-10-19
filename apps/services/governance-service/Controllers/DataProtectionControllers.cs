@@ -375,8 +375,11 @@ public class AccessReviewController : AppController
         if (head is null) return NotFound();
         var people = await PeopleMapAsync(ct);
         var items = await Db.QueryAsync($"SELECT {ItemCols} FROM governance_access_review_items WHERE \"TenantSlug\" = $1 AND \"ReviewId\" = $2", MapItem, ct, Tenant, id);
-        return Ok(new { id, head.title, head.status, head.dueDate, head.createdBy, head.createdAt, head.closedAt,
-            items = items.OrderBy(i => i.EmployeeId is { } e ? people.GetValueOrDefault(e)?.Name : i.AccountName).Select(i => Shape(i, people)) });
+        return Ok(new
+        {
+            id, head.title, head.status, head.dueDate, head.createdBy, head.createdAt, head.closedAt,
+            items = items.OrderBy(i => i.EmployeeId is { } e ? people.GetValueOrDefault(e)?.Name : i.AccountName).Select(i => Shape(i, people))
+        });
     }
 
     [HttpPost("{id:guid}/close")]

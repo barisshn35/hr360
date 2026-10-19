@@ -102,7 +102,15 @@ public static class SensitiveNoteDetector
         foreach (var ch in lower)
             sb.Append(ch switch
             {
-                'ı' => 'i', 'ğ' => 'g', 'ü' => 'u', 'ş' => 's', 'ö' => 'o', 'ç' => 'c', 'â' => 'a', 'î' => 'i', 'û' => 'u',
+                'ı' => 'i',
+                'ğ' => 'g',
+                'ü' => 'u',
+                'ş' => 's',
+                'ö' => 'o',
+                'ç' => 'c',
+                'â' => 'a',
+                'î' => 'i',
+                'û' => 'u',
                 '\'' or '’' => ' ',
                 _ => ch,
             });

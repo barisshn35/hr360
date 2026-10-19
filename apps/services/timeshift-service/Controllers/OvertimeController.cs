@@ -79,8 +79,11 @@ public class OvertimeController : ControllerBase
         var rows = await _db.OvertimeRequests.AsNoTracking().Where(o => o.EmployeeId == who && o.Date.Year == y).ToListAsync(ct);
         var approved = rows.Where(o => o.Status == OvertimeStatus.Approved).Sum(o => o.Hours);
         var pending = rows.Where(o => o.Status == OvertimeStatus.Pending).Sum(o => o.Hours);
-        return Ok(new { employeeId = who, year = y, approvedHours = approved, pendingHours = pending,
-            limitHours = AnnualLimitHours, remainingHours = Math.Max(0, AnnualLimitHours - approved - pending) });
+        return Ok(new
+        {
+            employeeId = who, year = y, approvedHours = approved, pendingHours = pending,
+            limitHours = AnnualLimitHours, remainingHours = Math.Max(0, AnnualLimitHours - approved - pending)
+        });
     }
 
     public record CreateOvertimeInput(Guid? EmployeeId, DateOnly Date, decimal Hours, string? Reason);

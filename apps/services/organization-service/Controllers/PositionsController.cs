@@ -111,8 +111,11 @@ public class PositionsController : ControllerBase
     public async Task<IActionResult> Create(PositionInput b, CancellationToken ct)
     {
         if (await ValidateAsync(b, null, ct) is { } err) return err;
-        var p = new Position { DepartmentId = b.DepartmentId, Title = b.Title.Trim(), Headcount = b.Headcount, Grade = b.Grade?.Trim(), BudgetMonthly = b.BudgetMonthly,
-            Currency = string.IsNullOrWhiteSpace(b.Currency) ? "TRY" : b.Currency.Trim().ToUpperInvariant(), Notes = b.Notes?.Trim() };
+        var p = new Position
+        {
+            DepartmentId = b.DepartmentId, Title = b.Title.Trim(), Headcount = b.Headcount, Grade = b.Grade?.Trim(), BudgetMonthly = b.BudgetMonthly,
+            Currency = string.IsNullOrWhiteSpace(b.Currency) ? "TRY" : b.Currency.Trim().ToUpperInvariant(), Notes = b.Notes?.Trim()
+        };
         _db.Positions.Add(p);
         await _db.SaveChangesAsync(ct);
         return Ok(p);

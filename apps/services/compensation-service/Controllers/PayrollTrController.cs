@@ -93,8 +93,11 @@ public class PayrollTrController : ControllerBase
         if (!IsPayrollViewer) return Forbid();
         var row = await _db.PayrollSettings.AsNoTracking().FirstOrDefaultAsync(ct);
         var m = PayrollSettingsModel.From(row);
-        return Ok(new { sgk = m.Sgk, accounts = m.Accounts, costCenters = m.CostCenters, bank = m.Bank, row?.UpdatedBy, row?.UpdatedAt,
-            bankTemplates = new[] { "generic", "ornek-a", "ornek-b", "custom" }, bankFields = BankFiles.Fields.OrderBy(x => x) });
+        return Ok(new
+        {
+            sgk = m.Sgk, accounts = m.Accounts, costCenters = m.CostCenters, bank = m.Bank, row?.UpdatedBy, row?.UpdatedAt,
+            bankTemplates = new[] { "generic", "ornek-a", "ornek-b", "custom" }, bankFields = BankFiles.Fields.OrderBy(x => x)
+        });
     }
 
     public record SettingsInput(SgkSettings? Sgk, AccountMap? Accounts, Dictionary<string, string>? CostCenters, BankSettings? Bank);
@@ -331,8 +334,11 @@ public class PayrollTrController : ControllerBase
         if (applied.Count == 0) return BadRequest(new { message = "Uygulanabilir fark bulunamadı (fark yok, negatif ya da hedef dönemden sonra)" });
         if (target.Status == PayrollPeriodStatus.Calculated) target.Status = PayrollPeriodStatus.Open;
         await _db.SaveChangesAsync(ct);
-        await AuditAsync("RetroDiff", target.Id.ToString(), "Approved", new { count = applied.Count, target.Year, target.Month,
-            items = applied.Select(a => new { a.EmployeeId, a.SourceYear, a.SourceMonth }) }, target.TenantSlug);
+        await AuditAsync("RetroDiff", target.Id.ToString(), "Approved", new
+        {
+            count = applied.Count, target.Year, target.Month,
+            items = applied.Select(a => new { a.EmployeeId, a.SourceYear, a.SourceMonth })
+        }, target.TenantSlug);
         return Ok(new { applied = applied.Count, total = applied.Sum(a => a.DiffGross), targetPeriodId = target.Id });
     }
 
@@ -413,15 +419,21 @@ public class PayrollTrController : ControllerBase
             return (BadRequest(new { message = "Girdi değerleri geçersiz" }), null, null);
         var input = new SeveranceInput(emp.HireDate, last.Value, reason, rec.BaseSalary, b.RegularAdditionsMonthly ?? suggestedAdditions,
             b.OtherBenefitsMonthly ?? 0, ceiling, b.SeveranceEligible, b.NoticePaid, b.UnusedLeaveDays ?? Math.Max(0, leave), prior, prm.Brackets, prm.StampTaxRate);
-        var sources = new { suggestedAdditions, payslipsUsed = lastSlips.Count, ceiling, ceilingFromParameters = true, remainingLeave = leave,
-            priorCumulativeTaxBase = prior, openingTaxBase = opening, currency = rec.Currency, employee = $"{emp.FirstName} {emp.LastName}" };
+        var sources = new
+        {
+            suggestedAdditions, payslipsUsed = lastSlips.Count, ceiling, ceilingFromParameters = true, remainingLeave = leave,
+            priorCumulativeTaxBase = prior, openingTaxBase = opening, currency = rec.Currency, employee = $"{emp.FirstName} {emp.LastName}"
+        };
         return (null, input, sources);
     }
 
     private static object ResultView(SeveranceInput i, SeveranceResult r, object? sources) => new
     {
-        input = new { i.HireDate, i.LastWorkingDay, i.Reason, i.MonthlyBaseGross, i.RegularAdditionsMonthly, i.OtherBenefitsMonthly, i.SeveranceCeiling,
-            severanceEligibleOverride = i.SeveranceEligibleOverride, noticePaidOverride = i.NoticePayOverride, i.UnusedLeaveDays, i.PriorCumulativeTaxBase },
+        input = new
+        {
+            i.HireDate, i.LastWorkingDay, i.Reason, i.MonthlyBaseGross, i.RegularAdditionsMonthly, i.OtherBenefitsMonthly, i.SeveranceCeiling,
+            severanceEligibleOverride = i.SeveranceEligibleOverride, noticePaidOverride = i.NoticePayOverride, i.UnusedLeaveDays, i.PriorCumulativeTaxBase
+        },
         result = r, sources,
         basis = new
         {

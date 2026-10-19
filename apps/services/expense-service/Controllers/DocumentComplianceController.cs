@@ -141,7 +141,12 @@ public class DocumentComplianceController : ControllerBase
 
     private static string Label(DocumentType t) => t switch
     {
-        DocumentType.Contract => "İş sözleşmesi", DocumentType.IdCard => "Kimlik", DocumentType.Diploma => "Diploma",
-        DocumentType.Certificate => "Sertifika", DocumentType.Health => "Sağlık raporu", DocumentType.Payslip => "Bordro", _ => "Diğer belge",
+        DocumentType.Contract => "İş sözleşmesi",
+        DocumentType.IdCard => "Kimlik",
+        DocumentType.Diploma => "Diploma",
+        DocumentType.Certificate => "Sertifika",
+        DocumentType.Health => "Sağlık raporu",
+        DocumentType.Payslip => "Bordro",
+        _ => "Diğer belge",
     };
 }

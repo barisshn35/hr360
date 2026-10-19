@@ -155,7 +155,8 @@ public sealed partial class ChatFeatures
         return ChatReply.Of(en
                 ? $"🔐 This action needs extra verification: *{summary}*. Confirm it in HR360 (sign-in required): {url} — valid for 10 minutes. Or type the 6-digit code shown in HR360 › Chat verification as *code 123456*."
                 : $"🔐 Bu işlem ek doğrulama gerektiriyor: *{summary}*. HR360'ta (giriş yaparak) onaylayın: {url} — 10 dakika geçerli. Ya da HR360 › Sohbet doğrulaması ekranındaki 6 haneli kodu *kod 123456* biçiminde yazın.",
-            en, ChatButton.Link(en ? "Verify in HR360" : "HR360'ta doğrula", url)) with { Replace = true };
+            en, ChatButton.Link(en ? "Verify in HR360" : "HR360'ta doğrula", url)) with
+        { Replace = true };
     }
 
     /// <summary>Bağlantı koduyla bekleyen adım doğrulaması (web sayfası önizleme/onay).</summary>
@@ -220,14 +221,14 @@ public sealed partial class ChatFeatures
         switch (p.Kind)
         {
             case "stepup:decide":
-            {
-                var wf = p.Payload.GetProperty("wf").GetGuid();
-                var step = p.Payload.GetProperty("step").GetGuid();
-                var approve = p.Payload.GetProperty("approve").GetBoolean();
-                var r = await _chat.DecideAsync(db, app, who, wf, step, approve, ct, null, stepUpDone: true);
-                message = (r.Ok ? "✅ " : "⚠️ ") + r.Message;
-                break;
-            }
+                {
+                    var wf = p.Payload.GetProperty("wf").GetGuid();
+                    var step = p.Payload.GetProperty("step").GetGuid();
+                    var approve = p.Payload.GetProperty("approve").GetBoolean();
+                    var r = await _chat.DecideAsync(db, app, who, wf, step, approve, ct, null, stepUpDone: true);
+                    message = (r.Ok ? "✅ " : "⚠️ ") + r.Message;
+                    break;
+                }
             case "stepup:bulk":
                 message = await BulkApproveAsync(db, app, who, p.Payload, en, ct);
                 break;
@@ -299,13 +300,13 @@ public sealed partial class ChatFeatures
             case "Slack":
                 return await _slack.PostAsync(SecretBox.Unprotect(app.SlackBotTokenEnc)!, conversationId, reply.Text, ChatFormat.SlackReply(reply), ct);
             case "Teams":
-            {
-                var token = await _chat.TeamsTokenAsync(app, ct);
-                var url = serviceUrl ?? await TeamsServiceUrlAsync(app, ct) ?? throw new ChatApiException("Teams serviceUrl bilinmiyor");
-                string? first = null;
-                foreach (var a in ChatFormat.TeamsReply(reply)) first ??= await _teams.PostActivityAsync(token, url, conversationId, a, ct);
-                return first;
-            }
+                {
+                    var token = await _chat.TeamsTokenAsync(app, ct);
+                    var url = serviceUrl ?? await TeamsServiceUrlAsync(app, ct) ?? throw new ChatApiException("Teams serviceUrl bilinmiyor");
+                    string? first = null;
+                    foreach (var a in ChatFormat.TeamsReply(reply)) first ??= await _teams.PostActivityAsync(token, url, conversationId, a, ct);
+                    return first;
+                }
             case "Mattermost":
                 return await _mm.PostAsync(app.ServerUrl!, SecretBox.Unprotect(app.BotTokenEnc)!, conversationId, MmText(reply, "Mattermost"),
                     ChatCards.MattermostAttachments(app, "", AllButtons(reply), now), ct);
@@ -501,8 +502,11 @@ public sealed partial class ChatFeatures
         }
         var reply = ChatReply.Of(ChatCards.ApprovalText(p, en), en, ChatCards.ApprovalButtons(p, en).ToArray());
         var msgId = await PostAsync(app, id.ConversationId!, null, reply, ct);
-        db.ChatMessages.Add(new ChatMessage { TenantSlug = app.TenantSlug, AppId = app.Id, Platform = app.Platform, WorkflowRequestId = p.WorkflowId,
-            StepId = p.StepId, RecipientEmployeeId = approverId, ConversationId = id.ConversationId!, MessageId = msgId ?? "", Subject = p.Subject });
+        db.ChatMessages.Add(new ChatMessage
+        {
+            TenantSlug = app.TenantSlug, AppId = app.Id, Platform = app.Platform, WorkflowRequestId = p.WorkflowId,
+            StepId = p.StepId, RecipientEmployeeId = approverId, ConversationId = id.ConversationId!, MessageId = msgId ?? "", Subject = p.Subject
+        });
         app.LastActivityAt = DateTime.UtcNow;
         app.LastError = null;
     }
@@ -575,18 +579,30 @@ public sealed partial class ChatFeatures
     /// <summary>Komutun okunur adı (yazım hatası düzeltilince kullanıcıya söylenir).</summary>
     public static string DisplayName(string cmd, bool en) => (cmd, en) switch
     {
-        ("approvals", false) => "onaylarım", ("approvals", true) => "approvals",
-        ("balance", false) => "bakiye", ("balance", true) => "balance",
-        ("leave", false) => "izin al", ("leave", true) => "request leave",
-        ("home", false) => "özet", ("home", true) => "summary",
-        ("onleave", false) => "izindekiler", ("onleave", true) => "on leave",
-        ("shifts", false) => "vardiyam", ("shifts", true) => "my shifts",
-        ("swaps", false) => "takas", ("swaps", true) => "swaps",
-        ("desk", false) => "masa", ("desk", true) => "desk",
-        ("announcements", false) => "duyurular", ("announcements", true) => "announcements",
-        ("clockin", false) => "geldim", ("clockout", false) => "çıktım",
-        ("cancelleave", false) => "izin iptal", ("kudos", false) => "teşekkür",
-        ("expense", false) => "masraf", ("documents", false) => "belge",
+        ("approvals", false) => "onaylarım",
+        ("approvals", true) => "approvals",
+        ("balance", false) => "bakiye",
+        ("balance", true) => "balance",
+        ("leave", false) => "izin al",
+        ("leave", true) => "request leave",
+        ("home", false) => "özet",
+        ("home", true) => "summary",
+        ("onleave", false) => "izindekiler",
+        ("onleave", true) => "on leave",
+        ("shifts", false) => "vardiyam",
+        ("shifts", true) => "my shifts",
+        ("swaps", false) => "takas",
+        ("swaps", true) => "swaps",
+        ("desk", false) => "masa",
+        ("desk", true) => "desk",
+        ("announcements", false) => "duyurular",
+        ("announcements", true) => "announcements",
+        ("clockin", false) => "geldim",
+        ("clockout", false) => "çıktım",
+        ("cancelleave", false) => "izin iptal",
+        ("kudos", false) => "teşekkür",
+        ("expense", false) => "masraf",
+        ("documents", false) => "belge",
         _ => cmd,
     };
 }

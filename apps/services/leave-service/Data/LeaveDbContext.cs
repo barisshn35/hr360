@@ -64,8 +64,8 @@ public class LeaveDbContext : DbContext, ITenantAwareContext
         modelBuilder.Entity<LeaveRequest>().Property(r => r.Status).HasConversion<string>();
         modelBuilder.Entity<LeaveRequest>().HasIndex(r => r.EmployeeId);
         modelBuilder.Entity<LeaveRequest>().HasIndex(r => r.Status);
-    
-                // Kafka idempotency tablosu - TUM tuketici servisler bu ORTAK tabloyu
+
+        // Kafka idempotency tablosu - TUM tuketici servisler bu ORTAK tabloyu
         // paylasir (Consumer sutunu hangi servisin isledigini ayirt eder).
         // TenantSlug yok, tenant filtrelerine dahil edilmemeli.
         modelBuilder.Entity<ProcessedEvent>().ToTable("messaging_processed_events");

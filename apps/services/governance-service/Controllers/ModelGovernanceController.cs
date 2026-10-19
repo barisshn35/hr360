@@ -169,8 +169,11 @@ public class ModelGovernanceController : AppController
     private async Task<IActionResult> SwitchAsync(string op, int version, string? note, CancellationToken ct)
     {
         if (!Me.IsPlatformAdmin)
-            return StatusCode(403, new { message = L("Paylaşılan modelin yayındaki sürümünü yalnızca platform yöneticisi değiştirebilir.",
-                                                     "Only a platform administrator can change the serving version of the shared model.") });
+            return StatusCode(403, new
+            {
+                message = L("Paylaşılan modelin yayındaki sürümünü yalnızca platform yöneticisi değiştirebilir.",
+                                                     "Only a platform administrator can change the serving version of the shared model.")
+            });
         try
         {
             var (status, text) = await MlAsync(HttpMethod.Post, $"/model/{op}", new { version = version.ToString(CultureInfo.InvariantCulture) }, ct, 120);
@@ -225,8 +228,11 @@ public class ModelGovernanceController : AppController
         var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
         var (payload, skipped) = AttritionFairness.BuildRows(rows, people, today);
         if (payload.Count < AttritionFairness.MinRows)
-            return BadRequest(new { message = L($"Eşleşen en az {AttritionFairness.MinRows} çalışan gerekir (eşleşen: {payload.Count}).",
-                                                $"At least {AttritionFairness.MinRows} matching employees are required (matched: {payload.Count})."), skipped });
+            return BadRequest(new
+            {
+                message = L($"Eşleşen en az {AttritionFairness.MinRows} çalışan gerekir (eşleşen: {payload.Count}).",
+                                                $"At least {AttritionFairness.MinRows} matching employees are required (matched: {payload.Count})."), skipped
+            });
         var threshold = await ThresholdAsync(Db, Tenant, ct) ?? 0.5m;
         try
         {

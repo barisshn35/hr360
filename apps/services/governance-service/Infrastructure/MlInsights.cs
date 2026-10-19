@@ -143,13 +143,13 @@ public static class SkillGraphPayload
 
     public static object Build(IReadOnlyList<Person> people, IReadOnlyDictionary<Guid, string[]> profileSkills,
         IReadOnlyDictionary<Guid, List<string>> competencies) => new
-    {
-        people = people.Select(p => new
         {
-            department = p.Department,
-            skills = (profileSkills.TryGetValue(p.Id, out var s) ? s : Array.Empty<string>())
-                .Concat(competencies.TryGetValue(p.Id, out var c) ? c : new List<string>())
-                .Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(200).ToList(),
-        }).ToList(),
-    };
+            people = people.Select(p => new
+            {
+                department = p.Department,
+                skills = (profileSkills.TryGetValue(p.Id, out var s) ? s : Array.Empty<string>())
+                    .Concat(competencies.TryGetValue(p.Id, out var c) ? c : new List<string>())
+                    .Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(200).ToList(),
+            }).ToList(),
+        };
 }

@@ -259,9 +259,12 @@ public class PayrollController : ControllerBase
         return Ok(periods.Select(p =>
         {
             var t = totals.FirstOrDefault(x => x.PeriodId == p.Id);
-            return new { p.Id, p.Year, p.Month, status = p.Status.ToString(), p.CalculatedAt, calculatedBy = p.CalculatedByName, p.ClosedAt, p.ClosedBy,
+            return new
+            {
+                p.Id, p.Year, p.Month, status = p.Status.ToString(), p.CalculatedAt, calculatedBy = p.CalculatedByName, p.ClosedAt, p.ClosedBy,
                 employeeCount = t?.Count ?? 0, totalGross = t?.Gross ?? 0, totalNet = t?.Net ?? 0, totalEmployerCost = t?.Cost ?? 0,
-                parametersConfigured = PayrollParameterResolver.Resolve(paramRows, p.Year, p.Month) is not null };
+                parametersConfigured = PayrollParameterResolver.Resolve(paramRows, p.Year, p.Month) is not null
+            };
         }));
     }
 

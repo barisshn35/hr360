@@ -212,10 +212,10 @@ public class ScimController : ControllerBase
 
     private static object Attr(string name, string type = "string", bool required = false, string mutability = "readWrite",
         bool caseExact = false, string uniqueness = "none", bool multiValued = false, object[]? sub = null) => new Dictionary<string, object>
-    {
-        ["name"] = name, ["type"] = type, ["multiValued"] = multiValued, ["required"] = required, ["caseExact"] = caseExact,
-        ["mutability"] = mutability, ["returned"] = "default", ["uniqueness"] = uniqueness,
-    }.Also(d => { if (sub is not null) d["subAttributes"] = sub; });
+        {
+            ["name"] = name, ["type"] = type, ["multiValued"] = multiValued, ["required"] = required, ["caseExact"] = caseExact,
+            ["mutability"] = mutability, ["returned"] = "default", ["uniqueness"] = uniqueness,
+        }.Also(d => { if (sub is not null) d["subAttributes"] = sub; });
 
     private static object SchemaOf(string id) => id switch
     {

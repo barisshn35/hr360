@@ -53,43 +53,43 @@ public static class BusinessMetrics
         switch (entry.Entity)
         {
             case WorkflowRequest wf:
-            {
-                var change = StatusChange<WorkflowStatus>(entry, nameof(WorkflowRequest.Status));
-                if (change is null) return;
-                var type = wf.Type.ToString();
-                var tenant = wf.TenantSlug;
-                if (entry.State == EntityState.Added)
                 {
-                    pending.Add(() => Requests.WithLabels(Values(tenant, "created", type)).Inc());
+                    var change = StatusChange<WorkflowStatus>(entry, nameof(WorkflowRequest.Status));
+                    if (change is null) return;
+                    var type = wf.Type.ToString();
+                    var tenant = wf.TenantSlug;
+                    if (entry.State == EntityState.Added)
+                    {
+                        pending.Add(() => Requests.WithLabels(Values(tenant, "created", type)).Inc());
+                        return;
+                    }
+                    var action = change.Value.To switch
+                    {
+                        WorkflowStatus.Approved => "approved",
+                        WorkflowStatus.Rejected => "rejected",
+                        WorkflowStatus.Cancelled => "cancelled",
+                        _ => null,
+                    };
+                    if (action is null) return;
+                    var seconds = ((wf.CompletedAt ?? DateTimeOffset.UtcNow) - wf.CreatedAt).TotalSeconds;
+                    pending.Add(() =>
+                    {
+                        Requests.WithLabels(Values(tenant, action, type)).Inc();
+                        if (action != "cancelled" && seconds >= 0)
+                            ApprovalDuration.WithLabels(Values(tenant, action, type)).Observe(seconds);
+                    });
                     return;
                 }
-                var action = change.Value.To switch
-                {
-                    WorkflowStatus.Approved => "approved",
-                    WorkflowStatus.Rejected => "rejected",
-                    WorkflowStatus.Cancelled => "cancelled",
-                    _ => null,
-                };
-                if (action is null) return;
-                var seconds = ((wf.CompletedAt ?? DateTimeOffset.UtcNow) - wf.CreatedAt).TotalSeconds;
-                pending.Add(() =>
-                {
-                    Requests.WithLabels(Values(tenant, action, type)).Inc();
-                    if (action != "cancelled" && seconds >= 0)
-                        ApprovalDuration.WithLabels(Values(tenant, action, type)).Observe(seconds);
-                });
-                return;
-            }
             case ApprovalStep step when entry.State == EntityState.Modified:
-            {
-                var change = StatusChange<StepDecision>(entry, nameof(ApprovalStep.Decision));
-                if (change is null || change.Value.To == StepDecision.Pending) return;
-                var decision = change.Value.To.ToString();
-                var type = step.WorkflowRequest?.Type.ToString() ?? "unknown";
-                var tenant = step.TenantSlug;
-                pending.Add(() => StepDecisions.WithLabels(Values(tenant, decision, type)).Inc());
-                return;
-            }
+                {
+                    var change = StatusChange<StepDecision>(entry, nameof(ApprovalStep.Decision));
+                    if (change is null || change.Value.To == StepDecision.Pending) return;
+                    var decision = change.Value.To.ToString();
+                    var type = step.WorkflowRequest?.Type.ToString() ?? "unknown";
+                    var tenant = step.TenantSlug;
+                    pending.Add(() => StepDecisions.WithLabels(Values(tenant, decision, type)).Inc());
+                    return;
+                }
         }
     }
 }

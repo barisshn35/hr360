@@ -86,6 +86,9 @@ jobs:
       - name: Derle
         working-directory: apps/services/${{ matrix.service }}
         run: dotnet build -c Release -nologo
+      - name: Biçim (.editorconfig; düzeltmek için "dotnet format whitespace")
+        working-directory: apps/services/${{ matrix.service }}
+        run: dotnet format whitespace *.csproj --verify-no-changes -v q
 
   dotnet-tests:
     name: .NET birim testleri
@@ -100,6 +103,8 @@ jobs:
           path: ~/.nuget/packages
           key: nuget-tests-${{ hashFiles('tests/dotnet/**/*.csproj', 'apps/services/governance-service/*.csproj', 'apps/services/engagement-service/*.csproj') }}
           restore-keys: nuget-
+      - name: Biçim (test projeleri)
+        run: for p in tests/dotnet/*/*.csproj; do dotnet format whitespace "$p" --verify-no-changes -v q; done
       - name: xUnit
         run: |
           for p in tests/dotnet/*/; do dotnet test "$p" --nologo --logger "trx;LogFileName=results.trx"; done
@@ -172,6 +177,8 @@ jobs:
           for p in apps/web/package.json apps/mobile/package.json; do
             [ "$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$p")" = "$v" ] || { echo "::error::$p surumu VERSION ($v) ile farkli"; exit 1; }
           done
+      - name: Python denetimi (ruff; ruff.toml)
+        run: pipx run ruff==0.17.1 check .
       - name: Ortak .NET kaynaklarinin servis kopyalari esit
         run: scripts/sync-shared.sh --check
       - name: Kabuk betikleri (bash -n + shellcheck)

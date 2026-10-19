@@ -1,0 +1,36 @@
+# HR360 kod biçimi. Mevcut stili tarif eder; CI'da .NET için "dotnet format whitespace" bununla denetlenir.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{cs,csx}]
+indent_size = 4
+# Kısa koşul/blokların tek satırda yazılması bilinçli (ör. "if (x) return y;", "{ get; set; }").
+csharp_preserve_single_line_statements = true
+csharp_preserve_single_line_blocks = true
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+# Nesne başlatıcı ve anonim tür üyeleri aynı satırda olabilir ("new { id, name }").
+csharp_new_line_before_members_in_object_initializers = false
+csharp_new_line_before_members_in_anonymous_types = false
+csharp_new_line_between_query_expression_clauses = false
+
+[*.{csproj,props,targets,xml}]
+indent_size = 2
+
+[*.py]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab

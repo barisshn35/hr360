@@ -153,8 +153,11 @@ public class ShiftOptimizerController : ControllerBase
         var body = new
         {
             days = days.Select(d => d.ToString("yyyy-MM-dd")),
-            shifts = shifts.Select(s => new { id = shiftKey[s.Id], start_min = s.StartTime.Hour * 60 + s.StartTime.Minute,
-                end_min = s.EndTime.Hour * 60 + s.EndTime.Minute, break_min = Math.Clamp(s.BreakMinutes, 0, 240) }),
+            shifts = shifts.Select(s => new
+            {
+                id = shiftKey[s.Id], start_min = s.StartTime.Hour * 60 + s.StartTime.Minute,
+                end_min = s.EndTime.Hour * 60 + s.EndTime.Minute, break_min = Math.Clamp(s.BreakMinutes, 0, 240)
+            }),
             employees = ids.Select(id =>
             {
                 var p = prefs.FirstOrDefault(x => x.EmployeeId == id);
@@ -174,8 +177,11 @@ public class ShiftOptimizerController : ControllerBase
                 };
             }),
             demand = demand.Where(d => d.Required > 0).Select(d => new { date = d.Date.ToString("yyyy-MM-dd"), shift = shiftKey[d.ShiftId], required = d.Required, skill = d.Skill }),
-            rules = new { min_rest_hours = rules.MinRestHours, weekly_max_hours = rules.WeeklyMaxHours, daily_max_hours = rules.DailyMaxHours,
-                night_max_hours = rules.NightMaxHours, max_consecutive_days = rules.MaxConsecutiveDays },
+            rules = new
+            {
+                min_rest_hours = rules.MinRestHours, weekly_max_hours = rules.WeeklyMaxHours, daily_max_hours = rules.DailyMaxHours,
+                night_max_hours = rules.NightMaxHours, max_consecutive_days = rules.MaxConsecutiveDays
+            },
             time_limit_seconds = 10,
             solver = b.Solver is "greedy" or "cp-sat" ? b.Solver : "auto",
         };

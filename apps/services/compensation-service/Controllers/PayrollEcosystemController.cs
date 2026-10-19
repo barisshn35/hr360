@@ -105,17 +105,17 @@ public class PayrollEcosystemController : ControllerBase
         switch (body.Kind)
         {
             case "SgkAphb":
-            {
-                format = (body.Format ?? "xml").ToLowerInvariant();
-                if (format is not ("xml" or "txt")) return BadRequest(new { message = "Geçersiz biçim" });
-                var (aphbPeople, leave, _, prm) = await PayrollData.AphbInputAsync(_db, Tenant, period, ct);
-                if (prm is null) return Conflict(PayrollParameterResolver.Missing(period.Year, period.Month));
-                var (aphbRows, issues) = Aphb.Build(period, slips, aphbPeople, leave, settings.Sgk, prm);
-                var content = format == "xml" ? Aphb.Xml(period, aphbRows, aphbPeople, title, settings.Sgk) : Aphb.Txt(aphbRows, aphbPeople);
-                r = new ExportResult(content, $"sgk-aphb-{period.Year}-{period.Month:00}.{format}", format == "xml" ? "application/xml" : "text/plain",
-                    aphbRows.Count, issues.Select(i => $"{i.Name}: {i.Message}").ToList());
-                break;
-            }
+                {
+                    format = (body.Format ?? "xml").ToLowerInvariant();
+                    if (format is not ("xml" or "txt")) return BadRequest(new { message = "Geçersiz biçim" });
+                    var (aphbPeople, leave, _, prm) = await PayrollData.AphbInputAsync(_db, Tenant, period, ct);
+                    if (prm is null) return Conflict(PayrollParameterResolver.Missing(period.Year, period.Month));
+                    var (aphbRows, issues) = Aphb.Build(period, slips, aphbPeople, leave, settings.Sgk, prm);
+                    var content = format == "xml" ? Aphb.Xml(period, aphbRows, aphbPeople, title, settings.Sgk) : Aphb.Txt(aphbRows, aphbPeople);
+                    r = new ExportResult(content, $"sgk-aphb-{period.Year}-{period.Month:00}.{format}", format == "xml" ? "application/xml" : "text/plain",
+                        aphbRows.Count, issues.Select(i => $"{i.Name}: {i.Message}").ToList());
+                    break;
+                }
             case "SgkHires": format = "csv"; r = Exporters.SgkHires(period, people.Values); break;
             case "Bank":
                 format = (body.Format ?? settings.Bank.Template ?? "generic").ToLowerInvariant();
@@ -124,17 +124,17 @@ public class PayrollEcosystemController : ControllerBase
                     body.PayDate ?? DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3)));
                 break;
             case "Accounting":
-            {
-                format = (body.Format ?? "generic").ToLowerInvariant();
-                if (format is not ("generic" or "logo" or "mikro" or "netsis")) return BadRequest(new { message = "Geçersiz biçim" });
-                var map = body.Accounts ?? settings.Accounts;
-                // Madde 64: borç = alacak denetimi; dengesiz fiş dosyaya dönüşmez.
-                var journal = Exporters.Journal(period, slips, people, map, settings.CostCenters);
-                if (!Exporters.JournalBalanced(journal))
-                    return UnprocessableEntity(new { message = $"Muhasebe fişi dengesiz (borç-alacak farkı {Exporters.JournalDifference(journal):0.00}); dosya üretilmedi.", code = "journal_unbalanced" });
-                r = Exporters.Accounting(period, slips, people, format, map, settings.CostCenters);
-                break;
-            }
+                {
+                    format = (body.Format ?? "generic").ToLowerInvariant();
+                    if (format is not ("generic" or "logo" or "mikro" or "netsis")) return BadRequest(new { message = "Geçersiz biçim" });
+                    var map = body.Accounts ?? settings.Accounts;
+                    // Madde 64: borç = alacak denetimi; dengesiz fiş dosyaya dönüşmez.
+                    var journal = Exporters.Journal(period, slips, people, map, settings.CostCenters);
+                    if (!Exporters.JournalBalanced(journal))
+                        return UnprocessableEntity(new { message = $"Muhasebe fişi dengesiz (borç-alacak farkı {Exporters.JournalDifference(journal):0.00}); dosya üretilmedi.", code = "journal_unbalanced" });
+                    r = Exporters.Accounting(period, slips, people, format, map, settings.CostCenters);
+                    break;
+                }
             default: return BadRequest(new { message = "Geçersiz dosya türü" });
         }
         var sha = EPayslip.Sha256Bytes(r.Content);

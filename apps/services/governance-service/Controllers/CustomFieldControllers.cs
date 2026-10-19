@@ -123,8 +123,15 @@ public class CustomFieldsController : AppController
         var f = (await CustomFields.ListAsync(Db, Tenant, ct)).FirstOrDefault(x => x.Id == id);
         if (f is null) return NotFound();
         // Anahtar, tür ve özel nitelik değişmez (değişmesi gerekiyorsa yeni alan açılır).
-        var d = Def(body with { Key = f.Key, Type = f.Type, IsSpecialCategory = f.IsSpecialCategory,
-            LegalBasis = body.LegalBasis ?? f.LegalBasis, Purpose = body.Purpose ?? f.Purpose, RetentionMonths = body.RetentionMonths ?? f.RetentionMonths });
+        var d = Def(body with
+        {
+            Key = f.Key,
+            Type = f.Type,
+            IsSpecialCategory = f.IsSpecialCategory,
+            LegalBasis = body.LegalBasis ?? f.LegalBasis,
+            Purpose = body.Purpose ?? f.Purpose,
+            RetentionMonths = body.RetentionMonths ?? f.RetentionMonths
+        });
         if (CustomFields.Validate(d) is { } err) return BadRequest(new { message = L(err.Tr, err.En) });
         await Db.ExecuteAsync("""
             UPDATE governance_custom_fields SET "Label" = $3, "Options" = $4::jsonb, "Required" = $5, "Visibility" = $6, "SelfEditable" = $7,

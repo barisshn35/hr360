@@ -429,7 +429,7 @@ public class ExpenseClaimsController : ControllerBase
         claim.WorkflowRequestId =
             await _approvals.StartExpenseApprovalAsync(claim.EmployeeId, claim.Title, ct,
                 // Akış tanımındaki tutar koşulları (ör. 10.000 TL üstü finans onayı) için.
-                                // anomalyFlags: onaycı akış ekranında denetim işareti sayısını görür (karar insanda).
+                // anomalyFlags: onaycı akış ekranında denetim işareti sayısını görür (karar insanda).
                 System.Text.Json.JsonSerializer.Serialize(anomalyFlags > 0
                     ? new { expenseClaimId = claim.Id, amount = claim.TotalAmount, currency = claim.Currency, anomalyFlags }
                     : (object)new { expenseClaimId = claim.Id, amount = claim.TotalAmount, currency = claim.Currency }));

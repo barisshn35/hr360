@@ -25,7 +25,15 @@ public static class ChatText
         {
             sb.Append(c switch
             {
-                'ı' => 'i', 'ğ' => 'g', 'ü' => 'u', 'ş' => 's', 'ö' => 'o', 'ç' => 'c', 'â' => 'a', 'î' => 'i', 'û' => 'u',
+                'ı' => 'i',
+                'ğ' => 'g',
+                'ü' => 'u',
+                'ş' => 's',
+                'ö' => 'o',
+                'ç' => 'c',
+                'â' => 'a',
+                'î' => 'i',
+                'û' => 'u',
                 _ => char.IsLetterOrDigit(c) ? c : ' ',
             });
         }
@@ -282,12 +290,22 @@ public static class ReceiptParser
 
     public static string CategoryLabel(string c, bool en) => en ? c switch
     {
-        "Meal" => "Meal", "Transport" => "Transport", "Travel" => "Travel", "Accommodation" => "Accommodation",
-        "Supplies" => "Supplies", "Training" => "Training", _ => "Other",
+        "Meal" => "Meal",
+        "Transport" => "Transport",
+        "Travel" => "Travel",
+        "Accommodation" => "Accommodation",
+        "Supplies" => "Supplies",
+        "Training" => "Training",
+        _ => "Other",
     } : c switch
     {
-        "Meal" => "Yemek", "Transport" => "Ulaşım", "Travel" => "Seyahat", "Accommodation" => "Konaklama",
-        "Supplies" => "Kırtasiye/malzeme", "Training" => "Eğitim", _ => "Diğer",
+        "Meal" => "Yemek",
+        "Transport" => "Ulaşım",
+        "Travel" => "Seyahat",
+        "Accommodation" => "Konaklama",
+        "Supplies" => "Kırtasiye/malzeme",
+        "Training" => "Eğitim",
+        _ => "Diğer",
     };
 
     /// <summary>"123,45" / "123.45" / "1.234,50" → tutar.</summary>

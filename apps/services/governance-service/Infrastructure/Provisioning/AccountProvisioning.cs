@@ -72,8 +72,15 @@ public static partial class AccountNaming
         {
             var c = ch switch
             {
-                'ı' or 'I' or 'İ' or 'i' => 'i', 'ş' or 'Ş' => 's', 'ğ' or 'Ğ' => 'g', 'ü' or 'Ü' => 'u',
-                'ö' or 'Ö' => 'o', 'ç' or 'Ç' => 'c', 'â' or 'Â' => 'a', 'î' or 'Î' => 'i', 'û' or 'Û' => 'u',
+                'ı' or 'I' or 'İ' or 'i' => 'i',
+                'ş' or 'Ş' => 's',
+                'ğ' or 'Ğ' => 'g',
+                'ü' or 'Ü' => 'u',
+                'ö' or 'Ö' => 'o',
+                'ç' or 'Ç' => 'c',
+                'â' or 'Â' => 'a',
+                'î' or 'Î' => 'i',
+                'û' or 'Û' => 'u',
                 _ => char.ToLowerInvariant(ch),
             };
             if (c is >= 'a' and <= 'z' or >= '0' and <= '9') sb.Append(c);

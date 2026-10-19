@@ -60,13 +60,13 @@ public sealed class BadgeService : BackgroundService
             FROM employee_employees e
             WHERE e."TenantSlug" = $1 AND e."Status" <> 'Terminated' AND ($2::uuid IS NULL OR e."Id" = $2)
             """, r => (Id: r.GetGuid(0), Hire: r.GetFieldValue<DateOnly>(1), M: new BadgeCatalog.Metrics
-            {
-                [BadgeCatalog.Tenure] = BadgeCatalog.TenureYears(r.GetFieldValue<DateOnly>(1), today),
-                [BadgeCatalog.KudosReceived] = r.GetInt64(2), [BadgeCatalog.KudosGiven] = r.GetInt64(3), [BadgeCatalog.EomWins] = r.GetInt64(4),
-                [BadgeCatalog.Ideas] = r.GetInt64(5), [BadgeCatalog.IdeasDone] = r.GetInt64(6), [BadgeCatalog.VolunteerHours] = r.GetDecimal(7),
-                [BadgeCatalog.EventsAttended] = r.GetInt64(8), [BadgeCatalog.CoffeeMet] = r.GetInt64(9), [BadgeCatalog.CardsSigned] = r.GetInt64(10),
-                [BadgeCatalog.Certifications] = r.GetInt64(11),
-            }), ct, tenant, employeeId);
+        {
+            [BadgeCatalog.Tenure] = BadgeCatalog.TenureYears(r.GetFieldValue<DateOnly>(1), today),
+            [BadgeCatalog.KudosReceived] = r.GetInt64(2), [BadgeCatalog.KudosGiven] = r.GetInt64(3), [BadgeCatalog.EomWins] = r.GetInt64(4),
+            [BadgeCatalog.Ideas] = r.GetInt64(5), [BadgeCatalog.IdeasDone] = r.GetInt64(6), [BadgeCatalog.VolunteerHours] = r.GetDecimal(7),
+            [BadgeCatalog.EventsAttended] = r.GetInt64(8), [BadgeCatalog.CoffeeMet] = r.GetInt64(9), [BadgeCatalog.CardsSigned] = r.GetInt64(10),
+            [BadgeCatalog.Certifications] = r.GetInt64(11),
+        }), ct, tenant, employeeId);
         return rows.ToDictionary(x => x.Id, x => (x.Hire, x.M));
     }
 

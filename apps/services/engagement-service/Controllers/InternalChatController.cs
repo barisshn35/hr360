@@ -78,8 +78,11 @@ public class InternalChatController : AppController
         var (error, k) = await KudosController.CreateCoreAsync(_db, notify, People, Tenant, from,
             new KudosController.CreateKudos(body.ToEmployeeId, string.IsNullOrWhiteSpace(body.Badge) ? "thanks" : body.Badge.Trim(), (body.Message ?? "").Trim()), ct);
         if (error is not null) return error.ToResult();
-        return Ok(new { id = k!.Id, fromName = k.FromName, toEmployeeId = k.ToEmployeeId, toName = k.ToName, badge = k.Badge,
-            badgeLabel = KudosController.Badges[k.Badge] });
+        return Ok(new
+        {
+            id = k!.Id, fromName = k.FromName, toEmployeeId = k.ToEmployeeId, toName = k.ToName, badge = k.Badge,
+            badgeLabel = KudosController.Badges[k.Badge]
+        });
     }
 
     /* ------------------------------------------------------------- masa */

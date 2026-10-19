@@ -170,8 +170,11 @@ public class DocumentRequestsController : AppController
                 """, ct, Tenant, r.EmployeeId.ToString(), $"{{\"field\":\"document\",\"template\":{System.Text.Json.JsonSerializer.Serialize(r.TemplateName)}}}", Me.UserId, Me.Name);
         }
         var sig = await DocumentSignatureController.EvidenceAsync(Db, Tenant, r.Id, ct);
-        return Ok(new { r.TemplateName, html = SecretBox.Unprotect(r.DocumentEnc), r.VerificationCode, r.IssuedAt,
-            signature = sig is null ? null : DocumentSignatureController.View(sig, En) });
+        return Ok(new
+        {
+            r.TemplateName, html = SecretBox.Unprotect(r.DocumentEnc), r.VerificationCode, r.IssuedAt,
+            signature = sig is null ? null : DocumentSignatureController.View(sig, En)
+        });
     }
 }
 

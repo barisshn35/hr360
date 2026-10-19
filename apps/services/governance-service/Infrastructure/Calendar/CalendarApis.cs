@@ -98,12 +98,18 @@ public sealed class GoogleCalendar(IHttpClientFactory http) : ICalendarProvider
         Http.SendAsync(http, HttpMethod.Post, $"{OAuthBase}/token", null, new FormUrlEncodedContent(form), ct, what: "Google jeton");
 
     public async Task<TokenSet> ExchangeCodeAsync(ProviderConfig cfg, string code, string verifier, string redirectUri, CancellationToken ct) =>
-        Http.ToTokens(await Token(new() { ["code"] = code, ["client_id"] = cfg.ClientId, ["client_secret"] = SecretBox.Unprotect(cfg.ClientSecretEnc) ?? "",
-            ["redirect_uri"] = redirectUri, ["grant_type"] = "authorization_code", ["code_verifier"] = verifier }, ct));
+        Http.ToTokens(await Token(new()
+        {
+            ["code"] = code, ["client_id"] = cfg.ClientId, ["client_secret"] = SecretBox.Unprotect(cfg.ClientSecretEnc) ?? "",
+            ["redirect_uri"] = redirectUri, ["grant_type"] = "authorization_code", ["code_verifier"] = verifier
+        }, ct));
 
     public async Task<TokenSet> RefreshAsync(ProviderConfig cfg, string refreshToken, CancellationToken ct) =>
-        Http.ToTokens(await Token(new() { ["client_id"] = cfg.ClientId, ["client_secret"] = SecretBox.Unprotect(cfg.ClientSecretEnc) ?? "",
-            ["refresh_token"] = refreshToken, ["grant_type"] = "refresh_token" }, ct));
+        Http.ToTokens(await Token(new()
+        {
+            ["client_id"] = cfg.ClientId, ["client_secret"] = SecretBox.Unprotect(cfg.ClientSecretEnc) ?? "",
+            ["refresh_token"] = refreshToken, ["grant_type"] = "refresh_token"
+        }, ct));
 
     public async Task<string?> AccountEmailAsync(string accessToken, CancellationToken ct)
     {
@@ -152,8 +158,11 @@ public sealed class GoogleCalendar(IHttpClientFactory http) : ICalendarProvider
 
     public async Task<List<(DateTime Start, DateTime End)>> BusyAsync(string accessToken, string? email, DateTime fromUtc, DateTime toUtc, CancellationToken ct)
     {
-        var body = new JsonObject { ["timeMin"] = fromUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"), ["timeMax"] = toUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-            ["items"] = new JsonArray(new JsonObject { ["id"] = "primary" }) };
+        var body = new JsonObject
+        {
+            ["timeMin"] = fromUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"), ["timeMax"] = toUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            ["items"] = new JsonArray(new JsonObject { ["id"] = "primary" })
+        };
         var r = (await Http.SendAsync(http, HttpMethod.Post, $"{Api}/calendar/v3/freeBusy", accessToken,
             new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"), ct, what: "Google boş/dolu"))!.Value;
         return r.GetProperty("calendars").GetProperty("primary").GetProperty("busy").EnumerateArray()
@@ -181,12 +190,18 @@ public sealed class MicrosoftCalendar(IHttpClientFactory http) : ICalendarProvid
         Http.SendAsync(http, HttpMethod.Post, $"{Login}/{Uri.EscapeDataString(TenantOf(cfg))}/oauth2/v2.0/token", null, new FormUrlEncodedContent(form), ct, what: "Microsoft jeton");
 
     public async Task<TokenSet> ExchangeCodeAsync(ProviderConfig cfg, string code, string verifier, string redirectUri, CancellationToken ct) =>
-        Http.ToTokens(await Token(cfg, new() { ["client_id"] = cfg.ClientId, ["client_secret"] = SecretBox.Unprotect(cfg.ClientSecretEnc) ?? "",
-            ["code"] = code, ["redirect_uri"] = redirectUri, ["grant_type"] = "authorization_code", ["code_verifier"] = verifier, ["scope"] = Scopes }, ct));
+        Http.ToTokens(await Token(cfg, new()
+        {
+            ["client_id"] = cfg.ClientId, ["client_secret"] = SecretBox.Unprotect(cfg.ClientSecretEnc) ?? "",
+            ["code"] = code, ["redirect_uri"] = redirectUri, ["grant_type"] = "authorization_code", ["code_verifier"] = verifier, ["scope"] = Scopes
+        }, ct));
 
     public async Task<TokenSet> RefreshAsync(ProviderConfig cfg, string refreshToken, CancellationToken ct) =>
-        Http.ToTokens(await Token(cfg, new() { ["client_id"] = cfg.ClientId, ["client_secret"] = SecretBox.Unprotect(cfg.ClientSecretEnc) ?? "",
-            ["refresh_token"] = refreshToken, ["grant_type"] = "refresh_token", ["scope"] = Scopes }, ct));
+        Http.ToTokens(await Token(cfg, new()
+        {
+            ["client_id"] = cfg.ClientId, ["client_secret"] = SecretBox.Unprotect(cfg.ClientSecretEnc) ?? "",
+            ["refresh_token"] = refreshToken, ["grant_type"] = "refresh_token", ["scope"] = Scopes
+        }, ct));
 
     public async Task<string?> AccountEmailAsync(string accessToken, CancellationToken ct)
     {

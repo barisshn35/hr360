@@ -60,7 +60,7 @@ public class OnboardingDbContext : DbContext, ITenantAwareContext
             .HasOne(a => a.Asset).WithMany(x => x.Assignments)
             .HasForeignKey(a => a.AssetId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<AssetAssignment>().HasIndex(a => a.EmployeeId);
-    
+
         // Dalga 5c tablolari: scripts/sql/2026-10-08_ops_plus.sql
         modelBuilder.Entity<TaskTemplate>().ConfigureTenantColumn();
         modelBuilder.Entity<TaskTemplate>().ToTable("onboarding_task_templates");

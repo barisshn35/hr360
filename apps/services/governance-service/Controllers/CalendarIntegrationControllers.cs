@@ -324,22 +324,22 @@ public class MeetingsController : AppController
         switch (body.SourceType)
         {
             case "one-on-one":
-            {
-                var o = (await Db.QueryAsync("""
+                {
+                    var o = (await Db.QueryAsync("""
                     SELECT o."ManagerUserId", o."EmployeeId", o."EmployeeName", o."ScheduledAt", o."Status" FROM engagement_one_on_ones o
                     WHERE o."TenantSlug" = $1 AND o."Id" = $2
                     """, r => (Mgr: r.GetString(0), Emp: r.GetGuid(1), Name: r.GetString(2), At: r.GetFieldValue<DateTime>(3), Status: r.GetString(4)), ct, Tenant, body.SourceId ?? Guid.Empty)).FirstOrDefault();
-                if (o.Mgr is null) return NotFound(new { message = "1:1 bulunamadı." });
-                if (o.Mgr != Me.UserId && !Me.IsHr) return Forbid();
-                if (o.Status != "Planned") return BadRequest(new { message = "Yalnızca planlı 1:1'e toplantı eklenebilir." });
-                title = body.Title ?? $"1:1 — {me.Name} & {o.Name}";
-                start = DateTime.SpecifyKind(o.At, DateTimeKind.Utc);
-                participants.Add(o.Emp);
-                break;
-            }
+                    if (o.Mgr is null) return NotFound(new { message = "1:1 bulunamadı." });
+                    if (o.Mgr != Me.UserId && !Me.IsHr) return Forbid();
+                    if (o.Status != "Planned") return BadRequest(new { message = "Yalnızca planlı 1:1'e toplantı eklenebilir." });
+                    title = body.Title ?? $"1:1 — {me.Name} & {o.Name}";
+                    start = DateTime.SpecifyKind(o.At, DateTimeKind.Utc);
+                    participants.Add(o.Emp);
+                    break;
+                }
             case "interview":
-            {
-                var i = (await Db.QueryAsync("""
+                {
+                    var i = (await Db.QueryAsync("""
                     SELECT i."InterviewerEmployeeId", i."ScheduledAt", c."FirstName" || ' ' || c."LastName", c."Email", p."Title", i."Type"
                     FROM recruitment_interviews i
                     JOIN recruitment_applications a ON a."Id" = i."ApplicationId"
@@ -347,14 +347,14 @@ public class MeetingsController : AppController
                     LEFT JOIN recruitment_job_postings p ON p."Id" = a."JobPostingId"
                     WHERE i."TenantSlug" = $1 AND i."Id" = $2
                     """, r => (Interviewer: r.GetGuid(0), At: r.GetFieldValue<DateTimeOffset>(1), Candidate: r.GetString(2), Email: r.Str(3), Posting: r.Str(4), Type: r.Str(5)), ct, Tenant, body.SourceId ?? Guid.Empty)).FirstOrDefault();
-                if (i.Candidate is null) return NotFound(new { message = "Mülakat bulunamadı." });
-                if (i.Interviewer != me.Id && !Me.IsHr) return Forbid();
-                title = body.Title ?? $"Mülakat — {i.Candidate}{(i.Posting is null ? "" : $" ({i.Posting})")}";
-                start = i.At.UtcDateTime;
-                if (i.Interviewer != me.Id) participants.Add(i.Interviewer);
-                if (body.IncludeCandidate && i.Email is not null) externals.Add(i.Email);
-                break;
-            }
+                    if (i.Candidate is null) return NotFound(new { message = "Mülakat bulunamadı." });
+                    if (i.Interviewer != me.Id && !Me.IsHr) return Forbid();
+                    title = body.Title ?? $"Mülakat — {i.Candidate}{(i.Posting is null ? "" : $" ({i.Posting})")}";
+                    start = i.At.UtcDateTime;
+                    if (i.Interviewer != me.Id) participants.Add(i.Interviewer);
+                    if (body.IncludeCandidate && i.Email is not null) externals.Add(i.Email);
+                    break;
+                }
             case "custom":
                 if (!Me.IsManager) return Forbid();
                 if (string.IsNullOrWhiteSpace(body.Title) || body.StartsAt is null) return BadRequest(new { message = "Başlık ve başlangıç zamanı zorunlu." });

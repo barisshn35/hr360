@@ -50,8 +50,11 @@ public class PrivacyController : AppController
         return Ok(types.Select(t =>
         {
             var last = mine.FirstOrDefault(c => c.ConsentType == t.Type);
-            return new { t.Type, t.Title, t.Version, t.Required, t.Text, granted = last?.Granted, recordedAt = last?.RecordedAt,
-                outdated = last is not null && last.Version != t.Version, history = mine.Where(c => c.ConsentType == t.Type).Take(5).Select(c => new { c.Granted, c.Version, c.RecordedAt }) };
+            return new
+            {
+                t.Type, t.Title, t.Version, t.Required, t.Text, granted = last?.Granted, recordedAt = last?.RecordedAt,
+                outdated = last is not null && last.Version != t.Version, history = mine.Where(c => c.ConsentType == t.Type).Take(5).Select(c => new { c.Granted, c.Version, c.RecordedAt })
+            };
         }));
     }
 
@@ -116,8 +119,11 @@ public class PrivacyController : AppController
         if ((body.Details?.Trim().Length ?? 0) < 10)
             return BadRequest(new { message = L("Başvurunuzu en az 10 karakterle açıklayın.", "Please describe your request in at least 10 characters.") });
         // Kendi oturumundan gelen başvuruda kimlik oturumla doğrulanmıştır.
-        var r = new DataRequest { UserId = Me.UserId, EmployeeId = me?.Id, PersonName = me?.Name ?? Me.Name, Kind = body.Kind, Details = body.Details?.Trim(),
-            Channel = "Panel", IdentityVerified = true, VerificationMethod = "Session", VerifiedAt = DateTime.UtcNow, VerifiedBy = "HR360" };
+        var r = new DataRequest
+        {
+            UserId = Me.UserId, EmployeeId = me?.Id, PersonName = me?.Name ?? Me.Name, Kind = body.Kind, Details = body.Details?.Trim(),
+            Channel = "Panel", IdentityVerified = true, VerificationMethod = "Session", VerifiedAt = DateTime.UtcNow, VerifiedBy = "HR360"
+        };
         _db.DataRequests.Add(r);
         await _db.SaveChangesAsync(ct);
         // Dalga 10: oturumla doğrulanmış erişim başvurusunda veri paketi hemen hazırlanır; başvurucu, İK
@@ -414,8 +420,11 @@ public class DocumentTemplatesController : AppController
     public async Task<IActionResult> Create(TemplateInput body, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(body.Name) || string.IsNullOrWhiteSpace(body.Body)) return BadRequest(new { message = "Ad ve içerik zorunlu." });
-        var t = new DocTemplate { Name = body.Name.Trim(), Category = body.Category?.Trim() is { Length: > 0 } c ? c : "Genel", Body = Sanitize(body.Body),
-            SelfService = body.SelfService ?? false, RequiresApproval = body.RequiresApproval ?? true };
+        var t = new DocTemplate
+        {
+            Name = body.Name.Trim(), Category = body.Category?.Trim() is { Length: > 0 } c ? c : "Genel", Body = Sanitize(body.Body),
+            SelfService = body.SelfService ?? false, RequiresApproval = body.RequiresApproval ?? true
+        };
         _db.DocTemplates.Add(t);
         await _db.SaveChangesAsync(ct);
         return Ok(t);
@@ -499,8 +508,11 @@ public class DocumentTemplatesController : AppController
         foreach (var s in samples.Where(s => !have.Contains(s.Name)))
         {
             // Çalışma belgesi onaysız, maaş yazısı İK onayıyla çalışanın kendisince talep edilebilir.
-            _db.DocTemplates.Add(new DocTemplate { Name = s.Name, Category = s.Cat, Body = s.Body.Trim(),
-                SelfService = s.Name is "Çalışma belgesi" or "Maaş yazısı", RequiresApproval = s.Name != "Çalışma belgesi" });
+            _db.DocTemplates.Add(new DocTemplate
+            {
+                Name = s.Name, Category = s.Cat, Body = s.Body.Trim(),
+                SelfService = s.Name is "Çalışma belgesi" or "Maaş yazısı", RequiresApproval = s.Name != "Çalışma belgesi"
+            });
             added++;
         }
         await _db.SaveChangesAsync(ct);

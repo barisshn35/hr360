@@ -36,10 +36,16 @@ public class ShiftPreferencesController : ControllerBase
         string[]? AvoidShiftTypes, int? MaxNightsPerWeek, string? Note);
 
     private static object Dto(ShiftPreference? p, Guid employeeId) => p is null
-        ? new { employeeId, preferredDays = Array.Empty<int>(), unavailableDays = Array.Empty<int>(), preferredShiftTypes = Array.Empty<string>(),
-                avoidShiftTypes = Array.Empty<string>(), maxNightsPerWeek = (int?)null, note = (string?)null, updatedAt = (DateTimeOffset?)null }
-        : new { employeeId = p.EmployeeId, preferredDays = p.PreferredDays, unavailableDays = p.UnavailableDays, preferredShiftTypes = p.PreferredShiftTypes,
-                avoidShiftTypes = p.AvoidShiftTypes, maxNightsPerWeek = p.MaxNightsPerWeek, note = p.Note, updatedAt = (DateTimeOffset?)p.UpdatedAt };
+        ? new
+        {
+            employeeId, preferredDays = Array.Empty<int>(), unavailableDays = Array.Empty<int>(), preferredShiftTypes = Array.Empty<string>(),
+            avoidShiftTypes = Array.Empty<string>(), maxNightsPerWeek = (int?)null, note = (string?)null, updatedAt = (DateTimeOffset?)null
+        }
+        : new
+        {
+            employeeId = p.EmployeeId, preferredDays = p.PreferredDays, unavailableDays = p.UnavailableDays, preferredShiftTypes = p.PreferredShiftTypes,
+            avoidShiftTypes = p.AvoidShiftTypes, maxNightsPerWeek = p.MaxNightsPerWeek, note = p.Note, updatedAt = (DateTimeOffset?)p.UpdatedAt
+        };
 
     [HttpGet("me")]
     public async Task<IActionResult> Mine(CancellationToken ct)
