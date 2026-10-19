@@ -173,8 +173,9 @@ try:
           and "nickName" not in u1 and u1["title"] == "TEST Uzman" and len(u1["emails"]) == 1 and u1["emails"][0]["value"] == email1
           and u1["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"] == {"department": "Mühendislik"}, u1)
     row = psql(f"""SELECT row_to_json(u)::text FROM tenant_directory_users u WHERE "Id" = '{U1}'""")
+    # Telefon tam parçasıyla aranır: yalın "555" zaman damgasının mikrosaniyesine de uyabilir (…17.354555).
     check("Y26 dizin satırında telefon/adres/foto/yönetici/çalışan no yok",
-          row and all(x not in row for x in ["555", "GIZLI", "photo", f"EMPNO-{RUN}", "m-1", "example.org"]), row)
+          row and all(x not in row for x in ["555 999", "GIZLI", "photo", f"EMPNO-{RUN}", "m-1", "example.org"]), row)
     cols = set(psql("""SELECT column_name FROM information_schema.columns WHERE table_name = 'tenant_directory_users'""").split())
     check("Y26 tabloda telefon/adres sütunu yok", cols and not ({"Phone", "Address", "HireDate"} & cols), cols)
     KC1 = psql(f"""SELECT "KeycloakUserId" FROM tenant_directory_users WHERE "Id" = '{U1}'""")
@@ -236,7 +237,7 @@ try:
     check("Y26 PATCH ad ve e-posta (Entra biçimi)", code == 200 and r["name"]["familyName"] == "Yeni" and r["emails"][0]["value"] == email1b, (code, r))
     check("Y26 PATCH Keycloak e-postası/soyadı güncellendi", kc_user(KC1) == f"true|{email1b}|TestScimX|Yeni", kc_user(KC1))
     check("Y26 PATCH çalışan e-postası güncellendi", psql(f"""SELECT "Email" || '|' || "LastName" FROM employee_employees WHERE "Id" = '{E1}'""") == f"{email1b}|Yeni")
-    check("Y26 PATCH ile gelen telefon saklanmadı", "555" not in psql(f"""SELECT row_to_json(u)::text FROM tenant_directory_users u WHERE "Id" = '{U1}'"""))
+    check("Y26 PATCH ile gelen telefon saklanmadı", "555 111" not in psql(f"""SELECT row_to_json(u)::text FROM tenant_directory_users u WHERE "Id" = '{U1}'"""))
 
     code, r = scim("PATCH", f"/Users/{U1}", {"Operations": [{"op": "Replace", "value": {"active": "False"}}]})
     check("Y26 PATCH active=false", code == 200 and r["active"] is False, (code, r))
@@ -298,7 +299,7 @@ try:
     check("Y26 LDAP kullanıcıları (unvan, departman, çalışan bağlı)",
           rows == ["testldap.ada|TEST Uzman|Mühendislik|Linked|true", "testldap.bora|TEST Analist|-|Linked|true"], rows)
     ldap_rows = psql("""SELECT string_agg(row_to_json(u)::text, ' ') FROM tenant_directory_users u WHERE "TenantSlug" = 'demo' AND "Source" = 'ldap'""")
-    check("Y26 LDAP'tan telefon/adres alınmadı", "555" not in ldap_rows and "Sokak" not in ldap_rows, ldap_rows[:200])
+    check("Y26 LDAP'tan telefon/adres alınmadı", "555 000" not in ldap_rows and "Sokak" not in ldap_rows, ldap_rows[:200])
     kc_ada = psql("""SELECT "KeycloakUserId" FROM tenant_directory_users WHERE "TenantSlug" = 'demo' AND "UserName" = 'testldap.ada'""")
     kc_bora = psql("""SELECT "KeycloakUserId" FROM tenant_directory_users WHERE "TenantSlug" = 'demo' AND "UserName" = 'testldap.bora'""")
     created["kc"].update(x for x in (kc_ada, kc_bora) if x)
