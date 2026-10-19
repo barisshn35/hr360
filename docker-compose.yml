@@ -281,6 +281,7 @@ services:
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
       INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   employee-service:
@@ -297,6 +298,7 @@ services:
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
       INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   workflow-service:
@@ -312,6 +314,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
       EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   leave-service:
@@ -330,6 +333,7 @@ services:
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
       INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   recruitment-service:
@@ -350,6 +354,7 @@ services:
       KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
       TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_RECRUITMENT:-hr360admin};Password=${HR360_DB_PASSWORD_RECRUITMENT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   onboarding-service:
@@ -365,6 +370,7 @@ services:
       KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
       TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ONBOARDING:-hr360admin};Password=${HR360_DB_PASSWORD_ONBOARDING:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   timeshift-service:
@@ -383,6 +389,7 @@ services:
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
       INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   performance-service:
@@ -397,6 +404,7 @@ services:
       EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
       ML_INFERENCE_URL: "http://ml-inference:8000"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   learning-service:
@@ -411,6 +419,7 @@ services:
       KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
       TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_LEARNING:-hr360admin};Password=${HR360_DB_PASSWORD_LEARNING:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   # Calisan deneyimi: takdir duvari, kutlamalar, ofis/masa, mentorluk, ic ilan,
@@ -441,6 +450,7 @@ services:
       # Paylasilan onbellek (dizin, ofis dolulugu, ekip sagligi). Bos ise kapali.
       REDIS_URL: "redis:6379,password=${REDIS_PASSWORD:-}"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "384m"
 
   # Yonetisim: denetim kaydi, canli olay radari (Kafka), zaman makinesi, KVKK,
@@ -492,6 +502,7 @@ services:
       # Dalga 12: Google Workspace / Microsoft 365 hesap acma/kapatma (IK onayli; varsayilan kapali).
       ACCOUNT_PROVISIONING_ENABLED: "${ACCOUNT_PROVISIONING_ENABLED:-false}"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -516,6 +527,7 @@ services:
       KEYCLOAK_VALID_ISSUERS: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}/auth/realms/hr360"
       TENANT_STATUS_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_COMPENSATION:-hr360admin};Password=${HR360_DB_PASSWORD_COMPENSATION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=3"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   expense-service:
@@ -540,6 +552,7 @@ services:
       ORGANIZATION_SERVICE_URL: "http://organization-service:8080"
       WORKFLOW_SERVICE_URL: "http://workflow-service:8080"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     mem_limit: "512m"
 
   notification-service:
@@ -570,6 +583,7 @@ services:
       # E-postadaki karar bağlantısı ve anlık bildirim (VAPID) için genel adres.
       PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_USER: ${SMTP_USER}
@@ -626,6 +640,7 @@ services:
       # SSO: kimlik saglayicisina kaydedilecek yonlendirme adresi bundan uretilir.
       PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-${PUBLIC_URL:-http://localhost}}"
       ASPNETCORE_ENVIRONMENT: "Production"
+      HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
     depends_on:
       postgres:
         condition: service_healthy

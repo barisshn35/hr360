@@ -29,11 +29,16 @@ scrape_configs:
       - drop:
           older_than: 24h
           drop_counter_reason: too_old
-      # ASP.NET Core konsol loglari "fail:" / "warn:" / "info:" ile baslar.
+      # .NET servisleri varsayilan olarak tek satir JSON yazar (HR360_LOG_FORMAT=json): seviye LogLevel,
+      # istek kimligi Scopes icinde (Loki'de: {service="..."} | json | line_format ... ya da |= "<kimlik>").
+      # Duz metin (HR360_LOG_FORMAT=text) "fail:" / "warn:" / "info:" ile baslar.
+      - json:
+          expressions:
+            jlvl: LogLevel
       - regex:
           expression: '^(?P<lvl>fail|crit|warn|info|dbug|trce):'
       - template:
           source: level
-          template: '{{ if eq .lvl "fail" }}error{{ else if eq .lvl "crit" }}critical{{ else if eq .lvl "warn" }}warning{{ else if .lvl }}info{{ end }}'
+          template: '{{ if or (eq .lvl "fail") (eq .jlvl "Error") }}error{{ else if or (eq .lvl "crit") (eq .jlvl "Critical") }}critical{{ else if or (eq .lvl "warn") (eq .jlvl "Warning") }}warning{{ else if or .lvl .jlvl }}info{{ end }}'
       - labels:
           level:

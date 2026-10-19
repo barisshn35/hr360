@@ -12,6 +12,7 @@ using LearningService.Tenancy;
 // Sırlar dosyadan da okunabilir (X_FILE, Docker secrets); X tanımlıysa davranış aynı.
 LearningService.Security.SecretEnv.Load();
 var builder = WebApplication.CreateBuilder(args);
+builder.AddHr360Logging(); // HR360_LOG_FORMAT=json: tek satır JSON, istek kimliği + şirket (Shared/StructuredLogging.cs)
 // G25: OpenTelemetry izleme (yalnizca OTEL_EXPORTER_OTLP_ENDPOINT tanimliysa) + KVKK maskeleme.
 LearningService.Observability.Telemetry.AddHrTelemetry(builder.Services, "learning-service");
 
@@ -129,6 +130,7 @@ builder.Services.AddHostedService<LearningService.Services.DueReminderWorker>();
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.MultipartBodyLengthLimit = 52L * 1024 * 1024);
 
 var app = builder.Build();
+app.UseHr360LogScope();
 // Zamanlanmış arka plan işleri çok kopyada tek kopyada çalışır (HR360.Platform.LeaderGate).
 HR360.Platform.LeaderGate.Configure(connectionString, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LeaderGate"));
 

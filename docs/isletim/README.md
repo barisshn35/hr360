@@ -105,6 +105,12 @@ ayakta olan servisler, istek hızı, 5xx oranı, p95 süre, en yavaş uçlar,
 bellek/CPU, PostgreSQL bağlantı ve boyutu, son yedek, geri yükleme testi, TLS sertifikası,
 Kafka outbox birikimi, etkin alarmlar, hata logları ve log araması.
 
+.NET servisleri tek satırlık JSON log yazar (`HR360_LOG_FORMAT=json`, varsayılan; düz metin için
+`.env`'de `HR360_LOG_FORMAT=text`). İstek içindeki her satırda `CorrelationId` (yanıt başlığı
+`X-Correlation-Id` ve denetim kaydıyla aynı) ve varsa şirket (`Tenant`) bulunur. Kullanıcının
+bildirdiği bir hatayı bulmak için: Grafana › Explore › Loki, `{service=~".+"} |= "<kimlik>"`;
+izleme kapalıysa `docker compose logs <servis> | grep <kimlik>`.
+
 Alarm kuralları (`deploy/monitoring/alerts.yml`: servis erişilemiyor, 5xx oranı,
 yavaş yanıt, bellek, disk (doluluk, 24 saatlik tahmin, inode), PostgreSQL, Kafka outbox
 birikimi, TLS sertifikası bitişi, yedek yaşı ve geri yükleme testi, denetim zinciri; tam liste

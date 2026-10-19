@@ -68,8 +68,9 @@ log_scan() {
   patterns="$(grep -vE '^[[:space:]]*(#|$)' "$ROOT/tests/support/log-allowlist.txt" 2>/dev/null || true)"
   step "Servis gunluklerinde hata taramasi"
   for c in $(docker ps --format '{{.Names}}' | grep -E '^hr360-.*(service|ml-inference)' | sort); do
+    # JSON gunluk (HR360_LOG_FORMAT=json) once duz metne acilir (tests/support/log_text.py).
     # Her hata bir blok (baslik + 3 satir); izin listesindeki bir desen bloğun herhangi bir satırına uyarsa blok atlanır.
-    lines="$(docker logs --since "$since" "$c" 2>&1 | grep -A3 -E '^fail: |Unhandled exception|^Traceback' \
+    lines="$(docker logs --since "$since" "$c" 2>&1 | python3 "$ROOT/tests/support/log_text.py" | grep -A3 -E '^fail: |Unhandled exception|^Traceback' \
       | PATTERNS="$patterns" awk '
           function flush() { if (blk != "" && !allowed) printf "%s", keep; blk = ""; keep = ""; allowed = 0; nl = 0 }
           BEGIN { n = split(ENVIRON["PATTERNS"], pat, "\n") }
