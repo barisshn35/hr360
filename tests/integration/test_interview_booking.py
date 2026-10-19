@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: recruitment  (kapalıysa scripts/test.sh bu betiği atlar)
 """Adayın mülakat saatini kendisi seçmesi: /api/recruitment/applications/<id>/interview-proposals ve
 /api/recruitment/public/<şirket>/interview-booking/<jeton>.
 

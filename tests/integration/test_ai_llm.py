@@ -1,3 +1,4 @@
+# hr360-modules: ml  (kapalıysa scripts/test.sh bu betiği atlar)
 """Yapay zekâ (LLM) entegrasyonu — kiracı izni, kişisel veri izni, takma ad, kota,
 kullanım kaydı ve İK asistanı (sahte Anthropic API ile).
 

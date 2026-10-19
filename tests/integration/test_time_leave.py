@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: timeshift  (kapalıysa scripts/test.sh bu betiği atlar)
 """Dalga 9 (izin, puantaj, vardiya) uçtan uca testi: izin ayarları ve ekip çakışması (69), yarım gün izin (70),
 yasal hak ön izlemesi (71), yarım gün tatil alanı ve puantaj dönemi kilidi (72), çalışma süresi kural denetimi (66),
 konum ayarları (67), kiosk uçlarının yetkisi (68), vardiya önerisi (44).

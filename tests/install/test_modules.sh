@@ -11,7 +11,7 @@ check() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
 
 mkdir -p "$T/repo/scripts/lib" "$T/bin"
 cp "$ROOT/scripts/modules.sh" "$T/repo/scripts/"
-cp "$ROOT/scripts/lib/modules.sh" "$T/repo/scripts/lib/"
+cp "$ROOT/scripts/lib/modules.sh" "$ROOT/scripts/lib/backup-common.sh" "$T/repo/scripts/lib/"
 cp "$ROOT/VERSION" "$T/repo/"
 printf 'HR360_DB_PASSWORD=x\nCOMPOSE_PROFILES=letsencrypt\n' > "$T/repo/.env"
 cat > "$T/bin/docker" <<'EOF'
@@ -19,7 +19,7 @@ cat > "$T/bin/docker" <<'EOF'
 echo "docker $*" >> "$HR360_TEST_LOG"
 EOF
 chmod +x "$T/bin/docker"
-export HR360_TEST_LOG="$T/docker.log" PATH="$T/bin:$PATH"
+export HR360_TEST_LOG="$T/docker.log" PATH="$T/bin:$PATH" HR360_METRICS_DIR="$T/metrics"
 M="$T/repo/scripts/modules.sh"
 envv() { grep "^$1=" "$T/repo/.env" | tail -1 | cut -d= -f2- || true; }
 log() { cat "$HR360_TEST_LOG" 2>/dev/null || true; }
@@ -36,6 +36,11 @@ check "HR360_MODULES kapalıları içermez" '[ "$(envv HR360_MODULES)" = "onboar
 check "ağ geçidi işaretleri yazıldı" '[ -f "$T/repo/deploy/nginx/modules/recruitment.off" ] && [ -f "$T/repo/deploy/nginx/modules/ml.off" ]'
 check "kapatma derleme yapmaz, up -d çağırır" '! log | grep -q " build" && log | grep -q "compose up -d"'
 check "COMPOSE_PROFILES korunur" '[ "$(envv COMPOSE_PROFILES)" = letsencrypt ]'
+check "izleme metriği: kapalı servis 1, açık 0" 'grep -q "hr360_module_disabled{service=\"ml-inference\"} 1" "$T/metrics/hr360_modules.prom" && grep -q "hr360_module_disabled{service=\"timeshift-service\"} 0" "$T/metrics/hr360_modules.prom"'
+
+rm -f "$T/repo/deploy/nginx/modules/"*.off; sed -i '/^HR360_MODULES=/d' "$T/repo/.env"
+$M sync
+check "sync işaretleri ve HR360_MODULES'u .env'den yeniden üretir" '[ -f "$T/repo/deploy/nginx/modules/ml.off" ] && [ "$(envv HR360_MODULES)" = "onboarding,timeshift,performance,learning,compensation,expense" ]'
 
 reset_log
 $M enable recruitment >/dev/null

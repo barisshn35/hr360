@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: compensation  (kapalıysa scripts/test.sh bu betiği atlar)
 """Kullanılmayan izin karşılığı: GET /api/compensation/compensation/reports/unused-leave.
 
 Denetlenenler: yalnızca İK; tutar = kalan gün × (aylık brüt / 30); görüntüleme ücret erişim kaydına yazılır.

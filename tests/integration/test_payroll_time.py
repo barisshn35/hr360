@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: compensation,timeshift  (kapalıysa scripts/test.sh bu betiği atlar)
 """Bordro dönemi (Y2), fazla mesai (Y5) ve giriş-çıkış (Y9) uçtan uca testi.
 
 Çalıştırma: python3 tests/integration/test_payroll_time.py

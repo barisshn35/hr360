@@ -5,7 +5,8 @@ groups:
   - name: hr360
     rules:
       - alert: ServisErisilemiyor
-        expr: up == 0
+        # Kurulumda kapatılmış modülün servisi (scripts/modules.sh) alarm vermez.
+        expr: up == 0 unless on(service) (hr360_module_disabled == 1)
         for: 2m
         labels: { severity: critical }
         annotations:

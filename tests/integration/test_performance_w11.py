@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: performance  (kapalıysa scripts/test.sh bu betiği atlar)
 """Performans ve gelişim (Dalga 11): kalibrasyon oturumu (79), OKR hizalama ağacı (80),
 anonim 360 derece geri bildirim (81).
 

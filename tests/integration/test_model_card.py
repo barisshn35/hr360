@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: compensation,ml  (kapalıysa scripts/test.sh bu betiği atlar)
 """G5: devir riski modeli - model kartı, küresel önem (ortalama |SHAP|), veri kayması (PSI,
 Prometheus hr360_model_feature_psi), yeniden eğitim yetkisi ve governance uyumluluğu.
 

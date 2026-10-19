@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: recruitment  (kapalıysa scripts/test.sh bu betiği atlar)
 """İşe alım+ (Dalga 5c): kariyer sayfası ve aday öz-hizmeti (Y16), tekrar aday tespiti ve kanban (G13),
 mülakat puan kartı ve planlama (Y17), teklif mektubu ve onayı (Y18).
 

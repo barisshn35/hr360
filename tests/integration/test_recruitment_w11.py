@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: recruitment  (kapalıysa scripts/test.sh bu betiği atlar)
 """İşe alım dalga 11: çalışan önerisi (73), aday durum bağlantısı (74), Google for Jobs JSON-LD (75),
 kör puan kartı ve değerlendiriciler arası tutarlılık (77), huni analizi (78).
 

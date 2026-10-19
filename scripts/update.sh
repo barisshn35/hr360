@@ -150,6 +150,8 @@ deploy() {
     local s; for s in $targets; do docker compose build "$s" >/dev/null || return 1; done
   } || return 1; fi
   docker compose up -d --remove-orphans >/dev/null || return 1
+  # Modül durumu (ağ geçidi işaretleri, HR360_MODULES, izleme metriği) .env'den yeniden yazılır.
+  if [ -x scripts/modules.sh ]; then scripts/modules.sh sync >/dev/null 2>&1 || true; fi
 }
 
 record() { # record key=value ...

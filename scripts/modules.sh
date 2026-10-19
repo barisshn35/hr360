@@ -9,6 +9,8 @@
 #   scripts/modules.sh disable MODÜL... [--no-stop] Kapat: konteyneri kaldır (VERİ SİLİNMEZ)
 #   scripts/modules.sh set "timeshift,compensation"|all [--no-start]
 #                                                   Seçimi bir kerede uygula (kurulum kullanır)
+#   scripts/modules.sh sync                         .env'e göre ağ geçidi işaretlerini, HR360_MODULES'u ve
+#                                                   izleme metriğini yeniden yaz (güncelleme çağırır)
 #
 # Çekirdek servisler (şirket, çalışan, organizasyon, onay, izin, bildirim, yönetişim, profil, belgeler)
 # her zaman açıktır. Kapatılan modülün tabloları ve verisi yerinde kalır; açınca kaldığı yerden devam eder.
@@ -17,6 +19,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ENV_FILE=.env
 . scripts/lib/modules.sh
+. scripts/lib/backup-common.sh
 
 die() { echo "HATA: $*" >&2; exit 1; }
 
@@ -34,6 +37,22 @@ marker() { # marker ID on|off — ağ geçidi işareti (deploy/nginx/modules/<id
   [ "$1" = expense ] && return 0   # yalnız ekran modülü; API çekirdek servisinde
   mkdir -p deploy/nginx/modules
   if [ "$2" = off ]; then : > "$f"; else rm -f "$f"; fi
+}
+
+# İzleme: kapalı modülün servisleri "servis erişilemiyor" alarmı vermesin (deploy/monitoring/alerts.yml
+# ServisErisilemiyor: up == 0 unless hr360_module_disabled == 1). Ağ geçidi işaretleri ve HR360_MODULES de
+# .env'den yeniden üretilir; her komuttan sonra ve güncellemede (sync) çalışır.
+write_state() {
+  local id s v
+  mod_sync_env
+  {
+    echo "# HELP hr360_module_disabled İsteğe bağlı modülün servisi bu kurulumda kapalı (1) ya da açık (0)."
+    echo "# TYPE hr360_module_disabled gauge"
+    for id in $(mod_ids); do
+      if mod_enabled "$id"; then v=0; marker "$id" on; else v=1; marker "$id" off; fi
+      for s in $(mod_services "$id"); do echo "hr360_module_disabled{service=\"$s\"} $v"; done
+    done
+  } | metrics_write hr360_modules
 }
 
 check_ids() {
@@ -95,6 +114,7 @@ cmd_enable() {
     fi
     refresh_core
   fi
+  write_state
   echo "Açıldı: ${ids[*]}"
 }
 
@@ -103,6 +123,7 @@ cmd_disable() {
   for a in "$@"; do [ "$a" = --no-stop ] && stop=0 || ids+=("$a"); done
   check_ids "${ids[@]}"
   for id in "${ids[@]}"; do mod_set "$id" off; marker "$id" off; svcs="$svcs $(mod_services "$id")"; done
+  write_state
   if [ "$stop" = 1 ]; then
     # scale 0: "up -d" kapalı modülün konteynerlerini kaldırır; hacim ve veritabanı tabloları kalır.
     refresh_core
@@ -131,5 +152,6 @@ case "${1:-list}" in
   enable) shift; cmd_enable "$@" ;;
   disable) shift; cmd_disable "$@" ;;
   set) shift; cmd_set "$@" ;;
+  sync) write_state ;;
   *) sed -n '2,15p' "$0"; exit 2 ;;
 esac

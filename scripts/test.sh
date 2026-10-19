@@ -113,6 +113,14 @@ integration() {
            test_time_leave test_kvkk_ml10 test_recruitment_w11 test_offer_esign test_performance_w11 test_learning_w11 test_webhooks_apikeys test_account_provisioning test_ui_prefs
            test_org_scenarios test_password_links test_public_site test_employee_photo test_employee_of_month test_team_calendar test_ideas test_document_compliance test_product_insights test_unused_leave test_newhire test_weekly_checkins test_interview_booking test_positions test_events test_recognition_points test_group_cards test_coffee test_announcement_feed test_badges test_platform_ops test_sample_data test_sms"
   for t in ${HR360_INTEGRATION_TESTS:-$all}; do
+    # Bütünüyle isteğe bağlı bir modüle ait betik (ilk satırlarda "# hr360-modules: a,b") o modül
+    # kapalıysa atlanır (scripts/modules.sh).
+    local need off=""
+    need="$(sed -n '1,5s/^# hr360-modules: *\([a-z,]*\).*/\1/p' "tests/integration/$t.py" | head -1)"
+    if [ -n "$need" ] && [ -f "$ROOT/scripts/lib/modules.sh" ]; then
+      for m in ${need//,/ }; do (ENV_FILE="$ROOT/.env"; . "$ROOT/scripts/lib/modules.sh"; mod_enabled "$m") || off="$off $m"; done
+    fi
+    if [ -n "$off" ]; then step "Entegrasyon: $t (atlandı: modül kapalı:$off)"; continue; fi
     step "Entegrasyon: $t"
     run python3 "tests/integration/$t.py"
   done

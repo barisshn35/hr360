@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: learning  (kapalıysa scripts/test.sh bu betiği atlar)
 """Dalga 11 öğrenme ve gelişim: yetkinlik açığı → eğitim önerisi bağlantısı (82), kariyer yolları (83),
 zorunlu eğitim son tarihi + İSG eğitimi hatırlatmaları ve gecikme panosu (84).
 

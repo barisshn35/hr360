@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: compensation  (kapalıysa scripts/test.sh bu betiği atlar)
 """Bordro ekosistemi ve masraf (Dalga 5b): SGK/banka/muhasebe dosyaları (Y1/Y3/Y4), avans
 taksitleri (Y11), esnek yan haklar (Y13), zam dönemi (Y21), TCMB kuru/km/limit (G9), seyahat ve
 harcırah (Y12), fiş okuma (Y27).

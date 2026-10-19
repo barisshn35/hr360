@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: recruitment  (kapalıysa scripts/test.sh bu betiği atlar)
 """Dalga 11 / madde 76: iş teklifi mektubunun aday tarafından basit elektronik imzayla (e-postaya
 tek kullanımlık kod) kabulü. Kod, imza ve kanıt governance'taki TEK imza motorundadır
 (DocumentType 'OfferLetter', SignerKind 'Candidate'); recruitment iç uçlarla çağırır.

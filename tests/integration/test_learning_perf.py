@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# hr360-modules: learning,performance  (kapalıysa scripts/test.sh bu betiği atlar)
 """Eğitim ve performans (Dalga 5c): yetkinlik matrisi + eğitim önerisi (Y19), eğitim içeriği /
 sınav / SCORM 1.2 / sertifika (Y20), sertifika bitiş hatırlatmaları (G17), 9-kutu + kalibrasyon
 ve dönem şablonları (G12).

@@ -6,6 +6,28 @@ rule_files:
 evaluation_interval: 30s
 
 tests:
+  # Modül kapalı (scripts/modules.sh, hr360_module_disabled=1): servisi yokken alarm yok; açık servis düşerse alarm.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="hr360-services",service="recruitment-service"}'
+        values: '0x10'
+      - series: 'hr360_module_disabled{job="node",service="recruitment-service"}'
+        values: '1x10'
+      - series: 'up{job="hr360-services",service="leave-service"}'
+        values: '0x10'
+      - series: 'hr360_module_disabled{job="node",service="timeshift-service"}'
+        values: '0x10'
+      - series: 'up{job="hr360-services",service="timeshift-service"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ServisErisilemiyor
+        exp_alerts:
+          - exp_labels: { severity: critical, job: hr360-services, service: leave-service }
+            exp_annotations: { summary: "leave-service 2 dakikadir yanit vermiyor" }
+          - exp_labels: { severity: critical, job: hr360-services, service: timeshift-service }
+            exp_annotations: { summary: "timeshift-service 2 dakikadir yanit vermiyor" }
+
   # Outbox: 10 dk boyunca en eski bekleyen olay 600 sn -> OutboxBirikiyor; 0 -> sessiz.
   - interval: 1m
     input_series:
