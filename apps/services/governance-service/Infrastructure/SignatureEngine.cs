@@ -134,8 +134,11 @@ public sealed class SignatureEngine
         if (externalEmail is not null)
             await _notifier.ExternalEmailAsync(tenant, externalEmail, externalEn ? "Document signing code" : "Belge imza kodu", externalEn ? bodyEn : bodyTr,
                 externalEn ? "en" : "tr", "signature.otp", ct);
-        else foreach (var c in ch == "InApp+Email" ? new[] { "InApp", "Email" } : new[] { ch })
+        else
+        {
+            foreach (var c in ch == "InApp+Email" ? new[] { "InApp", "Email" } : new[] { ch })
                 await _notifier.LocalizedAsync(tenant, employeeId, "Belge imza kodu", "Document signing code", bodyTr, bodyEn, "signature.otp", ct, c);
+        }
         return (new OtpIssued(otpId, ch, expires, Signatures.MaxAttempts, Math.Max(0, Signatures.MaxCodesPerHour - stats.Recent - 1)), null);
     }
 
