@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Yönetim parolalarını yeniler (platform.admin, varsa demo.admin ve yonetici, istenirse Keycloak master yöneticisi).
+"""Yönetim parolalarını yeniler (platform.admin, varsa demo.admin ve yonetici, istenirse Keycloak master yöneticisi
+ve MinIO yönetici parolası).
 
 Parola bir yerde açığa çıktığında (sohbet, ekran paylaşımı, e-posta) ya da düzenli parola
 yenilemesinde kullanılır. Yeni parolalar rastgele üretilir ve EKRANA BASILMAZ; yalnızca şuralara
@@ -15,6 +16,10 @@ Kullanım:
   python3 scripts/rotate-passwords.py platform.admin     # yalnızca seçilen kullanıcı(lar)
   python3 scripts/rotate-passwords.py --keycloak-admin   # Keycloak master yöneticisi de (keycloak + tenant-service yeniden oluşturulur)
   python3 scripts/rotate-passwords.py --keycloak-admin-only   # yalnızca Keycloak master yöneticisi
+  python3 scripts/rotate-passwords.py --minio-only       # yalnızca MinIO yönetici parolası (MINIO_ROOT_PASSWORD):
+                                                         # MinIO, minio-init, tenant-service, mlflow, ml-inference
+                                                         # yeni değerle yeniden oluşturulur; nesneler sayılıp doğrulanır,
+                                                         # sorun olursa eski parolaya dönülür (logo/model ~1 dk erişilemez)
   python3 scripts/rotate-passwords.py ayse mehmet        # test ortamı: tests/credentials.json anahtarları da kabul edilir
 
 Ek compose dosyaları kullanılıyorsa (ör. test katmanı): COMPOSE_ARGS="-f docker-compose.yml -f deploy/testing/chat-mock.yml"
@@ -105,6 +110,57 @@ def kcadm(cid, admin_user, admin_password, realm, *args):
     return out.stdout
 
 
+MINIO_USERS = ["minio-init", "tenant-service", "mlflow", "ml-inference"]
+# minio-init imajındaki mc ile sayım; kimlik MC_HOST_local ortam değişkeninden (komut satırında görünmez).
+# Bağlanamazsa (yanlış parola) mc'nin çıkış kodu korunur: sayım 0 değil "yok" (None) olur.
+MC_COUNT = "mc ls --recursive local > /tmp/ls.txt 2>/dev/null && wc -l < /tmp/ls.txt"
+
+
+def minio_count(env, user, password):
+    out = subprocess.run([*COMPOSE, "run", "--rm", "--no-deps", "-T", "-e", "MC_HOST_local", "--entrypoint", "sh",
+                          "minio-init", "-c", MC_COUNT], cwd=ROOT, capture_output=True, text=True, stdin=subprocess.DEVNULL,
+                         env={**os.environ, "MC_HOST_local": f"http://{user}:{password}@minio:9000"})
+    lines = out.stdout.strip().splitlines()
+    return int(lines[-1]) if out.returncode == 0 and lines and lines[-1].strip().isdigit() else None
+
+
+def minio_recreate():
+    """MinIO yeni kimlikle yeniden oluşturulur, hazır olması beklenir; kullananlar ve kova hazırlığı yenilenir."""
+    up = [*COMPOSE, "up", "-d", "--no-build"]
+    subprocess.run([*up, "--force-recreate", "--wait", "minio"], cwd=ROOT, check=True, capture_output=True)
+    subprocess.run([*up, "--force-recreate", "minio-init"], cwd=ROOT, check=True, capture_output=True)
+    running = subprocess.run([*COMPOSE, "config", "--services"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+    targets = [s for s in MINIO_USERS[1:] if s in running]  # kapalı modül (ör. ml) atlanır
+    if targets:
+        subprocess.run([*up, "--no-deps", *targets], cwd=ROOT, check=True, capture_output=True)
+
+
+def rotate_minio(env):
+    user = env.get("MINIO_ROOT_USER", "")
+    old = secret_get(env, "MINIO_ROOT_PASSWORD")
+    if not user or not old:
+        raise SystemExit("MINIO_ROOT_USER / MINIO_ROOT_PASSWORD bulunamadı (.env ya da secrets/).")
+    before = minio_count(env, user, old)
+    if before is None:
+        raise SystemExit("MinIO'ya mevcut parolayla bağlanılamadı; döndürme yapılmadı (docker compose ps minio).")
+    # Yalnızca harf ve rakam: parola minio-init'te tırnaksız kabuk komutunda ve S3 kimliğinde kullanılır.
+    pw = secrets.token_hex(16)
+    secret_set("MINIO_ROOT_PASSWORD", pw)
+    try:
+        minio_recreate()
+        after = minio_count(env, user, pw)
+        if after is None or after != before:
+            raise RuntimeError(f"doğrulama: önce {before} nesne, sonra {after}")
+        if minio_count(env, user, old) is not None:
+            raise RuntimeError("eski parola hâlâ geçiyor")
+    except (subprocess.CalledProcessError, RuntimeError) as e:
+        secret_set("MINIO_ROOT_PASSWORD", old)
+        minio_recreate()
+        raise SystemExit(f"MinIO parolası döndürülemedi ({e}); eski parolaya dönüldü.")
+    print(f"  MinIO yöneticisi ({user}): parola yenilendi; {after} nesne yerinde, eski parola geçersiz; "
+          "minio, tenant-service, mlflow ve ml-inference yeni değerle yeniden oluşturuldu")
+
+
 def main(argv):
     if any(a in ("-h", "--help") for a in argv):
         print(__doc__)
@@ -113,12 +169,19 @@ def main(argv):
         raise SystemExit(".env bulunamadı; depo kökünde, kurulu bir sunucuda çalıştırın.")
     master_only = "--keycloak-admin-only" in argv
     rotate_master = master_only or "--keycloak-admin" in argv
-    unknown_opts = [a for a in argv if a.startswith("-") and a not in ("--keycloak-admin", "--keycloak-admin-only")]
+    known = ("--keycloak-admin", "--keycloak-admin-only", "--minio-only")
+    unknown_opts = [a for a in argv if a.startswith("-") and a not in known]
     if unknown_opts:
         raise SystemExit("bilinmeyen seçenek: " + ", ".join(unknown_opts))
     wanted = [a for a in argv if not a.startswith("-")]
 
     env = read_env()
+    if "--minio-only" in argv:
+        if wanted or rotate_master:
+            raise SystemExit("--minio-only başka kullanıcı ya da seçenekle birlikte verilmez.")
+        rotate_minio(env)
+        print("Yeni parola ekrana basılmadı: .env dosyasında (sır secrets/ altına taşındıysa oradaki dosyada).")
+        return
     admin_user = env.get("KEYCLOAK_ADMIN_USER") or "admin"
     admin_pw = secret_get(env, "KEYCLOAK_ADMIN_PASSWORD")
     if not admin_pw:
