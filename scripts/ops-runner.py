@@ -19,10 +19,13 @@ izinli komutları, doğrulanmış bağımsız değişkenlerle çalıştırır:
   pitr-disable    scripts/pitr.sh disable [--purge]
   pitr-restore    scripts/pitr.sh restore --to "YYYY-AA-GG SS:DD" --yes (İstanbul saati)
   pitr-cleanup    scripts/pitr.sh cleanup
+  modules-set     scripts/modules.sh set MODÜL,MODÜL… | all   (boş seçim: scripts/modules.sh disable <hepsi>)
+  tenancy-multi   scripts/tenancy.sh multi
+  tenancy-single  scripts/tenancy.sh single
 
 Sonuç hem veritabanına hem ops-logs/<iş>.json dosyasına yazılır: geri yükleme veritabanını değiştirdiği
 için iş kaydı kaybolursa dosyadan geri yazılır. Her turda sunucu durum özeti
-(sürüm, etiketler, yedekler, zamanlama, disk, anlık geri dönüş) platform_ops_status tablosuna yazılır.
+(sürüm, etiketler, yedekler, zamanlama, disk, anlık geri dönüş, modüller, şirket kipi) platform_ops_status tablosuna yazılır.
 Tek seferde tek çalıştırıcı (dosya kilidi).
 """
 import datetime as dt
@@ -46,6 +49,9 @@ TAG = re.compile(r"^v\d+\.\d+\.\d+$")
 ARCHIVE = re.compile(r"^hr360-[A-Za-z0-9_.-]+\.tar\.gz(\.enc)?$")
 AT = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 TARGET = re.compile(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", re.ASCII)  # fullmatch: sondaki satır sonu da reddedilir
+# İsteğe bağlı modüller (scripts/lib/modules.sh HR360_MODULE_TABLE ile aynı, tablo sırasıyla). Arayüzden
+# gelen metin komuta hiçbir zaman olduğu gibi geçmez: yalnızca bu kimlikler, bu sırayla yazılır.
+MODULES = ("recruitment", "onboarding", "timeshift", "performance", "learning", "compensation", "ml", "expense")
 # Veritabanını değiştiren işler: sonrasında iş kuyruğu geri dönülen andaki hâlindedir.
 DB_REPLACING = ("restore", "pitr-restore")
 
@@ -182,6 +188,55 @@ def pitr_status():
     return parse_pitr(r.returncode, r.stdout)
 
 
+def _run_script(args):
+    """Yardımcı betiği çalıştırır; betik yoksa, çalışmazsa ya da hata verirse None."""
+    if not os.path.exists(os.path.join(ROOT, args[0])):
+        return None
+    try:
+        r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return r.stdout if r.returncode == 0 else None
+
+
+def parse_modules(out):
+    """scripts/modules.sh json çıktısı → {enabled, all, details}; bilinmeyen kimlikler ve bozuk alanlar atılır.
+    Okunamazsa None (durum özetinde alan yer almaz; arayüz kartı gizler)."""
+    try:
+        d = json.loads(out or "")
+    except ValueError:
+        return None
+    if not isinstance(d, dict) or not isinstance(d.get("all"), list) or not isinstance(d.get("enabled"), list):
+        return None
+    known = [m for m in d["all"] if m in MODULES]
+    details = []
+    for x in d.get("details") or []:
+        if not isinstance(x, dict) or x.get("id") not in known:
+            continue
+        mem = x.get("memoryMb")
+        details.append({"id": x["id"], "name": str(x.get("name") or x["id"]),
+                        "memoryMb": mem if isinstance(mem, int) and not isinstance(mem, bool) else None,
+                        "services": [s for s in x.get("services") or [] if isinstance(s, str)]})
+    return {"enabled": [m for m in known if m in d["enabled"]], "all": known, "details": details}
+
+
+def parse_tenancy(out):
+    """scripts/tenancy.sh status çıktısı ("tenancy=…", "tenants=N|?") → {mode, tenants}; okunamazsa None."""
+    if out is None:
+        return None
+    t = {"mode": "unknown", "tenants": None}
+    for line in out.splitlines():
+        k, sep, v = line.strip().partition("=")
+        if not sep:
+            continue
+        v = v.strip()
+        if k == "tenancy" and v in ("single", "multi"):
+            t["mode"] = v
+        elif k == "tenants" and v.isascii() and v.isdigit():
+            t["tenants"] = int(v)
+    return t
+
+
 def snapshot():
     def read(p):
         try:
@@ -194,10 +249,18 @@ def snapshot():
     _, bstatus = sh(["scripts/backup.sh", "status"])
     _, ustatus = sh(["scripts/update.sh", "status"])
     usage = shutil.disk_usage(ROOT)
+    extra = {}
+    modules = parse_modules(_run_script(["scripts/modules.sh", "json"]))
+    if modules is not None:
+        extra["modules"] = modules
+    tenancy = parse_tenancy(_run_script(["scripts/tenancy.sh", "status"]))
+    if tenancy is not None:
+        extra["tenancy"] = tenancy
     return {
         "version": read("VERSION"), "commit": commit, "commitDate": date, "tags": tags(), "backups": backups(),
         "backupStatus": bstatus, "updateStatus": ustatus, "diskFree": usage.free, "diskTotal": usage.total,
         "host": os.uname().nodename, "runnerAt": now(), "security": security(), "pitr": pitr_status(),
+        **extra,
     }
 
 
@@ -255,6 +318,20 @@ def command(kind, args):
         return ["scripts/pitr.sh", "restore", "--to", t, "--yes"]
     if kind == "pitr-cleanup":
         return ["scripts/pitr.sh", "cleanup"]
+    if kind == "modules-set":
+        mods = args.get("modules")
+        if not (isinstance(mods, list) and all(isinstance(m, str) and m in MODULES for m in mods) and len(set(mods)) == len(mods)):
+            raise ValueError("geçersiz modül seçimi")
+        chosen = [m for m in MODULES if m in mods]  # tablo sırası; değerler sabit kümeden
+        if not chosen:
+            return ["scripts/modules.sh", "disable", *MODULES]  # yalnızca çekirdek
+        if len(chosen) == len(MODULES):
+            return ["scripts/modules.sh", "set", "all"]
+        return ["scripts/modules.sh", "set", ",".join(chosen)]
+    if kind == "tenancy-multi":
+        return ["scripts/tenancy.sh", "multi"]
+    if kind == "tenancy-single":
+        return ["scripts/tenancy.sh", "single"]
     raise ValueError("izinli olmayan iş türü")
 
 

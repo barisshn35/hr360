@@ -2,9 +2,9 @@
 """Arayüzden bakım işleri: /api/tenant/platform/ops + scripts/ops-runner.py.
 
 Denetlenenler: yalnızca platform yöneticisi; iş türü ve bağımsız değişken doğrulaması (bilinmeyen
-tür, bilinmeyen etiket/yedek, yazılı onay, anlık geri dönüş anı); bekleyen iş iptali; yıkıcı iş sürmekte olan iş varken
+tür, bilinmeyen etiket/yedek, yazılı onay, anlık geri dönüş anı, modül seçimi, şirket kipi); bekleyen iş iptali; yıkıcı iş sürmekte olan iş varken
 kuyruğa alınmaz; çalıştırıcı izinli işi çalıştırıp çıktıyı yazar; istekler denetim kaydına girer.
-Gerçek güncelleme / geri yükleme / geri alma ÇALIŞTIRILMAZ (yalnızca doğrulama ve iptal).
+Gerçek güncelleme / geri yükleme / geri alma / modül / şirket kipi işi ÇALIŞTIRILMAZ (yalnızca doğrulama ve iptal).
 Test işleri, çıktı dosyaları sonda silinir.
 Çalıştırma: timeout 300 python3 tests/integration/test_platform_ops.py
 """
@@ -79,6 +79,32 @@ try:
     check("PO6: yanlış onay sözcüğü reddedilir", code == 400, code)
     code, _ = api("ik", "POST", f"{B}/jobs", {"kind": "pitr-disable", "args": {"purge": True}})
     check("PO6: İK anlık geri dönüşü kapatamaz", code == 403, code)
+
+    # Modüller ve şirket kipi: YALNIZCA reddedilen istekler. Canlı çalıştırıcı kuyruğa giren işi gerçekten
+    # çalıştırır (imaj derler, servisleri yeniden başlatır); kabul edilirse hemen iptal edilir ve hata sayılır.
+    def rejected(name, body):
+        code, res = api("platform", "POST", f"{B}/jobs", body)
+        if code == 200 and isinstance(res, dict) and res.get("id"):
+            api("platform", "POST", f"{B}/jobs/{res['id']}/cancel")
+        check(name, code == 400, code)
+
+    mods = st["snapshot"].get("modules")
+    tenancy = st["snapshot"].get("tenancy")
+    check("PO7: durum özetinde modüller ve şirket kipi", isinstance(mods, dict) and isinstance(tenancy, dict), (bool(mods), tenancy))
+    for bad in (["bordro"], ["employee"], ["timeshift; reboot"], ["$(id)"], ["timeshift,ml"], ["all"], ["ml", "ml"], [1], "timeshift", None):
+        rejected(f"PO7: geçersiz modül seçimi reddedilir ({bad!r})", {"kind": "modules-set", "args": {"modules": bad}, "confirm": "MODÜLÜ KAPAT"})
+    rejected("PO7: modül listesi olmadan reddedilir", {"kind": "modules-set", "args": {}, "confirm": "MODÜLÜ KAPAT"})
+    # Boş seçim (yalnızca çekirdek) açık modülleri kapatır: yazılı onay yoksa reddedilmeli. Açık modül yoksa
+    # istek geçerli olurdu; gönderilmez.
+    if not isinstance(mods, dict) or mods.get("enabled"):
+        rejected("PO7: modül kapatma yazılı onaysız reddedilir", {"kind": "modules-set", "args": {"modules": []}})
+        rejected("PO7: modül kapatmada yanlış onay sözcüğü reddedilir", {"kind": "modules-set", "args": {"modules": []}, "confirm": "GERİ YÜKLE"})
+    rejected("PO7: çok şirketli kip yazılı onaysız reddedilir", {"kind": "tenancy-multi", "args": {}})
+    rejected("PO7: çok şirketli kipte yanlış onay sözcüğü reddedilir", {"kind": "tenancy-multi", "args": {}, "confirm": "çok şirket"})
+    if not (isinstance(tenancy, dict) and tenancy.get("tenants") == 1):
+        rejected("PO7: birden çok şirket varken tek şirket kipi reddedilir", {"kind": "tenancy-single", "args": {}})
+    code, _ = api("ik", "POST", f"{B}/jobs", {"kind": "modules-set", "args": {"modules": []}, "confirm": "MODÜLÜ KAPAT"})
+    check("PO7: İK modül seçimini değiştiremez", code == 403, code)
 
     code, j1 = api("platform", "POST", f"{B}/jobs", {"kind": "check-updates", "args": {}})
     check("PO3: iş kuyruğa alınır", code == 200 and j1["status"] == "Pending", (code, j1))

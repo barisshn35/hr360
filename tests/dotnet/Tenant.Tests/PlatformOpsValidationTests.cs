@@ -128,4 +128,88 @@ public class PlatformOpsValidationTests
         Assert.NotNull(PlatformOpsController.ValidateArgs("update", Args(new { @ref = "v9.9.9" }), null, snap, Now).Error);
         Assert.NotNull(PlatformOpsController.ValidateArgs("schedule", Args(new { at = "25:00", keep = 14 }), null, snap, Now).Error);
     }
+
+    // --- Modüller ve şirket kipi ---
+
+    private static JsonElement ModSnap(string[]? enabled, int? tenants = 1) => JsonDocument.Parse(JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["backups"] = Array.Empty<object>(),
+        ["tags"] = Array.Empty<string>(),
+        ["modules"] = enabled is null ? null : new { enabled, all = PlatformOpsController.Modules },
+        ["tenancy"] = new { mode = "multi", tenants },
+    }.Where(kv => kv.Value is not null).ToDictionary(kv => kv.Key, kv => kv.Value))).RootElement;
+
+    private static (object? Args, string? Error) SetModules(object modules, string[]? enabled, string? confirm = null)
+        => PlatformOpsController.ValidateArgs("modules-set", Args(new { modules }), confirm, ModSnap(enabled), Now);
+
+    [Fact]
+    public void Modul_ve_kip_turleri_izinli_ve_yikici()
+    {
+        var destructive = (string[])typeof(PlatformOpsController).GetField("Destructive", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+        foreach (var k in new[] { "modules-set", "tenancy-multi", "tenancy-single" })
+        {
+            Assert.Contains(k, PlatformOpsController.Kinds);
+            Assert.Contains(k, destructive);
+        }
+    }
+
+    [Fact]
+    public void Yalnizca_acma_onaysiz_ve_tablo_sirasiyla()
+    {
+        var (args, error) = SetModules(new[] { "ml", "timeshift" }, ["timeshift"]);
+        Assert.Null(error);
+        Assert.Equal("""{"modules":["timeshift","ml"]}""", JsonSerializer.Serialize(args));
+        Assert.Null(SetModules(PlatformOpsController.Modules, ["ml"]).Error);
+        Assert.Null(SetModules(new[] { "ml" }, ["ml"]).Error); // degisiklik yok
+    }
+
+    [Fact]
+    public void Kapatma_yazili_onay_ister()
+    {
+        Assert.Equal("Modül kapatmak için \"MODÜLÜ KAPAT\" yazın", SetModules(new[] { "timeshift" }, ["timeshift", "ml"]).Error);
+        Assert.NotNull(SetModules(new[] { "timeshift" }, ["timeshift", "ml"], "modülü kapat").Error);
+        Assert.NotNull(SetModules(new[] { "timeshift" }, ["timeshift", "ml"], PlatformOpsController.RestoreConfirm).Error);
+        Assert.Null(SetModules(new[] { "timeshift" }, ["timeshift", "ml"], PlatformOpsController.ModuleOffConfirm).Error);
+        // bos secim = yalnizca cekirdek
+        var (args, error) = SetModules(Array.Empty<string>(), ["ml"], PlatformOpsController.ModuleOffConfirm);
+        Assert.Null(error);
+        Assert.Equal("""{"modules":[]}""", JsonSerializer.Serialize(args));
+        Assert.NotNull(SetModules(Array.Empty<string>(), ["ml"]).Error);
+        // ozette modul listesi yoksa (eski calistirici) hepsi acik sayilir
+        Assert.NotNull(SetModules(new[] { "ml" }, null).Error);
+        Assert.Null(SetModules(PlatformOpsController.Modules, null).Error);
+    }
+
+    [Fact]
+    public void Gecersiz_modul_secimi_reddedilir()
+    {
+        Assert.Equal("Bilinmeyen modül", SetModules(new[] { "bordro" }, null, PlatformOpsController.ModuleOffConfirm).Error);
+        foreach (var bad in new[] { "employee", "Timeshift", "timeshift ", "timeshift,ml", "all", "ml; reboot", "$(id)", "--no-start", "ml\n" })
+            Assert.Equal("Bilinmeyen modül", SetModules(new[] { bad }, null, PlatformOpsController.ModuleOffConfirm).Error);
+        Assert.Equal("Bilinmeyen modül", SetModules(new object[] { 1 }, null, PlatformOpsController.ModuleOffConfirm).Error);
+        Assert.Equal("Modül seçimi yinelenen öğe içeriyor", SetModules(new[] { "ml", "ml" }, null, PlatformOpsController.ModuleOffConfirm).Error);
+        Assert.Equal("Modül seçimi liste olmalı", SetModules("timeshift,ml", null, PlatformOpsController.ModuleOffConfirm).Error);
+        Assert.Equal("Modül seçimi liste olmalı", PlatformOpsController.ValidateArgs("modules-set", null, PlatformOpsController.ModuleOffConfirm, ModSnap(null), Now).Error);
+        Assert.Equal("Modül seçimi liste olmalı", PlatformOpsController.ValidateArgs("modules-set", Args(new { }), PlatformOpsController.ModuleOffConfirm, ModSnap(null), Now).Error);
+    }
+
+    [Fact]
+    public void Tek_sirket_kipi_yalnizca_tek_sirketle()
+    {
+        Assert.Null(PlatformOpsController.ValidateArgs("tenancy-single", null, null, ModSnap(null, 1), Now).Error);
+        foreach (var n in new int?[] { 0, 2, 7, null })
+            Assert.Equal("Tek şirket kipine yalnızca tam olarak bir şirket varken geçilebilir",
+                PlatformOpsController.ValidateArgs("tenancy-single", null, null, ModSnap(null, n), Now).Error);
+        Assert.NotNull(PlatformOpsController.ValidateArgs("tenancy-single", null, null, Snap(), Now).Error); // ozette kip yok
+    }
+
+    [Fact]
+    public void Cok_sirketli_kip_yazili_onay_ister()
+    {
+        Assert.Equal("Onay için \"ÇOK ŞİRKET\" yazın", PlatformOpsController.ValidateArgs("tenancy-multi", null, null, ModSnap(null), Now).Error);
+        Assert.NotNull(PlatformOpsController.ValidateArgs("tenancy-multi", null, "çok şirket", ModSnap(null), Now).Error);
+        var (args, error) = PlatformOpsController.ValidateArgs("tenancy-multi", Args(new { cmd = "; rm -rf /" }), PlatformOpsController.MultiTenancyConfirm, ModSnap(null), Now);
+        Assert.Null(error);
+        Assert.Equal("{}", JsonSerializer.Serialize(args));
+    }
 }

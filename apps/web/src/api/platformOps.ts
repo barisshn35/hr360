@@ -4,7 +4,7 @@ import { apiFetch } from './client'
 const B = '/api/tenant/platform/ops'
 
 export type OpsKind = 'backup' | 'backup-verify' | 'schedule' | 'unschedule' | 'check-updates' | 'update' | 'rollback' | 'restore' | 'db-isolation'
-  | 'pitr-enable' | 'pitr-disable' | 'pitr-restore' | 'pitr-cleanup'
+  | 'pitr-enable' | 'pitr-disable' | 'pitr-restore' | 'pitr-cleanup' | 'modules-set' | 'tenancy-multi' | 'tenancy-single'
 export type OpsStatus = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Cancelled'
 
 export interface OpsBackup { name: string; size: number; createdAt: string; encrypted: boolean; manifest: boolean }
@@ -39,6 +39,17 @@ export interface OpsPitr {
   /** Geri dönüşten önceki veri dizini kopyaları (silinene kadar disk kaplar). */
   preRestore: { name: string; size: string | null }[]
 }
+/** İsteğe bağlı modüller (scripts/modules.sh json). Kimlikler tablo sırasıyla. Eski çalıştırıcıda yoktur. */
+export interface OpsModules {
+  enabled: string[]
+  all: string[]
+  details: { id: string; name: string; memoryMb: number | null; services: string[] }[]
+}
+/** Şirket kipi (scripts/tenancy.sh status). tenants null: veritabanına ulaşılamadı. Eski çalıştırıcıda yoktur. */
+export interface OpsTenancy {
+  mode: 'single' | 'multi' | 'unknown'
+  tenants: number | null
+}
 export interface OpsSnapshot {
   version: string | null
   commit: string
@@ -53,6 +64,8 @@ export interface OpsSnapshot {
   runnerAt: string
   security?: OpsSecurity
   pitr?: OpsPitr
+  modules?: OpsModules
+  tenancy?: OpsTenancy
 }
 export interface OpsJob {
   id: string

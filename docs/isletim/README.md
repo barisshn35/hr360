@@ -27,6 +27,7 @@ ve testler. Kurulum, güncelleme ve yedekleme özeti ana [README](../../README.m
 | Yedeği doğrula (geçici veritabanına geri yükler) | `scripts/backup.sh verify [arşiv]` |
 | Yedekten dön | `scripts/restore.sh backups/hr360-….tar.gz[.enc] [--with-env] [--only-db] [--yes]` |
 | Anlık geri dönüş (PITR: veritabanını geçmişteki bir dakikaya döndür) | Arayüzden: **Platform › Bakım › Anlık geri dönüş** (aç/kapat, bir ana dön, eski veriyi sil). Sunucudan: `scripts/pitr.sh enable / status / disable [--purge]`; dönüş `scripts/pitr.sh restore --to "2026-10-19 14:05" --yes` (İstanbul saati), sonra `scripts/pitr.sh cleanup`. Ayrıntı aşağıda |
+| İsteğe bağlı modüller ve şirket kipi | Arayüzden: **Platform › Bakım › Modüller** (seçimi işaretle, Uygula) ve **Platform › Bakım › Şirket kipi**. Sunucudan: `scripts/modules.sh list / enable MODÜL… / disable MODÜL… / set timeshift,compensation\|all`, `scripts/tenancy.sh status / single / multi`. Ayrıntı aşağıda |
 
 Tüm ortam değişkenlerinin açıklamalı listesi: [.env.example](../../.env.example).
 
@@ -92,6 +93,47 @@ kurulumu durdurur, yine de devam etmek için `HR360_MAIL_IGNORE_CHECKS=1`):
 davetleri birkaç güne yayın. Gmail ve Outlook itibar oluşana kadar e-postaları istenmeyen klasörüne
 atabilir. Teslim durumunu `docker compose logs mailer` ile izleyin; ertelenen e-postalar 2 gün
 yeniden denenir. Paylaşımlı ya da kara listedeki bir IP'de bu kip uygun değildir.
+
+## Modüller ve şirket kipi
+
+**Arayüzden (önerilen):** **Platform › Bakım › Modüller** kartında sekiz isteğe bağlı modül (işe alım, işe
+alıştırma ve demirbaş, puantaj ve vardiya, performans, eğitim, ücret ve bordro, yapay zekâ, masraf ve seyahat)
+durumları ve yaklaşık bellek sınırlarıyla listelenir. İstenen seçimi işaretleyip **Uygula**'ya basın; özet
+penceresi açılacak ve kapatılacak modülleri gösterir. İş, bakım çalıştırıcısı üzerinden `scripts/modules.sh`
+ile tek seferde uygulanır:
+
+- **Açılan modül:** imajı derlenir (modül başına birkaç dakika), Kafka tüketici konumu sona alınır (kapalıyken
+  biriken eski olaylar işlenmez), servisler yeniden başlatılır.
+- **Kapatılan modül:** ekranları menülerden kalkar, konteyneri durdurulur. **Veri silinmez**; modül istendiği zaman
+  yeniden açılabilir ve kaldığı yerden devam eder. Kapatma yazılı onay ister (`MODÜLÜ KAPAT`).
+- **Çekirdek** (çalışanlar, organizasyon, izin, onaylar, bildirimler, belgeler, KVKK) her zaman açıktır.
+
+İş bitince menüler yeni seçime göre güncellenir. Sürmekte olan başka bir bakım işi varken uygulanamaz.
+
+**Şirket kipi** (`HR360_TENANCY`, yoksa `multi`): **Platform › Bakım › Şirket kipi** kartı geçerli kipi ve
+şirket sayısını gösterir.
+
+- *Çok şirketli* kipte ve kurulumda tam olarak bir şirket varsa **Tek şirket kipine geç** düğmesi görünür
+  (birden çok şirket varken tek şirket kipine geçilemez).
+- *Tek şirket* kipinde **Çok şirketli kipe geç** yazılı onay ister (`ÇOK ŞİRKET`): şirket listesi, yeni şirket ve
+  herkese açık kayıt kullanılabilir olur; platform ve şirket yönetimi yeniden ayrılır. İkinci şirket
+  eklendikten sonra tek şirket kipine dönülemez, bu yüzden pratikte tek yönlüdür.
+
+Geçişte yalnızca `.env` değişir ve servisler `docker compose up -d` ile yeni ortamı alır; veri ve şirket adı
+(`HR360_COMPANY_NAME`) değişmez.
+
+**Sunucudan:**
+
+```bash
+scripts/modules.sh list                       # modüller, durum, bellek, servisler
+scripts/modules.sh enable timeshift ml        # aç (imaj derlenir, servis başlar)
+scripts/modules.sh disable recruitment        # kapat (veri korunur)
+scripts/modules.sh set timeshift,compensation,expense   # seçimi bir kerede uygula; "all" = hepsi
+scripts/modules.sh status | json              # makine için durum (bakım çalıştırıcısı json'u okur)
+scripts/tenancy.sh status                     # tenancy=single|multi, tenants=N
+scripts/tenancy.sh single                     # yalnızca tam olarak bir şirket varken
+scripts/tenancy.sh multi
+```
 
 ## Anlık geri dönüş (PITR)
 

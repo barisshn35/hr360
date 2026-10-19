@@ -13,7 +13,7 @@ namespace TenantService.Controllers;
 /// Arayüzden yedek / geri yükleme / güncelleme (yenilik haritası #34). Yalnızca platform yöneticisi.
 /// Bu servis sunucu komutu çalıştırmaz: işi platform_ops_jobs kuyruğuna yazar, sunucudaki
 /// scripts/ops-runner.py yalnızca izinli komutları çalıştırır ve sonucu yazar. Geri yükleme ve geri
-/// alma ile anlık geri dönüş yazılı onay ister; aynı anda tek yıkıcı iş sürebilir. Her istek audit_log'a yazılır.
+/// alma ile anlık geri dönüş, modül kapatma ve çok şirketli kipe geçiş yazılı onay ister; aynı anda tek yıkıcı iş sürebilir. Her istek audit_log'a yazılır.
 /// </summary>
 [ApiController]
 [Route("api/platform/ops")]
@@ -21,9 +21,13 @@ namespace TenantService.Controllers;
 public partial class PlatformOpsController : ControllerBase
 {
     public static readonly string[] Kinds = ["backup", "backup-verify", "schedule", "unschedule", "check-updates", "update", "rollback", "restore", "db-isolation",
-        "pitr-enable", "pitr-disable", "pitr-restore", "pitr-cleanup"];
-    private static readonly string[] Destructive = ["update", "rollback", "restore", "pitr-restore"];
-    public const string RestoreConfirm = "GERİ YÜKLE", RollbackConfirm = "GERİ AL", PitrConfirm = "GERİ DÖN";
+        "pitr-enable", "pitr-disable", "pitr-restore", "pitr-cleanup", "modules-set", "tenancy-multi", "tenancy-single"];
+    // Servisleri yeniden başlatan / derleyen işler de sürmekte olan iş varken kuyruğa alınmaz.
+    private static readonly string[] Destructive = ["update", "rollback", "restore", "pitr-restore", "modules-set", "tenancy-multi", "tenancy-single"];
+    public const string RestoreConfirm = "GERİ YÜKLE", RollbackConfirm = "GERİ AL", PitrConfirm = "GERİ DÖN",
+        ModuleOffConfirm = "MODÜLÜ KAPAT", MultiTenancyConfirm = "ÇOK ŞİRKET";
+    /// <summary>İsteğe bağlı modüller (scripts/lib/modules.sh tablo sırası; çalıştırıcıdaki MODULES ile aynı).</summary>
+    public static readonly string[] Modules = ["recruitment", "onboarding", "timeshift", "performance", "learning", "compensation", "ml", "expense"];
     /// <summary>Çalıştırıcı son tur bundan eskiyse "çalışmıyor" sayılır.</summary>
     private static readonly TimeSpan RunnerStale = TimeSpan.FromMinutes(3);
 
@@ -144,6 +148,33 @@ public partial class PlatformOpsController : ControllerBase
                 if (targetUtc <= oldest) return (null, "Bu an geri dönülebilecek aralığın dışında");
                 if (confirm != PitrConfirm) return (null, $"Onay için \"{PitrConfirm}\" yazın");
                 return (new { target }, null);
+            case "modules-set":
+                if (a.ValueKind != JsonValueKind.Object || !a.TryGetProperty("modules", out var mv) || mv.ValueKind != JsonValueKind.Array)
+                    return (null, "Modül seçimi liste olmalı");
+                var picked = new List<string>();
+                foreach (var m in mv.EnumerateArray())
+                {
+                    if (m.ValueKind != JsonValueKind.String || m.GetString() is not { } id || !Modules.Contains(id)) return (null, "Bilinmeyen modül");
+                    if (picked.Contains(id)) return (null, "Modül seçimi yinelenen öğe içeriyor");
+                    picked.Add(id);
+                }
+                var selection = Modules.Where(picked.Contains).ToArray();
+                // Şu an açık olanlar sunucu özetinden; eski çalıştırıcıda özet yoksa hepsi açık sayılır (kurulum varsayılanı).
+                var enabledNow = snap.TryGetProperty("modules", out var ms) && ms.ValueKind == JsonValueKind.Object
+                    && ms.TryGetProperty("enabled", out var me) && me.ValueKind == JsonValueKind.Array
+                    ? me.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToHashSet()
+                    : Modules.ToHashSet();
+                if (enabledNow.Any(e => Modules.Contains(e) && !selection.Contains(e)) && confirm != ModuleOffConfirm)
+                    return (null, $"Modül kapatmak için \"{ModuleOffConfirm}\" yazın");
+                return (new { modules = selection }, null);
+            case "tenancy-single":
+                var tenants = snap.TryGetProperty("tenancy", out var tn) && tn.ValueKind == JsonValueKind.Object
+                    && tn.TryGetProperty("tenants", out var tc) && tc.ValueKind == JsonValueKind.Number && tc.TryGetInt32(out var n) ? n : (int?)null;
+                if (tenants != 1) return (null, "Tek şirket kipine yalnızca tam olarak bir şirket varken geçilebilir");
+                return (new { }, null);
+            case "tenancy-multi":
+                if (confirm != MultiTenancyConfirm) return (null, $"Onay için \"{MultiTenancyConfirm}\" yazın");
+                return (new { }, null);
             default:
                 return (new { }, null);
         }

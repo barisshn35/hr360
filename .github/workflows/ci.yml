@@ -191,6 +191,8 @@ jobs:
         run: tests/install/test_backup_update.sh
       - name: Isteğe bağlı modüller (scripts/modules.sh, compose scale)
         run: tests/install/test_modules.sh
+      - name: Sirket kipi (scripts/tenancy.sh; sahte docker)
+        run: tests/install/test_tenancy.sh
       - name: Anlik geri donus (PITR; gercek PostgreSQL ile)
         run: tests/install/test_pitr.sh
       - name: Sirlar dosyada ve anahtar halkasi (secrets-migrate, crypto-keys)

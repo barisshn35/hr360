@@ -99,6 +99,83 @@ class PitrStatusTests(unittest.TestCase):
             self.assertEqual(r.pitr_status()["state"], "unknown")
 
 
+MODULES_JSON = (
+    '{"enabled":["timeshift","compensation","expense"],'
+    '"all":["recruitment","onboarding","timeshift","performance","learning","compensation","ml","expense"],'
+    '"details":[{"id":"ml","name":"Yapay zekâ","memoryMb":1792,"services":["ml-inference","mlflow"]},'
+    '{"id":"expense","name":"Masraf ve seyahat (yalnız ekranlar)","memoryMb":0,"services":[]},'
+    '{"id":"bilinmeyen","name":"x","memoryMb":1,"services":[]}]}'
+)
+
+
+class ModulesCommandTests(unittest.TestCase):
+    def test_secim_tablo_sirasiyla_yazilir(self):
+        self.assertEqual(r.command("modules-set", {"modules": ["compensation", "timeshift", "expense"]}),
+                         ["scripts/modules.sh", "set", "timeshift,compensation,expense"])
+        self.assertEqual(r.command("modules-set", {"modules": ["ml"]}), ["scripts/modules.sh", "set", "ml"])
+
+    def test_hepsi_all_bos_secim_yalnizca_cekirdek(self):
+        self.assertEqual(r.command("modules-set", {"modules": list(reversed(r.MODULES))}), ["scripts/modules.sh", "set", "all"])
+        self.assertEqual(r.command("modules-set", {"modules": []}), ["scripts/modules.sh", "disable", *r.MODULES])
+
+    def test_gecersiz_secim_reddedilir(self):
+        bad = [None, "timeshift", "timeshift,ml", "all", {"timeshift": True}, ["timeshift", "timeshift"], ["bordro"],
+               ["employee"], ["Timeshift"], ["timeshift "], ["timeshift,ml"], ["all"], ["ml; reboot"], ["$(id)"],
+               ["--no-start"], ["../ml"], [1], [None], [["ml"]], ["ml\n"], ["ｍｌ"]]
+        for m in bad:
+            with self.subTest(m=m), self.assertRaises(ValueError):
+                r.command("modules-set", {"modules": m})
+        with self.assertRaises(ValueError):
+            r.command("modules-set", {})
+
+    def test_sirket_kipi(self):
+        self.assertEqual(r.command("tenancy-multi", {"x": "; rm -rf /"}), ["scripts/tenancy.sh", "multi"])
+        self.assertEqual(r.command("tenancy-single", {}), ["scripts/tenancy.sh", "single"])
+        for k in ("tenancy", "tenancy-status", "modules", "modules-enable"):
+            with self.subTest(k=k), self.assertRaises(ValueError):
+                r.command(k, {})
+
+
+class ModulesStatusTests(unittest.TestCase):
+    def test_json_ozeti(self):
+        m = r.parse_modules(MODULES_JSON)
+        self.assertEqual(m["enabled"], ["timeshift", "compensation", "expense"])
+        self.assertEqual(m["all"], list(r.MODULES))
+        self.assertEqual([d["id"] for d in m["details"]], ["ml", "expense"])  # bilinmeyen atılır
+        self.assertEqual(m["details"][0], {"id": "ml", "name": "Yapay zekâ", "memoryMb": 1792, "services": ["ml-inference", "mlflow"]})
+        self.assertEqual(m["details"][1]["services"], [])
+
+    def test_bozuk_cikti(self):
+        for out in (None, "", "recruitment=on", "[]", '{"all":"x","enabled":[]}', '{"enabled":[]}'):
+            with self.subTest(out=out):
+                self.assertIsNone(r.parse_modules(out))
+        m = r.parse_modules('{"enabled":["ml","bilinmeyen"],"all":["ml","bilinmeyen"],"details":[{"id":"ml","memoryMb":"x"}]}')
+        self.assertEqual(m["enabled"], ["ml"])
+        self.assertEqual(m["details"], [{"id": "ml", "name": "ml", "memoryMb": None, "services": []}])
+
+    def test_sirket_kipi_durumu(self):
+        self.assertEqual(r.parse_tenancy("tenancy=single\ntenants=1\n"), {"mode": "single", "tenants": 1})
+        self.assertEqual(r.parse_tenancy("tenancy=multi\ntenants=?\n"), {"mode": "multi", "tenants": None})
+        self.assertEqual(r.parse_tenancy("tenancy=tuhaf\ntenants=-1\n"), {"mode": "unknown", "tenants": None})
+        self.assertEqual(r.parse_tenancy("tenants=２\n"), {"mode": "unknown", "tenants": None})
+        self.assertIsNone(r.parse_tenancy(None))
+
+    def test_betikler_yoksa_alanlar_yok(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(r, "ROOT", d):
+            self.assertIsNone(r._run_script(["scripts/modules.sh", "json"]))
+            self.assertIsNone(r._run_script(["scripts/tenancy.sh", "status"]))
+
+    def test_betik_cikis_kodu_hatasi_none(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(r, "ROOT", d):
+            Path(d, "scripts").mkdir()
+            sh = Path(d, "scripts", "tenancy.sh")
+            sh.write_text("#!/bin/sh\necho tenancy=multi\nexit 3\n")
+            sh.chmod(0o755)
+            self.assertIsNone(r._run_script(["scripts/tenancy.sh", "status"]))
+            sh.write_text("#!/bin/sh\necho tenancy=multi\necho tenants=4\n")
+            self.assertEqual(r.parse_tenancy(r._run_script(["scripts/tenancy.sh", "status"])), {"mode": "multi", "tenants": 4})
+
+
 class AfterRestoreTests(unittest.TestCase):
     def test_geri_donus_sonrasi_kuyruk_duzeltilir(self):
         job = {"id": "j1", "kind": "pitr-restore", "args": {"target": "2026-10-19 14:05"}, "requestedAt": "2026-10-19T11:10:00+00:00"}

@@ -63,6 +63,20 @@ $M set all --no-start >/dev/null
 check "all: kapalı değişken kalmaz" '! grep -q "^HR360_MOD_" "$T/repo/.env" && [ "$(envv HR360_MODULES)" = all ]'
 check "all: işaret kalmaz" '[ -z "$(ls "$T/repo/deploy/nginx/modules/"*.off 2>/dev/null)" ]'
 
+$M disable ml --no-stop >/dev/null
+json="$($M json)"
+check "json: geçerli JSON, tablo sırası, etkin liste, ad/bellek/servis" 'printf "%s" "$json" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d[\"all\"] == [\"recruitment\", \"onboarding\", \"timeshift\", \"performance\", \"learning\", \"compensation\", \"ml\", \"expense\"], d[\"all\"]
+assert d[\"enabled\"] == [i for i in d[\"all\"] if i != \"ml\"], d[\"enabled\"]
+ml = [x for x in d[\"details\"] if x[\"id\"] == \"ml\"][0]
+assert ml[\"memoryMb\"] == 1792 and ml[\"services\"] == [\"ml-inference\", \"mlflow\"] and ml[\"name\"] == \"Yapay zekâ\"
+ex = [x for x in d[\"details\"] if x[\"id\"] == \"expense\"][0]
+assert ex[\"services\"] == [] and ex[\"memoryMb\"] == 0
+"'
+$M enable ml --no-start >/dev/null
+
 check "bilinmeyen modül reddedilir" '! $M disable bordro >/dev/null 2>&1'
 check "çekirdek servis modül değildir" '! $M disable employee >/dev/null 2>&1'
 

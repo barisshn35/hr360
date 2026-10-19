@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArchiveRestore, CalendarClock, CheckCircle2, CircleAlert, DownloadCloud, HardDrive, History, Info, LoaderCircle, RefreshCw, Rewind, ShieldCheck, Trash2, Undo2, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArchiveRestore, Building2, CalendarClock, CheckCircle2, CircleAlert, DownloadCloud, HardDrive, History, Info, LoaderCircle, Puzzle, RefreshCw, Rewind, ShieldCheck, Trash2, Undo2, X } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
 import { useConfirm } from '@/components/ui/Confirm'
 import { useAction } from '@/features/shared/kit'
-import { newerThan, pitrWindow, platformOpsApi, validPitrTarget, type OpsBackup, type OpsJob, type OpsKind, type OpsPitr, type OpsSecurity, type OpsStatus } from '@/api/platformOps'
+import { newerThan, pitrWindow, platformOpsApi, validPitrTarget, type OpsBackup, type OpsJob, type OpsKind, type OpsModules, type OpsPitr, type OpsSecurity, type OpsStatus, type OpsTenancy } from '@/api/platformOps'
+import { publicSiteKey } from '@/features/site/usePublicSite'
 import { formatDateTime, formatRelativeToNow } from '@/lib/format'
 import { appLocale, tx } from '@/lib/i18n'
 
@@ -19,6 +20,10 @@ const KEY = ['platform-ops'] as const
 const RESTORE_CONFIRM = 'GERİ YÜKLE'
 const ROLLBACK_CONFIRM = 'GERİ AL'
 const PITR_CONFIRM = 'GERİ DÖN'
+const MODULE_OFF_CONFIRM = 'MODÜLÜ KAPAT'
+const MULTI_CONFIRM = 'ÇOK ŞİRKET'
+/** Bitince menüleri değiştiren işler: herkese açık site bilgisi (modül listesi, şirket kipi) tazelenir. */
+const SITE_KINDS: ReadonlySet<OpsKind> = new Set(['modules-set', 'tenancy-multi', 'tenancy-single'])
 // Geri dönüş anı sunucuda İstanbul saatiyle yorumlanır; ekranda da o saatle gösterilir.
 const istanbulFmt = new Intl.DateTimeFormat(appLocale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' })
 const istanbul = (iso: string | null) => (iso && !Number.isNaN(Date.parse(iso)) ? istanbulFmt.format(new Date(iso)) : '—')
@@ -29,6 +34,7 @@ const kindLabels = (): Record<OpsKind, string> => ({
   'db-isolation': tx('Veritabanı yalıtımını aç'),
   'pitr-enable': tx('Anlık geri dönüşü aç'), 'pitr-disable': tx('Anlık geri dönüşü kapat'), 'pitr-restore': tx('Bir ana geri dön'),
   'pitr-cleanup': tx('Eski veriyi sil'),
+  'modules-set': tx('Modül seçimini uygula'), 'tenancy-multi': tx('Çok şirketli kipe geç'), 'tenancy-single': tx('Tek şirket kipine geç'),
 })
 const STATUS: Record<OpsStatus, { tone: 'neutral' | 'info' | 'success' | 'danger'; label: () => string }> = {
   Pending: { tone: 'neutral', label: () => tx('Sırada') }, Running: { tone: 'info', label: () => tx('Çalışıyor') },
@@ -94,6 +100,7 @@ function JobsPanel({ jobs, onOpen }: { jobs: OpsJob[]; onOpen: (id: string) => v
                   {typeof j.args.ref === 'string' && <span className="ml-1.5 text-muted-foreground">{j.args.ref}</span>}
                   {typeof j.args.archive === 'string' && <span className="ml-1.5 truncate text-muted-foreground">{j.args.archive}</span>}
                   {typeof j.args.target === 'string' && <span className="ml-1.5 text-muted-foreground">{j.args.target}</span>}
+                  {Array.isArray(j.args.modules) && <span className="ml-1.5 text-muted-foreground">{j.args.modules.length ? j.args.modules.join(', ') : tx('yalnızca çekirdek')}</span>}
                   <span className="block text-[12px] text-muted-foreground">{formatRelativeToNow(j.requestedAt)}{j.requestedBy ? ` · ${j.requestedBy}` : ''}</span>
                 </button>
                 {j.status === 'Running' && <LoaderCircle className="size-4 animate-spin text-primary" />}
@@ -204,6 +211,167 @@ export function PitrPanel({ pitr, lastJob, disabled, busy, onOpenJob }: {
   )
 }
 
+/** Kartın altındaki "son işlem" satırı; tıklayınca çıktı açılır. */
+function LastJobLine({ job, onOpen }: { job?: OpsJob; onOpen: (id: string) => void }) {
+  if (!job) return null
+  return (
+    <button type="button" onClick={() => onOpen(job.id)} className="flex w-full cursor-pointer items-center gap-2 text-left text-[12px] text-muted-foreground">
+      <span className="min-w-0 flex-1">{tx('Son işlem: {0} · {1}', [kindLabels()[job.kind], formatRelativeToNow(job.requestedAt)])}</span>
+      {job.status === 'Running' && <LoaderCircle className="size-4 animate-spin text-primary" />}
+      <StatusBadge tone={STATUS[job.status].tone}>{STATUS[job.status].label()}</StatusBadge>
+    </button>
+  )
+}
+
+/** Modüllerin arayüz adı ve kısa açıklaması (sunucu özetindeki ad yalnızca yedek olarak kullanılır). */
+const moduleInfo = (): Record<string, { name: string; desc: string }> => ({
+  recruitment: { name: tx('İşe alım'), desc: tx('İş ilanları, aday havuzu, mülakat planlama ve teklif süreci.') },
+  onboarding: { name: tx('İşe alıştırma ve demirbaş'), desc: tx('Yeni çalışan karşılama planları, görev listeleri ve zimmetli demirbaş takibi.') },
+  timeshift: { name: tx('Puantaj ve vardiya'), desc: tx('Vardiya planlama, giriş-çıkış kayıtları, fazla mesai ve aylık puantaj.') },
+  performance: { name: tx('Performans'), desc: tx('Hedefler, değerlendirme dönemleri, geri bildirim ve yetkinlikler.') },
+  learning: { name: tx('Eğitim'), desc: tx('Eğitim kataloğu, atamalar, katılım ve sertifika takibi.') },
+  compensation: { name: tx('Ücret ve bordro'), desc: tx('Ücret yapıları, bordro hesaplama ve ücret değişikliği süreçleri.') },
+  ml: { name: tx('Yapay zekâ'), desc: tx('Ayrılma riski tahmini, CV ve ilan analizi, aday eşleştirme ve model kartı. En çok belleği bu modül kullanır.') },
+  expense: { name: tx('Masraf ve seyahat'), desc: tx('Masraf beyanı, seyahat talepleri ve onayları. Ayrı servis çalıştırmaz; yalnızca ekranları açar.') },
+})
+
+/** İsteğe bağlı modüller (scripts/modules.sh): istenen seçim işaretlenir, "Uygula" tek işte uygular. */
+export function ModulesPanel({ modules, lastJob, disabled, busy, onOpenJob }: {
+  modules: OpsModules; lastJob?: OpsJob; disabled: boolean; busy: boolean; onOpenJob: (id: string) => void
+}) {
+  const [want, setWant] = useState<Set<string>>(() => new Set(modules.enabled))
+  const [open, setOpen] = useState(false)
+  const run = useEnqueue(tx('İş sıraya alındı; çalıştırıcı bir dakika içinde başlatır.'), () => setOpen(false))
+  const info = moduleInfo()
+  const detail = (id: string) => modules.details.find((d) => d.id === id)
+  const name = (id: string) => info[id]?.name ?? detail(id)?.name ?? id
+  const enabled = new Set(modules.enabled)
+  const order = modules.all
+  const toOn = order.filter((id) => want.has(id) && !enabled.has(id))
+  const toOff = order.filter((id) => !want.has(id) && enabled.has(id))
+  const changed = toOn.length + toOff.length > 0
+  const memOf = (ids: string[]) => ids.reduce((n, id) => n + (detail(id)?.memoryMb ?? 0), 0)
+  const toggle = (id: string, on: boolean) => setWant((w) => { const n = new Set(w); if (on) n.add(id); else n.delete(id); return n })
+  const submit = () => run.mutate({ kind: 'modules-set', args: { modules: order.filter((id) => want.has(id)) }, confirm: toOff.length ? MODULE_OFF_CONFIRM : undefined })
+  const close = () => setOpen(false)
+  const title = tx('Modül seçimini uygula')
+
+  const summary = (
+    <div className="space-y-3 text-[13px] leading-relaxed">
+      {toOn.length > 0 && (
+        <div className="rounded-xl border border-primary/40 bg-primary/5 p-3">
+          <p className="font-medium">{tx('Açılacak: {0}', [toOn.map(name).join(', ')])}</p>
+          <p className="text-[12px] text-muted-foreground">{tx('Modül imajları derlenir (modül başına birkaç dakika) ve servisler yeniden başlatılır; bu sırada uygulama kısa süre yavaşlayabilir. Ek bellek: yaklaşık {0} MB.', [String(memOf(toOn))])}</p>
+        </div>
+      )}
+      {toOff.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+          <p className="font-medium">{tx('Kapatılacak: {0}', [toOff.map(name).join(', ')])}</p>
+          <p className="text-[12px] text-muted-foreground">{tx('Ekranları menülerden kalkar ve servisleri durdurulur. Veriler silinmez; modül istendiği zaman yeniden açılabilir ve kaldığı yerden devam eder.')}</p>
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <Panel>
+      <PanelHead title={<span className="flex items-center gap-2"><Puzzle className="size-4 text-primary" />{tx('Modüller')}</span>}
+        note={tx('Kullanmadığınız modülleri kapatarak sunucu belleğinden tasarruf edin. Kapatılan modülün verisi silinmez.')}
+        action={<StatusBadge tone="neutral">{tx('{0}/{1} açık', [String(modules.enabled.length), String(order.length)])}</StatusBadge>} />
+      <PanelBody className="space-y-4">
+        <p className="flex items-start gap-2 text-[13px] text-muted-foreground"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+          {tx('Çekirdek: çalışanlar, organizasyon, izin, onaylar, bildirimler, belgeler, KVKK — her zaman açık')}</p>
+        <ul className="divide-y divide-border rounded-xl border border-border">
+          {order.map((id) => {
+            const on = enabled.has(id)
+            const mem = detail(id)?.memoryMb
+            return (
+              <li key={id} className="flex items-start gap-3 px-4 py-2.5 text-[13px]">
+                <Checkbox checked={want.has(id)} onCheckedChange={(v) => toggle(id, v === true)} disabled={disabled || busy || run.isPending} aria-label={name(id)} className="mt-0.5" />
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">{name(id)}</span>
+                  <span className="block text-[12px] text-muted-foreground">{info[id]?.desc ?? ''}</span>
+                  <span className="block text-[12px] text-muted-foreground">{mem ? tx('Bellek: yaklaşık {0} MB', [String(mem)]) : tx('Ek bellek gerekmez')}</span>
+                </span>
+                <StatusBadge tone={on ? 'success' : 'neutral'}>{on ? tx('Açık') : tx('Kapalı')}</StatusBadge>
+              </li>
+            )
+          })}
+        </ul>
+        <LastJobLine job={lastJob} onOpen={onOpenJob} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button disabled={!changed || disabled || busy || run.isPending} onClick={() => setOpen(true)}>{tx('Uygula')}</Button>
+          {changed && <Button variant="ghost" onClick={() => setWant(new Set(modules.enabled))}>{tx('Seçimi geri al')}</Button>}
+          {busy && <span className="text-[12px] text-muted-foreground">{tx('Sürmekte olan iş bitince uygulanabilir.')}</span>}
+        </div>
+      </PanelBody>
+
+      {open && (toOff.length > 0 ? (
+        <TypedConfirm title={title} word={MODULE_OFF_CONFIRM} pending={run.isPending} onClose={close} onConfirm={submit}
+          note={tx('Seçim tek işte uygulanır; servisler yeniden başlatılır.')}>{summary}</TypedConfirm>
+      ) : (
+        <Modal open onClose={close} title={title} note={tx('Seçim tek işte uygulanır; servisler yeniden başlatılır.')}
+          footer={<><Button variant="outline" onClick={close}>{tx('Vazgeç')}</Button><Button disabled={run.isPending} onClick={submit}>{title}</Button></>}>
+          {summary}
+        </Modal>
+      ))}
+    </Panel>
+  )
+}
+
+/** Şirket kipi (scripts/tenancy.sh): tek şirket ya da çok şirketli. */
+export function TenancyPanel({ tenancy, lastJob, disabled, busy, onOpenJob }: {
+  tenancy: OpsTenancy; lastJob?: OpsJob; disabled: boolean; busy: boolean; onOpenJob: (id: string) => void
+}) {
+  const confirm = useConfirm()
+  const [multi, setMulti] = useState(false)
+  const run = useEnqueue(tx('İş sıraya alındı; çalıştırıcı bir dakika içinde başlatır.'), () => setMulti(false))
+  const { mode, tenants } = tenancy
+  const off = disabled || busy || run.isPending
+  const modeLabel = { single: tx('Tek şirket'), multi: tx('Çok şirketli'), unknown: tx('Bilinmiyor') }[mode]
+
+  return (
+    <Panel>
+      <PanelHead title={<span className="flex items-center gap-2"><Building2 className="size-4 text-primary" />{tx('Şirket kipi')}</span>}
+        note={tx('Şirket sayısı: {0}', [tenants === null ? '?' : String(tenants)])}
+        action={<StatusBadge tone={mode === 'unknown' ? 'danger' : 'info'}>{modeLabel}</StatusBadge>} />
+      <PanelBody className="space-y-4 text-[13px] leading-relaxed">
+        {mode === 'single' && (
+          <>
+            <p className="text-muted-foreground">{tx('Kurulum tek bir şirket için çalışıyor: şirket listesi, yeni şirket ekleme ve herkese açık şirket kaydı gizli.')}</p>
+            <Button variant="outline" disabled={off} onClick={() => setMulti(true)}>{tx('Çok şirketli kipe geç')}</Button>
+          </>
+        )}
+        {mode === 'multi' && (
+          <>
+            <p className="text-muted-foreground">{tx('Kurulum birden çok şirketi barındırabilir: platform yönetimi ile şirket yönetimi ayrıdır.')}</p>
+            {tenants === 1 ? (
+              <Button variant="outline" disabled={off} onClick={async () => {
+                if (await confirm({ title: tx('Tek şirket kipine geçilsin mi?'), note: tx('Arayüz tek şirket için sadeleşir: şirket listesi, yeni şirket ekleme ve herkese açık şirket kaydı gizlenir. Veriler değişmez; servisler yeniden başlatılır.'), action: tx('Tek şirket kipine geç'), destructive: false }))
+                  run.mutate({ kind: 'tenancy-single' })
+              }}>{tx('Tek şirket kipine geç')}</Button>
+            ) : tenants === null ? (
+              <InfoNote>{tx('Şirket sayısı okunamadı; veritabanı çalışmıyor olabilir.')}</InfoNote>
+            ) : (
+              <InfoNote>{tx('Bu kurulumda {0} şirket var. Tek şirket kipine yalnızca tam olarak bir şirket varken geçilebilir.', [String(tenants)])}</InfoNote>
+            )}
+          </>
+        )}
+        {mode === 'unknown' && <InfoNote>{tx('Şirket kipi okunamadı.')}</InfoNote>}
+        <LastJobLine job={lastJob} onOpen={onOpenJob} />
+      </PanelBody>
+
+      {multi && (
+        <TypedConfirm title={tx('Çok şirketli kipe geç')} word={MULTI_CONFIRM} pending={run.isPending} onClose={() => setMulti(false)}
+          note={tx('Şirket listesi, yeni şirket ekleme ve herkese açık şirket kaydı kullanılabilir hâle gelir; platform yönetimi ile şirket yönetimi yeniden ayrılır. Servisler yeniden başlatılır.')}
+          onConfirm={() => run.mutate({ kind: 'tenancy-multi', confirm: MULTI_CONFIRM })}>
+          <p className="text-[12px] text-muted-foreground">{tx('Pratikte tek yönlüdür: ikinci bir şirket eklendikten sonra tek şirket kipine dönülemez.')}</p>
+        </TypedConfirm>
+      )}
+    </Panel>
+  )
+}
+
 /** Sunucu güvenlik duruşu: önerilen ayarların açık/kapalı durumu (değerler değil). */
 function SecurityPanel({ sec, pitr, disabled, onIsolate }: { sec: OpsSecurity; pitr?: OpsPitr; disabled: boolean; onIsolate: () => void }) {
   const [rlsOn, rlsAll] = sec.rlsTables.split('/').map((x) => Number(x) || 0)
@@ -258,6 +426,19 @@ export function MaintenancePage() {
   const run = useEnqueue(queued)
   const restore = useEnqueue(queued, () => setRestoring(null))
   const rollback = useEnqueue(queued, () => setRollingBack(false))
+  // Modül / şirket kipi işi başarıyla bitince menüler yeni seçime göre çizilsin.
+  const qc = useQueryClient()
+  const seen = useRef(new Map<string, OpsStatus>())
+  useEffect(() => {
+    let refresh = false
+    for (const j of jobs.data ?? []) {
+      if (!SITE_KINDS.has(j.kind)) continue
+      const prev = seen.current.get(j.id)
+      if (j.status === 'Succeeded' && prev !== undefined && prev !== 'Succeeded') refresh = true
+      seen.current.set(j.id, j.status)
+    }
+    if (refresh) void qc.invalidateQueries({ queryKey: publicSiteKey })
+  }, [jobs.data, qc])
 
   if (status.isPending) return <><PageHeader title={tx('Bakım')} eyebrow={[tx('Platform')]} /><RowsSkeleton /></>
   if (status.isError) return <><PageHeader title={tx('Bakım')} eyebrow={[tx('Platform')]} /><ErrorState onRetry={() => void status.refetch()} /></>
@@ -344,6 +525,11 @@ export function MaintenancePage() {
       </Panel>
 
       {s?.pitr && <PitrPanel pitr={s.pitr} lastJob={jobs.data?.find((j) => j.kind.startsWith('pitr-'))} disabled={disabled} busy={busy} onOpenJob={setOutput} />}
+
+      {s?.modules && <ModulesPanel key={s.modules.enabled.join(',')} modules={s.modules} lastJob={jobs.data?.find((j) => j.kind === 'modules-set')}
+        disabled={disabled} busy={busy} onOpenJob={setOutput} />}
+
+      {s?.tenancy && <TenancyPanel tenancy={s.tenancy} lastJob={jobs.data?.find((j) => j.kind.startsWith('tenancy-'))} disabled={disabled} busy={busy} onOpenJob={setOutput} />}
 
       {s?.security && <SecurityPanel sec={s.security} pitr={s.pitr} disabled={disabled || busy} onIsolate={async () => {
         if (await confirm({ title: tx('Veritabanı yalıtımı açılsın mı?'), note: tx('Her servis kendi rolüne geçer ve satır düzeyi güvenlik açılır. Servisler yeniden başlatılır; uygulama bir dakika kadar erişilemez olabilir.'), action: tx('Aç'), destructive: false }))

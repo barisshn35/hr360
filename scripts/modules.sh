@@ -5,6 +5,7 @@
 # Kullanım:
 #   scripts/modules.sh list                         Modüller, durumları ve bellek sınırları
 #   scripts/modules.sh status                       Makine için: "id=on|off" satırları + HR360_MODULES
+#   scripts/modules.sh json                         Makine için JSON: etkin modüller, tablo sırası, ad/bellek/servis
 #   scripts/modules.sh enable MODÜL... [--no-start] Aç: imajı derle, Kafka konumunu sona al, başlat
 #   scripts/modules.sh disable MODÜL... [--no-stop] Kapat: konteyneri kaldır (VERİ SİLİNMEZ)
 #   scripts/modules.sh set "timeshift,compensation"|all [--no-start]
@@ -95,6 +96,25 @@ cmd_status() {
   echo "HR360_MODULES=$(mod_active_list | tr ' ' ',')"
 }
 
+_json_str() { # JSON metni: ters bölü ve tırnak kaçırılır (tablodaki adlar sabit metindir)
+  local v="${1//\\/\\\\}"
+  printf '"%s"' "${v//\"/\\\"}"
+}
+
+# Bakım çalıştırıcısı (scripts/ops-runner.py) bunu okuyup Platform › Bakım › Modüller'e taşır.
+cmd_json() {
+  local id s sep="" enabled="" all="" details="" svcs
+  for id in $(mod_ids); do
+    all="$all$sep$(_json_str "$id")"
+    if mod_enabled "$id"; then enabled="$enabled${enabled:+,}$(_json_str "$id")"; fi
+    svcs=""
+    for s in $(mod_services "$id"); do svcs="$svcs${svcs:+,}$(_json_str "$s")"; done
+    details="$details$sep{\"id\":$(_json_str "$id"),\"name\":$(_json_str "$(mod_name "$id")"),\"memoryMb\":$(( $(mod_mem "$id") + 0 )),\"services\":[$svcs]}"
+    sep=","
+  done
+  printf '{"enabled":[%s],"all":[%s],"details":[%s]}\n' "$enabled" "$all" "$details"
+}
+
 cmd_enable() {
   local start=1 ids=() id svcs="" was_off=()
   for a in "$@"; do [ "$a" = --no-start ] && start=0 || ids+=("$a"); done
@@ -136,7 +156,9 @@ cmd_set() {
   [ "${2:-}" = --no-start ] && start=0
   if [ "$sel" != all ]; then check_ids ${sel//,/ }; fi
   for id in $(mod_ids); do
-    if [ "$sel" = all ] || [[ ",$sel," == *",$id,"* ]]; then on+=("$id"); else off+=("$id"); fi
+    # Yalnızca durumu değişenler: zaten açık modülün imajı yeniden derlenmez.
+    if [ "$sel" = all ] || [[ ",$sel," == *",$id,"* ]]; then mod_enabled "$id" || on+=("$id")
+    else mod_enabled "$id" && off+=("$id"); fi
   done
   [ "${#off[@]}" -gt 0 ] && cmd_disable "${off[@]}" --no-stop >/dev/null
   if [ "${#on[@]}" -gt 0 ]; then
@@ -149,9 +171,10 @@ cmd_set() {
 case "${1:-list}" in
   list) cmd_list ;;
   status) cmd_status ;;
+  json) cmd_json ;;
   enable) shift; cmd_enable "$@" ;;
   disable) shift; cmd_disable "$@" ;;
   set) shift; cmd_set "$@" ;;
   sync) write_state ;;
-  *) sed -n '2,15p' "$0"; exit 2 ;;
+  *) sed -n '2,16p' "$0"; exit 2 ;;
 esac
