@@ -38,6 +38,8 @@ cleanup_data() {
 # Test katmani; sirlar dosyaya tasindiysa (scripts/secrets-migrate.sh) uretilen compose eki de verilir,
 # yoksa -f kullanildigi icin .env'deki COMPOSE_FILE yok sayilir ve servisler sirsiz acilir.
 TEST_COMPOSE=(-f docker-compose.yml -f deploy/testing/chat-mock.yml)
+# Kapalı modüller (scripts/modules.sh): -f verilince .env'deki COMPOSE_FILE okunmaz; ek dosya elle eklenir.
+[ -f compose.modules.yml ] && TEST_COMPOSE+=(-f compose.modules.yml)
 if [ -f secrets/compose.secrets.yml ]; then TEST_COMPOSE+=(-f secrets/compose.secrets.yml); fi
 
 if ! declare -F docker >/dev/null && ! docker info >/dev/null 2>&1 && sudo docker info >/dev/null 2>&1; then

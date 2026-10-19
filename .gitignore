@@ -32,6 +32,7 @@ __pycache__/
 deploy/nginx/keycloak-admin/*.conf
 # Kapalı modül işaretleri (scripts/modules.sh)
 deploy/nginx/modules/*.off
+compose.modules.yml
 
 # scripts/tls.sh ciktisi: sertifika, anahtar ve uretilen nginx parcalari
 deploy/nginx/tls/*

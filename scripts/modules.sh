@@ -43,9 +43,35 @@ marker() { # marker ID on|off — ağ geçidi işareti (deploy/nginx/modules/<id
 # İzleme: kapalı modülün servisleri "servis erişilemiyor" alarmı vermesin (deploy/monitoring/alerts.yml
 # ServisErisilemiyor: up == 0 unless hr360_module_disabled == 1). Ağ geçidi işaretleri ve HR360_MODULES de
 # .env'den yeniden üretilir; her komuttan sonra ve güncellemede (sync) çalışır.
+# Kapalı modüllerin servisleri compose'dan tamamen çıkarılır: hiç açılmayan bir profile alınırlar
+# (compose.modules.yml, .env COMPOSE_FILE ile eklenir). Yalnızca "scale: 0" yetmez: compose eksik imajı
+# yine de derler. Hepsi açıksa dosya ve COMPOSE_FILE girdisi kaldırılır (eski kurulumlarla aynı).
+OVERRIDE=compose.modules.yml
+write_override() {
+  local off cur new part
+  off="$(mod_disabled_services)"
+  if [ -z "${off// /}" ]; then
+    rm -f "$OVERRIDE"
+  else
+    {
+      echo "# OTOMATIK: scripts/modules.sh yazar, elle düzenlemeyin. Kapalı modüllerin servisleri."
+      echo "services:"
+      for s in $off; do printf '  %s:\n    profiles: ["hr360-module-disabled"]\n' "$s"; done
+    } > "$OVERRIDE.tmp" && mv "$OVERRIDE.tmp" "$OVERRIDE"
+  fi
+  cur="$(_mod_env_get COMPOSE_FILE)"; new=""
+  IFS=':' read -r -a parts <<< "${cur:-}"
+  for part in "${parts[@]}"; do [ -n "$part" ] && [ "$part" != "$OVERRIDE" ] && new="${new:+$new:}$part"; done
+  if [ -f "$OVERRIDE" ]; then new="${new:-docker-compose.yml}:$OVERRIDE"
+  elif [ "$new" = docker-compose.yml ]; then new=""; fi
+  [ "$new" = "$cur" ] && return 0
+  if [ -n "$new" ]; then _mod_env_write COMPOSE_FILE "$new"; else _mod_env_write COMPOSE_FILE; fi
+}
+
 write_state() {
   local id s v
   mod_sync_env
+  write_override
   {
     echo "# HELP hr360_module_disabled İsteğe bağlı modülün servisi bu kurulumda kapalı (1) ya da açık (0)."
     echo "# TYPE hr360_module_disabled gauge"
@@ -123,6 +149,7 @@ cmd_enable() {
     mod_enabled "$id" || was_off+=("$id")
     mod_set "$id" on; marker "$id" on; svcs="$svcs $(mod_services "$id")"
   done
+  write_state   # derlemeden önce: servis compose.modules.yml'den çıksın
   svcs="${svcs# }"
   if [ "$start" = 1 ]; then
     if [ -n "${svcs// /}" ]; then

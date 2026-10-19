@@ -57,11 +57,20 @@ reset_log
 $M set timeshift,compensation,expense --no-start >/dev/null
 check "Hafif seçimi: yalnız puantaj, bordro, masraf açık" '[ "$(envv HR360_MODULES)" = "timeshift,compensation,expense" ]'
 check "Hafif seçimi: beş modül kapalı" '[ "$(grep -c "^HR360_MOD_.*=0$" "$T/repo/.env")" = 5 ]'
+$M sync >/dev/null
+check "kapalı servisler compose.modules.yml'de, COMPOSE_FILE eklendi" 'grep -q "^  ml-inference:" "$T/repo/compose.modules.yml" && grep -q "^  recruitment-service:" "$T/repo/compose.modules.yml" && ! grep -q "timeshift-service" "$T/repo/compose.modules.yml" && [ "$(envv COMPOSE_FILE)" = "docker-compose.yml:compose.modules.yml" ]'
 check "--no-start docker çağırmaz" '[ ! -s "$HR360_TEST_LOG" ]'
 
 $M set all --no-start >/dev/null
 check "all: kapalı değişken kalmaz" '! grep -q "^HR360_MOD_" "$T/repo/.env" && [ "$(envv HR360_MODULES)" = all ]'
 check "all: işaret kalmaz" '[ -z "$(ls "$T/repo/deploy/nginx/modules/"*.off 2>/dev/null)" ]'
+check "all: ek compose dosyası ve COMPOSE_FILE kalkar" '[ ! -f "$T/repo/compose.modules.yml" ] && [ -z "$(envv COMPOSE_FILE)" ]'
+printf 'COMPOSE_FILE=docker-compose.yml:secrets/compose.secrets.yml\n' >> "$T/repo/.env"
+$M disable ml --no-stop >/dev/null
+check "başka COMPOSE_FILE girdileri korunur" '[ "$(envv COMPOSE_FILE)" = "docker-compose.yml:secrets/compose.secrets.yml:compose.modules.yml" ]'
+$M enable ml --no-start >/dev/null
+check "modül açılınca yalnız kendi girdisi kalkar" '[ "$(envv COMPOSE_FILE)" = "docker-compose.yml:secrets/compose.secrets.yml" ]'
+sed -i "/^COMPOSE_FILE=/d" "$T/repo/.env"
 
 $M disable ml --no-stop >/dev/null
 json="$($M json)"

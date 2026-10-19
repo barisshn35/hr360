@@ -1249,6 +1249,8 @@ EOF
 fi
 # Isteğe bagli moduller (HR360_MOD_* + HR360_MODULES): kapalilar derlenmez ve baslatilmaz.
 ( ENV_FILE=.env; . scripts/lib/modules.sh; mod_apply_selection "${MODULES_SEL:-none}" )
+# Kapali modullerin servisleri compose'dan cikarilir (compose.modules.yml + COMPOSE_FILE): imajlari hic derlenmez.
+scripts/modules.sh sync >/dev/null
 info ".env yazildi."
 
 # --- 4) Keycloak realm sablonunu doldur ------------------------------------
