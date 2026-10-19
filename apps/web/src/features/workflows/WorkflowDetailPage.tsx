@@ -22,6 +22,7 @@ import { ApprovalChain, activeStepId } from './ApprovalChain'
 import { DecisionModal } from './DecisionModal'
 import { DelegateModal } from './DelegateModal'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 /** Talep yükündeki bilinen anahtarların okunur adları ("Talep bilgileri" listesi için). */
 const PAYLOAD_LABELS: Record<string, string> = {
@@ -92,6 +93,7 @@ function payloadRows(p: Record<string, unknown>, skip: string[]): Array<{ key: s
 export function WorkflowDetailPage() {
   const { workflowId } = useParams<{ workflowId: string }>()
   const { can, roles } = useAuth()
+  const { isEnabled } = useModules()
   const { employeeId: myEmployeeId } = useMyEmployeeId()
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -346,7 +348,7 @@ export function WorkflowDetailPage() {
                 )}
               </dl>
 
-              {expenseClaimId && can('expense:manage') && (
+              {expenseClaimId && can('expense:manage') && isEnabled('expense') && (
                 <div className="mt-4 border-t border-border pt-3">
                   <Button variant="outline" size="sm" asChild>
                     <Link to={`/panel/masraf/${expenseClaimId}`}>

@@ -99,10 +99,11 @@ export function useLeaveRequests(filters: LeaveRequestFilters = {}, enabled = tr
 
 /* ----------------------------------------------------------------- İşe alım */
 
-export function useJobPostings(status?: JobPostingStatus) {
+export function useJobPostings(status?: JobPostingStatus, enabled = true) {
   return useQuery({
     queryKey: qkx.postings(status),
     queryFn: ({ signal }) => recruitmentApi.listPostings(status, signal),
+    enabled,
   })
 }
 

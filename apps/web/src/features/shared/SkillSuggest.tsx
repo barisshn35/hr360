@@ -7,6 +7,7 @@ import { mlInsightsApi, type SkillExtract } from '@/api/mlInsights'
 import { learningContentApi } from '@/api/learningContent'
 import { newSuggestions } from '@/lib/mlInsights'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 import { errMsg } from './kit'
 
 /**
@@ -14,18 +15,26 @@ import { errMsg } from './kit'
  * yetkinlik kataloğuyla eşleşmeler. Hiçbir şey OTOMATİK eklenmez: kullanıcı öneriye tıklayınca listeye
  * girer, kaydetmek yine kullanıcının "Kaydet" adımıdır. Yapıştırılan metin saklanmaz.
  */
-export function SkillSuggest({ existing, onAdd, text: givenText, paste = true }: {
+type SkillSuggestProps = {
   existing: string[]
   onAdd: (skill: string) => void
   /** Hazır metin (ör. CV ayrıştırma sonucu); yoksa kullanıcı yapıştırır. */
   text?: string
   paste?: boolean
-}) {
+}
+
+/** Yapay zekâ modülü kurulumda kapalıysa öneri kutusu hiç gösterilmez. */
+export function SkillSuggest(props: SkillSuggestProps) {
+  const { isEnabled, canQuery } = useModules()
+  return isEnabled('ml') ? <SkillSuggestBox {...props} learning={canQuery('learning')} /> : null
+}
+
+function SkillSuggestBox({ existing, onAdd, text: givenText, paste = true, learning }: SkillSuggestProps & { learning: boolean }) {
   const [text, setText] = useState('')
   const [result, setResult] = useState<SkillExtract | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const catalog = useQuery({ queryKey: ['learning', 'competencies', 'catalog'], queryFn: ({ signal }) => learningContentApi.competencies(signal), staleTime: 5 * 60_000, retry: false })
+  const catalog = useQuery({ queryKey: ['learning', 'competencies', 'catalog'], queryFn: ({ signal }) => learningContentApi.competencies(signal), enabled: learning, staleTime: 5 * 60_000, retry: false })
   const source = (givenText ?? '') + (text ? `\n${text}` : '')
 
   async function run() {

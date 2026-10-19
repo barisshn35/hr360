@@ -20,6 +20,7 @@ import {
 import type { Permission, Role } from '@/auth/roles'
 import { hasStandardRole } from '@/auth/roles'
 import { tx } from '@/lib/i18n'
+import type { ModuleId } from '@/lib/modules'
 
 export type NavItemData = {
   id: string
@@ -37,6 +38,8 @@ export type NavItemData = {
   requireRoles?: Role[]
   /** İsteğe bağlı modül: kiracıda kapalıysa gizlenir (İK yine görür ki açabilsin). */
   feature?: NavFeature
+  /** Kurulumda kapatılabilen modül ("Hafif"): kapalıysa her yerde gizlenir (alt girdileriyle). */
+  module?: ModuleId
   children?: NavItemData[]
 }
 
@@ -69,16 +72,16 @@ export const navGroups: NavGroupData[] = [
       { id: 'todos', title: tx('Yapılacaklarım'), description: tx('Sizi bekleyen her şey tek listede'), icon: ClipboardList, path: '/panel/yapilacaklarim', tenantOnly: true },
       { id: 'approvals', title: tx('Onay kutusu'), description: tx('Kararınızı bekleyen talepler'), icon: Inbox, path: '/panel/onaylar', permission: 'workflow:view' },
       { id: 'leave', title: tx('İzin'), description: tx('Talepler ve yıllık bakiyeler'), icon: CalendarDays, path: '/panel/izin', permission: 'leave:view' },
-      { id: 'expense', title: tx('Masraf'), description: tx('Fiş, harcama ve geri ödeme'), icon: Wallet, path: '/panel/masraf', permission: 'expense:view' },
+      { id: 'expense', module: 'expense', title: tx('Masraf'), description: tx('Fiş, harcama ve geri ödeme'), icon: Wallet, path: '/panel/masraf', permission: 'expense:view' },
       { id: 'cases', title: tx('İK vakaları'), description: tx('Soru, talep ve şikâyet defteri'), icon: LifeBuoy, path: '/panel/ik-vakalari', permission: 'case:view' },
-      { id: 'timeshift', title: tx('Puantaj'), description: tx('Giriş/çıkış ve fazla mesai'), icon: Clock, path: '/panel/puantaj', permission: 'timeshift:view' },
-      { id: 'time-clock', title: tx('Giriş-çıkış'), description: tx('QR, kart ya da PIN ile; biyometri yok'), icon: ScanLine, path: '/panel/giris-cikis', permission: 'timeshift:clock' },
-      { id: 'shift-swap', title: tx('Vardiya takası'), description: tx('Takas, devir ve vardiya tercihleri'), icon: CalendarClock, path: '/panel/vardiya-takasi', permission: 'timeshift:view' },
-      { id: 'my-payslips', title: tx('Bordrolarım'), description: tx('Bordro pusulalarınız'), icon: ReceiptText, path: '/panel/bordrolarim' },
-      { id: 'travel', title: tx('Seyahat'), description: tx('Seyahat talebi ve harcırah'), icon: Plane, path: '/panel/seyahat', permission: 'expense:view' },
-      { id: 'benefits', title: tx('Yan haklar'), description: tx('Esnek yan hak seçimi'), icon: Gift, path: '/panel/yan-haklar' },
-      { id: 'my-interviews', title: tx('Mülakatlarım'), description: tx('Görüşmeci olduğunuz mülakatlar'), icon: ClipboardCheck, path: '/panel/mulakatlarim' },
-      { id: 'refer', title: tx('Aday öner'), description: tx('Açık pozisyonlara aday önerin'), icon: UserPlus, path: '/panel/aday-oner' },
+      { id: 'timeshift', module: 'timeshift', title: tx('Puantaj'), description: tx('Giriş/çıkış ve fazla mesai'), icon: Clock, path: '/panel/puantaj', permission: 'timeshift:view' },
+      { id: 'time-clock', module: 'timeshift', title: tx('Giriş-çıkış'), description: tx('QR, kart ya da PIN ile; biyometri yok'), icon: ScanLine, path: '/panel/giris-cikis', permission: 'timeshift:clock' },
+      { id: 'shift-swap', module: 'timeshift', title: tx('Vardiya takası'), description: tx('Takas, devir ve vardiya tercihleri'), icon: CalendarClock, path: '/panel/vardiya-takasi', permission: 'timeshift:view' },
+      { id: 'my-payslips', module: 'compensation', title: tx('Bordrolarım'), description: tx('Bordro pusulalarınız'), icon: ReceiptText, path: '/panel/bordrolarim' },
+      { id: 'travel', module: 'expense', title: tx('Seyahat'), description: tx('Seyahat talebi ve harcırah'), icon: Plane, path: '/panel/seyahat', permission: 'expense:view' },
+      { id: 'benefits', module: 'compensation', title: tx('Yan haklar'), description: tx('Esnek yan hak seçimi'), icon: Gift, path: '/panel/yan-haklar' },
+      { id: 'my-interviews', module: 'recruitment', title: tx('Mülakatlarım'), description: tx('Görüşmeci olduğunuz mülakatlar'), icon: ClipboardCheck, path: '/panel/mulakatlarim' },
+      { id: 'refer', module: 'recruitment', title: tx('Aday öner'), description: tx('Açık pozisyonlara aday önerin'), icon: UserPlus, path: '/panel/aday-oner' },
       { id: 'doc-request', title: tx('Belge talebi'), description: tx('Çalışma belgesi, maaş yazısı'), icon: FileCheck2, path: '/panel/belge-talebi' },
       { id: 'my-signatures', title: tx('İmzalarım'), description: tx('İmzanızı bekleyen belgeler'), icon: FileCheck2, path: '/panel/imzalarim' },
       { id: 'announcements', title: tx('Duyurular'), description: tx('Şirket duyuruları, okundu onayı'), icon: Megaphone, path: '/panel/duyurular' },
@@ -86,9 +89,9 @@ export const navGroups: NavGroupData[] = [
       { id: 'osh', title: tx('İş sağlığı ve güvenliği'), description: tx('Kaza kaydı, muayene, İSG eğitimi'), icon: HardHat, path: '/panel/isg' },
       { id: 'ethics', title: tx('Etik hattı'), description: tx('Anonim bildirim ve etik kurulu'), icon: Scale, path: '/panel/etik' },
       { id: 'my-defences', title: tx('Savunmalarım'), description: tx('Sizden istenen yazılı savunmalar'), icon: ScrollText, path: '/panel/disiplin/savunmalarim' },
-      { id: 'shift-engine', title: tx('Vardiya planı'), description: tx('Döngüsel desenler, 7/24 kapsama'), icon: CalendarClock, path: '/panel/vardiya-motoru', permission: 'timeshift:view' },
+      { id: 'shift-engine', module: 'timeshift', title: tx('Vardiya planı'), description: tx('Döngüsel desenler, 7/24 kapsama'), icon: CalendarClock, path: '/panel/vardiya-motoru', permission: 'timeshift:view' },
       { id: 'workplace', title: tx('Ofis ve masa'), description: tx('Kim nerede, masa/oda rezervasyonu'), icon: MapPin, path: '/panel/ofis', tenantOnly: true },
-      { id: 'payroll-sim', title: tx('Bordro simülasyonu'), description: tx('Brütten nete, 2026 parametreleri'), icon: Calculator, path: '/panel/bordro-simulasyonu', tenantOnly: true },
+      { id: 'payroll-sim', module: 'compensation', title: tx('Bordro simülasyonu'), description: tx('Brütten nete, 2026 parametreleri'), icon: Calculator, path: '/panel/bordro-simulasyonu', tenantOnly: true },
     ],
   },
   {
@@ -102,7 +105,7 @@ export const navGroups: NavGroupData[] = [
       { id: 'teams', title: tx('Ekipler'), description: tx('Diyagram ve ekip yönetimi'), icon: UsersRound, path: '/panel/organizasyon/ekipler', permission: 'organization:view' },
       { id: 'positions', title: tx('Norm kadro'), description: tx('Onaylı pozisyonlar, boş kadro, bütçe'), icon: Briefcase, path: '/panel/norm-kadro', tenantOnly: true, requireRoles: ['hr-admin', 'tenant-admin', 'manager', 'platform-admin'] },
       {
-        id: 'recruitment', title: tx('İşe alım'), description: tx('İlanlar, adaylar, mülakatlar'), icon: UserPlus, permission: 'recruitment:view',
+        id: 'recruitment', module: 'recruitment', title: tx('İşe alım'), description: tx('İlanlar, adaylar, mülakatlar'), icon: UserPlus, permission: 'recruitment:view',
         children: [
           { id: 'postings', title: tx('İlanlar'), description: tx('Açık pozisyonlar'), icon: FileText, path: '/panel/ise-alim' },
           { id: 'candidates', title: tx('Adaylar'), description: tx('Aday havuzu'), icon: Users, path: '/panel/ise-alim/adaylar' },
@@ -112,7 +115,7 @@ export const navGroups: NavGroupData[] = [
         ],
       },
       {
-        id: 'onboarding', title: tx('Onboarding'), description: tx('İşe giriş planları ve zimmet'), icon: ClipboardCheck, permission: 'onboarding:view',
+        id: 'onboarding', module: 'onboarding', title: tx('Onboarding'), description: tx('İşe giriş planları ve zimmet'), icon: ClipboardCheck, permission: 'onboarding:view',
         children: [
           { id: 'plans', title: tx('Planlar'), description: tx('İşe giriş görevleri'), icon: ClipboardCheck, path: '/panel/onboarding' },
           { id: 'assets', title: tx('Zimmet'), description: tx('Demirbaş ve atamalar'), icon: Laptop, path: '/panel/zimmet' },
@@ -131,7 +134,7 @@ export const navGroups: NavGroupData[] = [
     icon: Sprout,
     items: [
       {
-        id: 'performance', title: tx('Performans'), description: tx('Hedef, değerlendirme, geri bildirim'), icon: Target, permission: 'performance:view',
+        id: 'performance', module: 'performance', title: tx('Performans'), description: tx('Hedef, değerlendirme, geri bildirim'), icon: Target, permission: 'performance:view',
         children: [
           { id: 'perf-me', title: tx('Benim performansım'), description: tx('Kişisel karne'), icon: UserRound, path: '/panel/performans/benim' },
           { id: 'perf-goals', title: tx('Hedefler'), description: tx('Dönem hedefleri'), icon: Crosshair, path: '/panel/performans/hedefler' },
@@ -147,17 +150,17 @@ export const navGroups: NavGroupData[] = [
         ],
       },
       {
-        id: 'performance-setup', title: tx('Performans kurulumu'), description: tx('Dönem, metrik, puanlama'), icon: SlidersHorizontal, permission: 'performance:manage',
+        id: 'performance-setup', module: 'performance', title: tx('Performans kurulumu'), description: tx('Dönem, metrik, puanlama'), icon: SlidersHorizontal, permission: 'performance:manage',
         children: [
           { id: 'perf-cycles', title: tx('Dönemler'), description: tx('Değerlendirme dönemleri'), icon: CalendarRange, path: '/panel/performans/donemler' },
           { id: 'perf-metrics', title: tx('Metrikler'), description: tx('Ölçülen göstergeler'), icon: Ruler, path: '/panel/performans/metrikler' },
           { id: 'perf-settings', title: tx('Puanlama ayarı'), description: tx('Ağırlık ve ölçek'), icon: SlidersHorizontal, path: '/panel/performans/ayarlar' },
         ],
       },
-      { id: 'learning', title: tx('Eğitim'), description: tx('Katalog ve sertifikalar'), icon: GraduationCap, path: '/panel/egitim', permission: 'learning:view' },
-      { id: 'competencies', title: tx('Yetkinlikler'), description: tx('Yetkinlik açığı ve eğitim önerisi'), icon: Layers, path: '/panel/yetkinlikler', permission: 'learning:view' },
-      { id: 'career-paths', title: tx('Kariyer yolları'), description: tx('Rol basamakları ve sonraki adım'), icon: Sprout, path: '/panel/kariyer-yollari', permission: 'learning:view' },
-      { id: 'due-training', title: tx('Zorunlu eğitim takibi'), description: tx('Son tarih, sertifika ve İSG eğitimi'), icon: CalendarClock, path: '/panel/egitim-takibi', permission: 'learning:view' },
+      { id: 'learning', module: 'learning', title: tx('Eğitim'), description: tx('Katalog ve sertifikalar'), icon: GraduationCap, path: '/panel/egitim', permission: 'learning:view' },
+      { id: 'competencies', module: 'learning', title: tx('Yetkinlikler'), description: tx('Yetkinlik açığı ve eğitim önerisi'), icon: Layers, path: '/panel/yetkinlikler', permission: 'learning:view' },
+      { id: 'career-paths', module: 'learning', title: tx('Kariyer yolları'), description: tx('Rol basamakları ve sonraki adım'), icon: Sprout, path: '/panel/kariyer-yollari', permission: 'learning:view' },
+      { id: 'due-training', module: 'learning', title: tx('Zorunlu eğitim takibi'), description: tx('Son tarih, sertifika ve İSG eğitimi'), icon: CalendarClock, path: '/panel/egitim-takibi', permission: 'learning:view' },
       { id: 'mentorship', title: tx('Mentorluk'), description: tx('Beceri eşleştirmeli mentor bulma'), icon: Handshake, path: '/panel/mentorluk', tenantOnly: true },
       { id: 'mobility', title: tx('İç ilanlar'), description: tx('Şirket içi açık pozisyonlar'), icon: Megaphone, path: '/panel/ic-ilanlar', tenantOnly: true },
       { id: 'checkin', title: tx('Haftalık check-in'), description: tx('Kısa haftalık not ve ruh hâli'), icon: CalendarCheck, path: '/panel/check-in', tenantOnly: true },
@@ -191,13 +194,13 @@ export const navGroups: NavGroupData[] = [
     icon: Telescope,
     items: [
       { id: 'analytics', title: tx('Analitik'), description: tx('Kadro, devir, izin, mesai eğilimi'), icon: BarChart3, path: '/panel/analitik', permission: 'performance:manage', tenantOnly: true },
-      { id: 'model-card', title: tx('Model kartı'), description: tx('Devir riski modeli: önem, kayma, adalet'), icon: BarChart3, path: '/panel/model-karti', permission: 'performance:manage', tenantOnly: true, requireRoles: ['hr-admin', 'tenant-admin', 'platform-admin'] },
+      { id: 'model-card', module: 'ml', title: tx('Model kartı'), description: tx('Devir riski modeli: önem, kayma, adalet'), icon: BarChart3, path: '/panel/model-karti', permission: 'performance:manage', tenantOnly: true, requireRoles: ['hr-admin', 'tenant-admin', 'platform-admin'] },
       { id: 'product-insights', title: tx('Ekran içgörüleri'), description: tx('Kullanım ve kullanıcı geri bildirimi'), icon: MessageSquareText, path: '/panel/ekran-icgoruleri', tenantOnly: true, requireRoles: ['hr-admin', 'tenant-admin', 'platform-admin'] },
       { id: 'nl-report', title: tx('Rapor asistanı'), description: tx('Türkçe sorun, tablo ve grafik gelsin'), icon: Sparkles, path: '/panel/rapor-asistani', permission: 'performance:manage', tenantOnly: true },
       { id: 'time-machine', title: tx('Zaman makinesi'), description: tx('Organizasyon geçmişte nasıldı?'), icon: History, path: '/panel/zaman-makinesi', permission: 'performance:manage', tenantOnly: true },
       // Olay yükleri kiracı genelinde kişisel veri taşır: yalnızca İK (sunucu: RequireHrAdmin).
       { id: 'event-radar', title: tx('Canlı olay radarı'), description: tx('Kafka olayları gerçek zamanlı'), icon: Radar, path: '/panel/olay-radari', permission: 'employee:manage', tenantOnly: true },
-      { id: 'ai-tools', title: tx('Yapay zekâ araçları'), description: tx('CV, ilan, eşleşme, tahmin'), icon: Bot, path: '/panel/ai-araclari', permission: 'recruitment:view', tenantOnly: true },
+      { id: 'ai-tools', module: 'ml', title: tx('Yapay zekâ araçları'), description: tx('CV, ilan, eşleşme, tahmin'), icon: Bot, path: '/panel/ai-araclari', permission: 'recruitment:view', tenantOnly: true },
     ],
   },
   {
@@ -217,11 +220,11 @@ export const navGroups: NavGroupData[] = [
         // kabul ettiği sabit rollerle eşleştiriyor.
         requireRoles: ['hr-admin', 'tenant-admin', 'platform-admin'],
       },
-      { id: 'compensation', title: tx('Ücret'), description: tx('Bantlar, geçmiş, zam simülasyonu'), icon: BadgeDollarSign, path: '/panel/ucret', permission: 'compensation:view' },
-      { id: 'payroll', title: tx('Bordro'), description: tx('Aylık dönem, pusula, kapatma'), icon: Banknote, path: '/panel/bordro', permission: 'compensation:view' },
-      { id: 'raise-cycles', title: tx('Zam dönemi'), description: tx('Öneri, bütçe ve bant kontrolü'), icon: TrendingUp, path: '/panel/zam-donemi', requireRoles: ['manager', 'hr-admin', 'tenant-admin', 'platform-admin'] },
+      { id: 'compensation', module: 'compensation', title: tx('Ücret'), description: tx('Bantlar, geçmiş, zam simülasyonu'), icon: BadgeDollarSign, path: '/panel/ucret', permission: 'compensation:view' },
+      { id: 'payroll', module: 'compensation', title: tx('Bordro'), description: tx('Aylık dönem, pusula, kapatma'), icon: Banknote, path: '/panel/bordro', permission: 'compensation:view' },
+      { id: 'raise-cycles', module: 'compensation', title: tx('Zam dönemi'), description: tx('Öneri, bütçe ve bant kontrolü'), icon: TrendingUp, path: '/panel/zam-donemi', requireRoles: ['manager', 'hr-admin', 'tenant-admin', 'platform-admin'] },
       { id: 'wf-designer', title: tx('Onay akışları'), description: tx('Çok adımlı zincir, koşullar, vekâlet'), icon: GitBranch, path: '/panel/onay-akislari', permission: 'employee:manage' },
-      { id: 'time-clock-admin', title: tx('Giriş-çıkış yönetimi'), description: tx('Noktalar, kiosk QR, kartlar'), icon: QrCode, path: '/panel/giris-cikis/yonetim', permission: 'employee:manage' },
+      { id: 'time-clock-admin', module: 'timeshift', title: tx('Giriş-çıkış yönetimi'), description: tx('Noktalar, kiosk QR, kartlar'), icon: QrCode, path: '/panel/giris-cikis/yonetim', permission: 'employee:manage' },
       { id: 'documents', title: tx('Dokümanlar'), description: tx('Çalışan dosyaları'), icon: FileText, path: '/panel/dokumanlar', permission: 'document:manage' },
       { id: 'notifications', title: tx('Bildirimler'), description: tx('Gelen kutusu ve şablonlar'), icon: Bell, path: '/panel/bildirimler', permission: 'notification:view' },
       { id: 'doc-templates', title: tx('Belge şablonları'), description: tx('Toplu belge ve PDF üretimi'), icon: FileStack, path: '/panel/belge-sablonlari', permission: 'document:manage', tenantOnly: true },
@@ -258,8 +261,10 @@ export function filterByPermission(
   roles: string[],
   hasTenant = true,
   features: Partial<Record<NavFeature, boolean>> = {},
+  moduleEnabled: (id: ModuleId) => boolean = () => true,
 ): NavGroupData[] {
   const allowed = (item: NavItemData) =>
+    (!item.module || moduleEnabled(item.module)) &&
     (!item.feature || features[item.feature] === true) &&
     (!item.permission || can(item.permission)) &&
     (!item.requireRoles || hasStandardRole(roles, item.requireRoles)) &&

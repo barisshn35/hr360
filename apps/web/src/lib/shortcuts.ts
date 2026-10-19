@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { tx } from '@/lib/i18n'
+import type { ModuleId } from '@/lib/modules'
 
 /**
  * Klavye kısayolları (G23) açık/kapalı tercihi. Cihaza özgüdür (localStorage);
@@ -41,11 +42,11 @@ export function useShortcutsEnabled(): [boolean, (on: boolean) => void] {
 }
 
 /** "g" ardından basılan harf → hedef sayfa. */
-export const GOTO_SHORTCUTS: Array<{ key: string; path: string; label: string }> = [
+export const GOTO_SHORTCUTS: Array<{ key: string; path: string; label: string; module?: ModuleId }> = [
   { key: 'd', path: '/panel', label: tx('Genel bakış') },
   { key: 'o', path: '/panel/onaylar', label: tx('Onay kutusu') },
   { key: 'i', path: '/panel/izin', label: tx('İzin') },
-  { key: 'm', path: '/panel/masraf', label: tx('Masraf') },
+  { key: 'm', path: '/panel/masraf', label: tx('Masraf'), module: 'expense' },
   { key: 'p', path: '/panel/profil', label: tx('Profilim') },
   { key: 'b', path: '/panel/bildirimler', label: tx('Bildirimler') },
 ]

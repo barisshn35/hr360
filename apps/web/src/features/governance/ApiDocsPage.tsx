@@ -11,6 +11,7 @@ import { env } from '@/lib/env'
 import { cn } from '@/lib/utils'
 import { toGatewaySpec, type Spec } from '@/lib/openapi'
 import { translateServerData, tx } from '@/lib/i18n'
+import { useModules, type ModuleId } from '@/lib/modules'
 
 /**
  * Birleşik API belgesi: her servisin OpenAPI tanımı gateway'den
@@ -20,7 +21,9 @@ import { translateServerData, tx } from '@/lib/i18n'
  * istek atar; yani kullanıcı yalnızca zaten yetkili olduğu işlemleri yapabilir.
  */
 
-type Doc = { id: string; title: string; detail: string; public?: boolean }
+// module: kurulumda kapatılabilen servis; kapalıysa listede yok (gateway 404 döner).
+// Masraf servisi "expense" kapalıyken de belge/vaka için çalışır, listede kalır.
+type Doc = { id: string; title: string; detail: string; public?: boolean; module?: ModuleId }
 
 const DOCS: Doc[] = [
   { id: 'public', title: tx('Açık API (v1)'), detail: tx('Dış sistemler için, X-Api-Key ile'), public: true },
@@ -29,12 +32,12 @@ const DOCS: Doc[] = [
   { id: 'leave', title: tx('İzin'), detail: tx('Bakiye, talep, resmi tatil') },
   { id: 'workflow', title: tx('Onay akışları'), detail: tx('Adımlar, vekâlet, SLA') },
   { id: 'expense', title: tx('Masraf ve İK vakaları'), detail: tx('Beyan, belge, vaka') },
-  { id: 'timeshift', title: tx('Vardiya ve puantaj'), detail: tx('Vardiya, giriş/çıkış') },
-  { id: 'performance', title: tx('Performans'), detail: tx('Dönem, hedef, değerlendirme') },
-  { id: 'learning', title: tx('Eğitim'), detail: tx('Katalog, kayıt, sertifika') },
-  { id: 'compensation', title: tx('Ücret'), detail: tx('Ücret geçmişi, bant') },
-  { id: 'recruitment', title: tx('İşe alım'), detail: tx('İlan, aday, mülakat') },
-  { id: 'onboarding', title: tx('İşe başlangıç'), detail: tx('Plan, görev, zimmet') },
+  { id: 'timeshift', title: tx('Vardiya ve puantaj'), detail: tx('Vardiya, giriş/çıkış'), module: 'timeshift' },
+  { id: 'performance', title: tx('Performans'), detail: tx('Dönem, hedef, değerlendirme'), module: 'performance' },
+  { id: 'learning', title: tx('Eğitim'), detail: tx('Katalog, kayıt, sertifika'), module: 'learning' },
+  { id: 'compensation', title: tx('Ücret'), detail: tx('Ücret geçmişi, bant'), module: 'compensation' },
+  { id: 'recruitment', title: tx('İşe alım'), detail: tx('İlan, aday, mülakat'), module: 'recruitment' },
+  { id: 'onboarding', title: tx('İşe başlangıç'), detail: tx('Plan, görev, zimmet'), module: 'onboarding' },
   { id: 'notification', title: tx('Bildirim'), detail: tx('Gelen kutusu, şablon') },
   { id: 'engagement', title: tx('Bağlılık'), detail: tx('Takdir, anket, 1:1, ofis') },
   { id: 'governance', title: tx('Yönetişim'), detail: tx('Denetim, kural, entegrasyon, AI') },
@@ -61,6 +64,8 @@ async function loadSpec(doc: Doc): Promise<Spec> {
 }
 
 export function ApiDocsPage() {
+  const { isEnabled } = useModules()
+  const docs = useMemo(() => DOCS.filter((d) => isEnabled(d.module)), [isEnabled])
   const [active, setActive] = useState<Doc>(DOCS[0])
   const spec = useQuery({ queryKey: ['api-docs', active.id], queryFn: () => loadSpec(active), staleTime: 5 * 60_000, retry: false })
   const count = useMemo(() => Object.keys(spec.data?.paths ?? {}).length, [spec.data])
@@ -75,7 +80,7 @@ export function ApiDocsPage() {
         <Panel className="h-fit">
           <PanelHead title={tx('Servisler')} />
           <PanelBody className="grid gap-1 p-2">
-            {DOCS.map((d) => (
+            {docs.map((d) => (
               <button
                 key={d.id}
                 type="button"

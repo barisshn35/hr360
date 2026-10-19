@@ -20,6 +20,7 @@ import { formatDate, formatMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Initials, PersonSelect, TenantGate, isoDate, useAction } from '@/features/shared/kit'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 import { AccountAndRetention, AssetReturnChecklist } from './OffboardingExtras'
 
 function StartModal({ onClose }: { onClose: () => void }) {
@@ -53,7 +54,8 @@ function StartModal({ onClose }: { onClose: () => void }) {
 
 function Settlement({ id }: { id: string }) {
   const { roles } = useAuth()
-  const canPayroll = roles.some((r) => ['hr-admin', 'tenant-admin', 'platform-admin'].includes(r))
+  const compensation = useModules().isEnabled('compensation')
+  const canPayroll = compensation && roles.some((r) => ['hr-admin', 'tenant-admin', 'platform-admin'].includes(r))
   const q = useQuery({ queryKey: ['offboarding', id, 'settlement'], queryFn: ({ signal }) => engagementApi.settlement(id, signal), retry: false })
   if (q.isPending) return <RowsSkeleton rows={2} />
   if (q.isError) return <p className="text-[13px] text-muted-foreground">{tx('Hak ediş hesabı için ücret görme yetkisi gerekir.')}</p>

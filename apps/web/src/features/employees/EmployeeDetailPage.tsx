@@ -17,11 +17,13 @@ import { NewAssignmentModal } from './NewAssignmentModal'
 import { AttritionRiskPanel } from './AttritionRiskCard'
 import { ExtraInfoPanel } from '@/features/governance/CustomFields'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 import { ApiError } from '@/api/client'
 
 export function EmployeeDetailPage() {
   const { employeeId } = useParams<{ employeeId: string }>()
   const { can } = useAuth()
+  const { isEnabled } = useModules()
   const employee = useEmployee(employeeId)
   const companies = useCompanies({ enabled: can('organization:view') })
   const [assignOpen, setAssignOpen] = useState(false)
@@ -209,7 +211,7 @@ export function EmployeeDetailPage() {
         </div>
 
         <div className="space-y-4">
-          {canManage && <AttritionRiskPanel employee={data} />}
+          {canManage && isEnabled('ml') && <AttritionRiskPanel employee={data} />}
           <ExtraInfoPanel employeeId={data.id} />
 
           <Panel>

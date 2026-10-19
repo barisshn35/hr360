@@ -30,6 +30,7 @@ import {
 import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 import { errMsg, isoDate, Metric, useAction } from '@/features/shared/kit'
 import { tx, txServer } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 import { PiiHint } from '@/components/PiiHint'
 import { useToast } from '@/components/ui/Toast'
 import { aiApi } from '@/api/ai'
@@ -63,6 +64,8 @@ export function MyReferralsPage() {
   }), { invalidate: [['recruitment', 'referrals']], success: tx('Öneriniz alındı; adaya KVKK bilgilendirmesi gönderildi.'), onDone: () => setF(empty) })
   const toast = useToast()
   const [readingCv, setReadingCv] = useState(false)
+  // CV okuma ml-inference ister: yapay zekâ modülü kapalıysa alan gösterilmez.
+  const cvReader = useModules().isEnabled('ml')
   /** CV dosyası saklanmaz: ayıklanan metin adayın özgeçmişi olur, boş alanlar CV'den doldurulur. */
   const readCv = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) return toast.stop(tx('Dosya 5 MB\'tan büyük olamaz'))
@@ -113,7 +116,7 @@ export function MyReferralsPage() {
                     <span className="min-w-0 flex-1 truncate">{f.cvName}</span>
                     <button type="button" className="text-[12px] text-muted-foreground underline hover:text-foreground" onClick={() => setF({ ...f, cvName: '', resumeText: '' })}>{tx('Kaldır')}</button>
                   </div>
-                ) : (
+                ) : cvReader && (
                   <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-border px-3 py-2.5 text-[13px] transition-colors hover:border-primary/50 hover:bg-primary/5"
                     onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files?.[0]; if (file) void readCv(file) }}>
                     {readingCv ? <LoaderCircle className="size-4 animate-spin text-primary" /> : <Upload className="size-4 text-muted-foreground group-hover:text-primary" />}

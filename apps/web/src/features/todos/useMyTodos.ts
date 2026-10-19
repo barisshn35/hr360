@@ -14,6 +14,7 @@ import { useMyEmployeeId } from '@/api/queries'
 import { workflowTypeLabels, type Workflow } from '@/api/types'
 import { useAuth } from '@/auth/useAuth'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 export type TodoKind = 'newhire' | 'document' | 'approval' | 'signature' | 'defence' | 'training' | 'onboarding' | 'survey' | 'consent' | 'announcement' | 'feedback360' | 'vote'
 
@@ -43,6 +44,8 @@ export function useMyTodos() {
   const { can, tenantSlug } = useAuth()
   const me = useMyEmployeeId(!!tenantSlug).employeeId
   const on = !!tenantSlug
+  // Kurulumda kapalı modüllerin uçları 404 döner: sorgu hiç atılmaz.
+  const { canQuery } = useModules()
   const opt = { staleTime: ONE_MIN, retry: false } as const
 
   const results = useQueries({
@@ -62,11 +65,11 @@ export function useMyTodos() {
         queryFn: ({ signal }: { signal: AbortSignal }) => complianceApi.myCases(signal).then((list): Todo[] => list
           .filter((c) => c.canSubmitDefence)
           .map((c) => ({ id: `def:${c.id}`, kind: 'defence', title: c.categoryLabel, due: c.defenceDeadline ?? null, href: '/panel/disiplin/savunmalarim' }))) },
-      { queryKey: ['todos', 'training'], enabled: on && can('learning:view'), ...opt,
+      { queryKey: ['todos', 'training'], enabled: on && can('learning:view') && canQuery('learning'), ...opt,
         queryFn: ({ signal }: { signal: AbortSignal }) => learningW11Api.myDue(signal).then((r): Todo[] => r.items
           .filter((i) => i.status !== 'Completed' && i.status !== 'Done')
           .map((i) => ({ id: `tr:${i.kind}:${i.sourceId}`, kind: 'training', title: i.title, detail: i.mandatory ? tx('Zorunlu') : undefined, due: i.dueOn, href: '/panel/egitim-takibi' }))) },
-      { queryKey: ['todos', 'onboarding', me], enabled: on && !!me && can('onboarding:view'), ...opt,
+      { queryKey: ['todos', 'onboarding', me], enabled: on && !!me && can('onboarding:view') && canQuery('onboarding'), ...opt,
         queryFn: ({ signal }: { signal: AbortSignal }) => onboardingApi.listPlans({ employeeId: me! }, signal).then((plans): Todo[] => plans
           .filter((p) => p.status !== 'Completed' && p.status !== 'Cancelled')
           .flatMap((p) => (p.tasks ?? [])
@@ -83,7 +86,7 @@ export function useMyTodos() {
         queryFn: ({ signal }: { signal: AbortSignal }) => complianceApi.announcements(signal).then((list): Todo[] => list
           .filter((a) => a.requiresAck && !a.read)
           .map((a) => ({ id: `an:${a.id}`, kind: 'announcement', title: a.title, detail: tx('Okundu onayı bekleniyor'), due: a.expireAt ?? null, href: '/panel/duyurular' }))) },
-      { queryKey: ['todos', 'f360'], enabled: on && can('performance:view'), ...opt,
+      { queryKey: ['todos', 'f360'], enabled: on && can('performance:view') && canQuery('performance'), ...opt,
         queryFn: ({ signal }: { signal: AbortSignal }) => f360Api.mine(signal).then((list): Todo[] => list
           .filter((i) => !i.submitted)
           .map((i) => ({ id: `f3:${i.id}`, kind: 'feedback360', title: i.subjectName ? tx('{0} için geri bildirim', [i.subjectName]) : i.title, detail: i.title, due: i.dueDate ?? null, href: '/panel/performans/360' }))) },

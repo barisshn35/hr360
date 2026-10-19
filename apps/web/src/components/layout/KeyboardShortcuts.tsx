@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Modal } from '@/components/ui/Modal'
 import { GOTO_SHORTCUTS, isTypingTarget, useShortcutsEnabled } from '@/lib/shortcuts'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 /**
  * Genel klavye kısayolları (G23):
@@ -17,6 +18,7 @@ export function KeyboardShortcuts({ onOpenPalette }: { onOpenPalette: () => void
   const [helpOpen, setHelpOpen] = useState(false)
   const navigate = useNavigate()
   const pendingG = useRef<number | null>(null)
+  const { isEnabled } = useModules()
 
   useEffect(() => {
     if (!enabled) return
@@ -31,7 +33,7 @@ export function KeyboardShortcuts({ onOpenPalette }: { onOpenPalette: () => void
       if (document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"]')) return
 
       if (pendingG.current !== null) {
-        const target = GOTO_SHORTCUTS.find((s) => s.key === e.key.toLowerCase())
+        const target = GOTO_SHORTCUTS.find((s) => s.key === e.key.toLowerCase() && isEnabled(s.module))
         clearG()
         if (target) {
           e.preventDefault()
@@ -54,7 +56,7 @@ export function KeyboardShortcuts({ onOpenPalette }: { onOpenPalette: () => void
       window.removeEventListener('keydown', onKey)
       clearG()
     }
-  }, [enabled, navigate, onOpenPalette])
+  }, [enabled, navigate, onOpenPalette, isEnabled])
 
   return <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
 }
@@ -73,11 +75,12 @@ function Keys({ keys }: { keys: string[] }) {
 }
 
 export function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { isEnabled } = useModules()
   const rows: Array<{ keys: string[]; label: string }> = [
     { keys: ['?'], label: tx('Bu yardımı aç') },
     { keys: ['/'], label: tx('Genel aramayı (komut paleti) aç') },
     { keys: ['⌘K'], label: tx('Komut paleti (Windows/Linux: Ctrl+K)') },
-    ...GOTO_SHORTCUTS.map((s) => ({ keys: ['g', s.key], label: tx('Git: {0}', [s.label]) })),
+    ...GOTO_SHORTCUTS.filter((s) => isEnabled(s.module)).map((s) => ({ keys: ['g', s.key], label: tx('Git: {0}', [s.label]) })),
     { keys: ['Esc'], label: tx('Açık pencereyi kapat') },
   ]
   return (

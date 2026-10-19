@@ -17,6 +17,7 @@ import { workflowTypeLabels } from '@/api/types'
 import { useAuth } from '@/auth/useAuth'
 import { overviewItem, type NavItemData } from './nav-config'
 import { useNavGroups } from './use-nav'
+import { useModules } from '@/lib/modules'
 import { tx } from '@/lib/i18n'
 import { normalizeSearch } from '@/lib/format'
 import { directoryApi, directoryKey } from '@/api/directory'
@@ -40,6 +41,7 @@ export function CommandPalette({
   const qc = useQueryClient()
   const { can: canRole, roles, tenantSlug } = useAuth()
   const navTree = useNavGroups()
+  const { isEnabled } = useModules()
   // Kişisel eylemler (izin/masraf/talep oluşturma) şirket bağlamı ve çalışan kaydı ister: kiracı seçmemiş
   // platform yöneticisine ya da çalışan kaydı olmayan hesaba gösterilmez. Kiracı verisi aramaları da
   // şirket bağlamı yoksa yapılmaz.
@@ -79,7 +81,7 @@ export function CommandPalette({
         icon: <CalendarPlus className="size-4" strokeWidth={1.5} />, keywords: ['izin', 'tatil', 'leave'],
         onAction: () => navigate('/panel/izin?yeni=1'),
       },
-      hasEmployee && can('expense:create') && {
+      hasEmployee && can('expense:create') && isEnabled('expense') && {
         id: 'act:expense', label: tx('Masraf ekle'), subtitle: tx('Yeni masraf talebi (taslak)'),
         icon: <ReceiptText className="size-4" strokeWidth={1.5} />, keywords: ['masraf', 'fiş', 'harcama', 'expense'],
         onAction: () => navigate('/panel/masraf?yeni=1'),
@@ -269,7 +271,7 @@ export function CommandPalette({
     })
 
     return list
-  }, [can, roles, navigate, qc, navTree, hasEmployee, hasTenant])
+  }, [can, roles, navigate, qc, navTree, hasEmployee, hasTenant, isEnabled])
 
   return (
     <OmniCommandPalette

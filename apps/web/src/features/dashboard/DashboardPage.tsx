@@ -40,6 +40,7 @@ import { TextReveal } from '@/components/fx/text-reveal'
 import { Spotlight } from '@/components/fx/spotlight'
 import { flattenItems } from '@/components/layout/nav-config'
 import { useNavGroups } from '@/components/layout/use-nav'
+import { useModules } from '@/lib/modules'
 import { useAuth } from '@/auth/useAuth'
 import { PinnedReportsWidget } from '@/features/insights/SavedReports'
 import { WinnerSpotlight } from '@/features/community/eom/EomWinnerCard'
@@ -155,7 +156,8 @@ function TenantDashboard() {
   const pending = useWorkflows({ status: 'Pending' }, { enabled: canWorkflow })
   const allWorkflows = useWorkflows({}, { enabled: canWorkflow })
   const overdue = useOverdueWorkflows({ enabled: canDecide })
-  const postings = useJobPostings('Published')
+  const { isEnabled, canQuery } = useModules()
+  const postings = useJobPostings('Published', canQuery('recruitment'))
   const leave = useLeaveRequests({}, can('leave:view'))
 
   const activeCount = useMemo(
@@ -241,7 +243,7 @@ function TenantDashboard() {
       trend: tx('{0} departman', [formatNumber(departmentCount)]),
       trendSense: 'neutral' as const,
     },
-    can('recruitment:view') && {
+    can('recruitment:view') && isEnabled('recruitment') && {
       key: 'postings',
       to: '/panel/ise-alim',
       label: tx('Yayındaki ilan'),
@@ -263,7 +265,7 @@ function TenantDashboard() {
 
   const quickActions = [
     can('leave:view') && { to: '/panel/izin', label: tx('İzin talebi'), icon: CalendarDays },
-    can('expense:view') && { to: '/panel/masraf', label: tx('Masraf bildir'), icon: Wallet },
+    can('expense:view') && isEnabled('expense') && { to: '/panel/masraf', label: tx('Masraf bildir'), icon: Wallet },
     canWorkflow && { to: '/panel/onaylar', label: tx('Onay kutusu'), icon: Inbox },
   ].filter(Boolean) as Array<{ to: string; label: string; icon: React.ElementType }>
 

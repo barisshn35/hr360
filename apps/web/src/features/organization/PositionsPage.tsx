@@ -18,6 +18,7 @@ import { useAction } from '@/features/shared/kit'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 interface PositionRow {
   id: string; departmentId: string; department: string; title: string; headcount: number; filled: number; open: number; over: number
@@ -82,6 +83,7 @@ function Bar({ filled, headcount }: { filled: number; headcount: number }) {
 export function PositionsPage() {
   const { roles } = useAuth()
   const isHr = roles.some((r) => r === 'hr-admin' || r === 'tenant-admin')
+  const recruitment = useModules().isEnabled('recruitment')
   const confirm = useConfirm()
   const depts = useDepartments()
   const [dept, setDept] = useState('')
@@ -130,7 +132,7 @@ export function PositionsPage() {
                     {isHr && <td className="px-3 py-2.5 text-right tabular-nums">{r.budgetMonthly != null ? formatMoney(r.budgetMonthly, r.currency ?? 'TRY') : '—'}</td>}
                     <td className="px-5 py-2.5">
                       <div className="flex justify-end gap-1">
-                        {r.open > 0 && <Button size="sm" variant="outline" asChild>
+                        {r.open > 0 && recruitment && <Button size="sm" variant="outline" asChild>
                           <Link to={`/panel/ise-alim?unvan=${encodeURIComponent(r.title)}&departman=${r.departmentId}&kadro=${r.open}`}>{tx('{0} boş: ilan aç', [r.open])}</Link>
                         </Button>}
                         {isHr && <Button size="icon" variant="ghost" aria-label={tx('Düzenle')} onClick={() => setEdit({ row: r })}><Pencil className="size-4" /></Button>}

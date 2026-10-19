@@ -17,6 +17,8 @@ import { NotFoundPage } from '@/features/NotFoundPage'
 import { PasswordLinkDialogProvider } from '@/features/access/PasswordLinkCard'
 import { NoTenantNotice, TenantGate } from '@/features/shared/FeatureGate'
 import { CookieNotice, RobotsMeta } from '@/features/site/CookieNotice'
+import { RequireModule } from '@/features/shared/ModuleGate'
+import type { ModuleId } from '@/lib/modules'
 
 /**
  * Adlandırılmış dışa aktarımı olan sayfaları tembel yükler.
@@ -218,6 +220,11 @@ function guarded(permission: Permission, element: ReactNode, requireRoles?: Role
   )
 }
 
+/** Kurulumda kapatılabilen modülün ekranı ("Hafif"): kapalıysa "modül kurulu değil" gösterir. */
+function mod(module: ModuleId, element: ReactNode) {
+  return <RequireModule module={module}>{element}</RequireModule>
+}
+
 /**
  * İK ekranı; ayrıca ilgili "ext-*" ek iznini taşıyanlara açık (servisteki IsHr ile aynı küme), böylece
  * bağlantıyı gören herkes sayfayı açabilir, diğerleri yetkisiz sayfasını görür.
@@ -264,7 +271,7 @@ export function App() {
 
                 {/* Belge doğrulama ve e-postadan tek tıkla karar: oturum gerekmez (kişisel veri göstermez). */}
                 <Route path="/belge-dogrula" element={<Suspense fallback={<FullPageSpinner />}><VerifyDocumentPage /></Suspense>} />
-                <Route path="/kiosk" element={<Suspense fallback={<FullPageSpinner />}><KioskPage /></Suspense>} />
+                <Route path="/kiosk" element={<RequireModule module="timeshift" standalone><Suspense fallback={<FullPageSpinner />}><KioskPage /></Suspense></RequireModule>} />
                 <Route path="/belge-dogrula/:code" element={<Suspense fallback={<FullPageSpinner />}><VerifyDocumentPage /></Suspense>} />
                 {/* Y15 anonim etik hattı: oturum gerektirmez */}
                 <Route path="/etik/:tenant" element={<Suspense fallback={<FullPageSpinner />}><PublicEthicsPage /></Suspense>} />
@@ -279,12 +286,12 @@ export function App() {
                 <Route path="/iletisim" element={<Suspense fallback={<FullPageSpinner />}><ContactPage /></Suspense>} />
                 <Route path="/tesekkurler" element={<Suspense fallback={<FullPageSpinner />}><ThanksPage /></Suspense>} />
                 {/* Kariyer sayfası ve aday öz-hizmeti (Y16): oturum gerekmez; aday bağlantısı yalnızca jeton özetiyle eşlenir. */}
-                <Route path="/kariyer/:tenant" element={<Suspense fallback={<FullPageSpinner />}><CareerPage /></Suspense>} />
-                <Route path="/kariyer/:tenant/basvuru/:token" element={<Suspense fallback={<FullPageSpinner />}><CandidateSelfServicePage /></Suspense>} />
-                <Route path="/kariyer/:tenant/ilan/:jobId" element={<Suspense fallback={<FullPageSpinner />}><CareerJobPage /></Suspense>} />
-                <Route path="/kariyer/:tenant/durum/:token" element={<Suspense fallback={<FullPageSpinner />}><CandidateStatusPage /></Suspense>} />
-                <Route path="/kariyer/:tenant/mulakat/:token" element={<Suspense fallback={<FullPageSpinner />}><InterviewBookingPage /></Suspense>} />
-                <Route path="/kariyer/:tenant/teklif/:token" element={<Suspense fallback={<FullPageSpinner />}><OfferSignPage /></Suspense>} />
+                <Route path="/kariyer/:tenant" element={<RequireModule module="recruitment" standalone><Suspense fallback={<FullPageSpinner />}><CareerPage /></Suspense></RequireModule>} />
+                <Route path="/kariyer/:tenant/basvuru/:token" element={<RequireModule module="recruitment" standalone><Suspense fallback={<FullPageSpinner />}><CandidateSelfServicePage /></Suspense></RequireModule>} />
+                <Route path="/kariyer/:tenant/ilan/:jobId" element={<RequireModule module="recruitment" standalone><Suspense fallback={<FullPageSpinner />}><CareerJobPage /></Suspense></RequireModule>} />
+                <Route path="/kariyer/:tenant/durum/:token" element={<RequireModule module="recruitment" standalone><Suspense fallback={<FullPageSpinner />}><CandidateStatusPage /></Suspense></RequireModule>} />
+                <Route path="/kariyer/:tenant/mulakat/:token" element={<RequireModule module="recruitment" standalone><Suspense fallback={<FullPageSpinner />}><InterviewBookingPage /></Suspense></RequireModule>} />
+                <Route path="/kariyer/:tenant/teklif/:token" element={<RequireModule module="recruitment" standalone><Suspense fallback={<FullPageSpinner />}><OfferSignPage /></Suspense></RequireModule>} />
 
                 {/* --------------------------- Oturum gerektiren --------------------------- */}
                 <Route
@@ -313,10 +320,10 @@ export function App() {
 
                     <Route path="izin" element={guarded('leave:view', <LeavePage />)} />
 
-                    <Route path="masraf" element={guarded('expense:view', <ExpensePage />)} />
+                    <Route path="masraf" element={mod('expense', guarded('expense:view', <ExpensePage />))} />
                     <Route
                       path="masraf/:claimId"
-                      element={guarded('expense:view', <ExpenseClaimPage />)}
+                      element={mod('expense', guarded('expense:view', <ExpenseClaimPage />))}
                     />
 
                     <Route path="ik-vakalari" element={guarded('case:view', <CasesPage />)} />
@@ -325,13 +332,13 @@ export function App() {
                       element={guarded('case:view', <CaseDetailPage />)}
                     />
 
-                    <Route path="puantaj" element={guarded('timeshift:view', <TimesheetPage />)} />
-                    <Route path="giris-cikis" element={guarded('timeshift:clock', <TimeClockPage />)} />
-                    <Route path="vardiya-takasi" element={guarded('timeshift:view', <ShiftSwapPage />)} />
-                    <Route path="giris-cikis/yonetim" element={guarded('employee:manage', <TimeClockAdminPage />)} />
+                    <Route path="puantaj" element={mod('timeshift', guarded('timeshift:view', <TimesheetPage />))} />
+                    <Route path="giris-cikis" element={mod('timeshift', guarded('timeshift:clock', <TimeClockPage />))} />
+                    <Route path="vardiya-takasi" element={mod('timeshift', guarded('timeshift:view', <ShiftSwapPage />))} />
+                    <Route path="giris-cikis/yonetim" element={mod('timeshift', guarded('employee:manage', <TimeClockAdminPage />))} />
                     <Route
                       path="vardiya-motoru"
-                      element={guarded('timeshift:view', <ShiftEnginePage />)}
+                      element={mod('timeshift', guarded('timeshift:view', <ShiftEnginePage />))}
                     />
 
                     <Route
@@ -359,67 +366,67 @@ export function App() {
 
                     {/* "adaylar" ilan kimliğinden ÖNCE eşleşmeli */}
                     {/* Görüşmeci olan her çalışan (yönetici olmasa da) kendi mülakatlarını görür. */}
-                    <Route path="mulakatlarim" element={<MyInterviewsPage />} />
-                    <Route path="aday-oner" element={<MyReferralsPage />} />
-                    <Route path="ise-alim" element={guarded('recruitment:view', <JobPostingsPage />)} />
-                    <Route path="ise-alim/oneriler" element={guarded('recruitment:publish', <ReferralsAdminPage />, ['hr-admin', 'tenant-admin', 'platform-admin'])} />
-                    <Route path="ise-alim/analiz" element={guarded('recruitment:publish', <RecruitmentAnalyticsPage />, ['hr-admin', 'tenant-admin', 'platform-admin'])} />
+                    <Route path="mulakatlarim" element={mod('recruitment', <MyInterviewsPage />)} />
+                    <Route path="aday-oner" element={mod('recruitment', <MyReferralsPage />)} />
+                    <Route path="ise-alim" element={mod('recruitment', guarded('recruitment:view', <JobPostingsPage />))} />
+                    <Route path="ise-alim/oneriler" element={mod('recruitment', guarded('recruitment:publish', <ReferralsAdminPage />, ['hr-admin', 'tenant-admin', 'platform-admin']))} />
+                    <Route path="ise-alim/analiz" element={mod('recruitment', guarded('recruitment:publish', <RecruitmentAnalyticsPage />, ['hr-admin', 'tenant-admin', 'platform-admin']))} />
                     <Route
                       path="ise-alim/adaylar"
-                      element={guarded('recruitment:view', <CandidatesPage />)}
+                      element={mod('recruitment', guarded('recruitment:view', <CandidatesPage />))}
                     />
                     <Route
                       path="ise-alim/:postingId"
-                      element={guarded('recruitment:view', <JobPostingDetailPage />)}
+                      element={mod('recruitment', guarded('recruitment:view', <JobPostingDetailPage />))}
                     />
 
-                    <Route path="onboarding" element={guarded('onboarding:view', <OnboardingPage />)} />
+                    <Route path="onboarding" element={mod('onboarding', guarded('onboarding:view', <OnboardingPage />))} />
                     <Route
                       path="onboarding/:planId"
-                      element={guarded('onboarding:view', <OnboardingPlanPage />)}
+                      element={mod('onboarding', guarded('onboarding:view', <OnboardingPlanPage />))}
                     />
-                    <Route path="zimmet" element={guarded('onboarding:view', <AssetsPage />)} />
-                    <Route path="zimmet/tara" element={<AssetScanPage />} />
+                    <Route path="zimmet" element={mod('onboarding', guarded('onboarding:view', <AssetsPage />))} />
+                    <Route path="zimmet/tara" element={mod('onboarding', <AssetScanPage />)} />
 
                     {/* ------------------------------ Performans ------------------------------ */}
-                    <Route path="performans" element={guarded('performance:view', <PerformanceIndex />)} />
+                    <Route path="performans" element={mod('performance', guarded('performance:view', <PerformanceIndex />))} />
                     <Route
                       path="performans/metrikler"
-                      element={guarded('performance:manage', <MetricsPage />)}
+                      element={mod('performance', guarded('performance:manage', <MetricsPage />))}
                     />
                     <Route
                       path="performans/ayarlar"
-                      element={guarded('performance:manage', <ScoringSettingsPage />)}
+                      element={mod('performance', guarded('performance:manage', <ScoringSettingsPage />))}
                     />
                     <Route
                       path="performans/donemler"
-                      element={guarded('performance:manage', <CyclesPage />)}
+                      element={mod('performance', guarded('performance:manage', <CyclesPage />))}
                     />
-                    <Route path="performans/hedefler" element={guarded('performance:view', <GoalsPage />)} />
-                    <Route path="performans/degerlendirme" element={guarded('performance:view', <ReviewsPage />)} />
-                    <Route path="performans/degerlendirme/yeni" element={guarded('performance:view', <NewReviewPage />)} />
-                    <Route path="performans/degerlendirme/:reviewId" element={guarded('performance:view', <ReviewFormPage />)} />
-                    <Route path="performans/puan" element={guarded('performance:view', <ScorePage />)} />
-                    <Route path="performans/analiz" element={guarded('performance:manage', <AnalyticsPage />)} />
-                    <Route path="performans/geri-bildirim" element={guarded('performance:view', <FeedbackPage />)} />
-                    <Route path="performans/oneriler" element={guarded('performance:manage', <RecommendationsPage />)} />
-                    <Route path="performans/benim" element={guarded('performance:view', <MyPerformancePage />)} />
-                    <Route path="performans/dokuz-kutu" element={guarded('performance:manage', <NineBoxPage />)} />
-                    <Route path="performans/kalibrasyon" element={guarded('performance:manage', <CalibrationPage />)} />
-                    <Route path="performans/okr" element={guarded('performance:view', <OkrTreePage />)} />
-                    <Route path="performans/360" element={guarded('performance:view', <Feedback360Page />)} />
+                    <Route path="performans/hedefler" element={mod('performance', guarded('performance:view', <GoalsPage />))} />
+                    <Route path="performans/degerlendirme" element={mod('performance', guarded('performance:view', <ReviewsPage />))} />
+                    <Route path="performans/degerlendirme/yeni" element={mod('performance', guarded('performance:view', <NewReviewPage />))} />
+                    <Route path="performans/degerlendirme/:reviewId" element={mod('performance', guarded('performance:view', <ReviewFormPage />))} />
+                    <Route path="performans/puan" element={mod('performance', guarded('performance:view', <ScorePage />))} />
+                    <Route path="performans/analiz" element={mod('performance', guarded('performance:manage', <AnalyticsPage />))} />
+                    <Route path="performans/geri-bildirim" element={mod('performance', guarded('performance:view', <FeedbackPage />))} />
+                    <Route path="performans/oneriler" element={mod('performance', guarded('performance:manage', <RecommendationsPage />))} />
+                    <Route path="performans/benim" element={mod('performance', guarded('performance:view', <MyPerformancePage />))} />
+                    <Route path="performans/dokuz-kutu" element={mod('performance', guarded('performance:manage', <NineBoxPage />))} />
+                    <Route path="performans/kalibrasyon" element={mod('performance', guarded('performance:manage', <CalibrationPage />))} />
+                    <Route path="performans/okr" element={mod('performance', guarded('performance:view', <OkrTreePage />))} />
+                    <Route path="performans/360" element={mod('performance', guarded('performance:view', <Feedback360Page />))} />
 
-                    <Route path="egitim" element={guarded('learning:view', <LearningPage />)} />
-                    <Route path="egitim/sertifika/:id" element={guarded('learning:view', <CertificatePage />)} />
-                    <Route path="egitim/:courseId" element={guarded('learning:view', <CoursePlayerPage />)} />
-                    <Route path="yetkinlikler" element={guarded('learning:view', <CompetencyMatrixPage />)} />
-                    <Route path="kariyer-yollari" element={guarded('learning:view', <CareerPathsPage />)} />
-                    <Route path="egitim-takibi" element={guarded('learning:view', <DueTrainingPage />)} />
+                    <Route path="egitim" element={mod('learning', guarded('learning:view', <LearningPage />))} />
+                    <Route path="egitim/sertifika/:id" element={mod('learning', guarded('learning:view', <CertificatePage />))} />
+                    <Route path="egitim/:courseId" element={mod('learning', guarded('learning:view', <CoursePlayerPage />))} />
+                    <Route path="yetkinlikler" element={mod('learning', guarded('learning:view', <CompetencyMatrixPage />))} />
+                    <Route path="kariyer-yollari" element={mod('learning', guarded('learning:view', <CareerPathsPage />))} />
+                    <Route path="egitim-takibi" element={mod('learning', guarded('learning:view', <DueTrainingPage />))} />
 
                     {/* Ücret hassas veri — yalnızca İK yönetimi */}
-                    <Route path="ucret" element={guarded('compensation:view', <CompensationPage />)} />
-                    <Route path="bordro" element={guarded('compensation:view', <PayrollPage />)} />
-                    <Route path="bordro/:id" element={guarded('compensation:view', <PayrollPeriodPage />)} />
+                    <Route path="ucret" element={mod('compensation', guarded('compensation:view', <CompensationPage />))} />
+                    <Route path="bordro" element={mod('compensation', guarded('compensation:view', <PayrollPage />))} />
+                    <Route path="bordro/:id" element={mod('compensation', guarded('compensation:view', <PayrollPeriodPage />))} />
 
                     <Route path="dokumanlar" element={guarded('document:manage', <DocumentsPage />)} />
                     <Route
@@ -463,10 +470,10 @@ export function App() {
                     <Route path="profil" element={<ProfilePage />} />
                     <Route path="sohbet-bagla" element={<ChatLinkPage />} />
                     <Route path="sohbet-onay" element={<ChatStepUpPage />} />
-                    <Route path="bordrolarim" element={<MyPayslipsPage />} />
-                    <Route path="yan-haklar" element={<BenefitsPage />} />
-                    <Route path="zam-donemi" element={<RaiseCyclesPage />} />
-                    <Route path="seyahat" element={guarded('expense:view', <TravelPage />)} />
+                    <Route path="bordrolarim" element={mod('compensation', <MyPayslipsPage />)} />
+                    <Route path="yan-haklar" element={mod('compensation', <BenefitsPage />)} />
+                    <Route path="zam-donemi" element={mod('compensation', <RaiseCyclesPage />)} />
+                    <Route path="seyahat" element={mod('expense', guarded('expense:view', <TravelPage />))} />
                     <Route path="belge-talebi" element={<MyDocumentsPage />} />
                     <Route path="imzalarim" element={<MySignaturesPage />} />
 
@@ -490,7 +497,7 @@ export function App() {
                     <Route path="anketler" element={<TenantGate><SurveysPage /></TenantGate>} />
                     <Route path="yetenek-dizini" element={<TenantGate><DirectoryPage /></TenantGate>} />
                     <Route path="ofis" element={<TenantGate><WorkplacePage /></TenantGate>} />
-                    <Route path="bordro-simulasyonu" element={<TenantGate><PayrollSimPage /></TenantGate>} />
+                    <Route path="bordro-simulasyonu" element={mod('compensation', <TenantGate><PayrollSimPage /></TenantGate>)} />
 
                     {/* ---------------- Gelişim ---------------- */}
                     <Route path="mentorluk" element={<TenantGate><MentorshipPage /></TenantGate>} />
@@ -502,16 +509,16 @@ export function App() {
                     <Route path="offboarding" element={guarded('onboarding:manage', <TenantGate><OffboardingPage /></TenantGate>)} />
                     <Route path="ardil-planlama" element={guarded('performance:manage', <TenantGate><SuccessionPage /></TenantGate>)} />
                     <Route path="org-senaryolari" element={guarded('performance:manage', <TenantGate><OrgScenariosPage /></TenantGate>)} />
-                    <Route path="ise-alim/saga" element={guarded('recruitment:view', <TenantGate><HireSagaPage /></TenantGate>, ['hr-admin', 'tenant-admin', 'platform-admin'])} />
+                    <Route path="ise-alim/saga" element={mod('recruitment', guarded('recruitment:view', <TenantGate><HireSagaPage /></TenantGate>, ['hr-admin', 'tenant-admin', 'platform-admin']))} />
                     <Route path="organizasyon/sunum" element={guarded('organization:view', <TenantGate><OrgPresentationPage /></TenantGate>)} />
 
                     {/* ---------------- İçgörü ---------------- */}
                     <Route path="analitik" element={guarded('performance:manage', <TenantGate><InsightsAnalyticsPage /></TenantGate>)} />
-                    <Route path="model-karti" element={guarded('performance:manage', <TenantGate allowPlatform><ModelCardPage /></TenantGate>, ['hr-admin', 'tenant-admin', 'platform-admin'])} />
+                    <Route path="model-karti" element={mod('ml', guarded('performance:manage', <TenantGate allowPlatform><ModelCardPage /></TenantGate>, ['hr-admin', 'tenant-admin', 'platform-admin']))} />
                     <Route path="rapor-asistani" element={guarded('performance:manage', <TenantGate><NlReportPage /></TenantGate>)} />
                     <Route path="zaman-makinesi" element={guarded('performance:manage', <TenantGate><TimeMachinePage /></TenantGate>)} />
                     <Route path="olay-radari" element={guarded('employee:manage', <TenantGate><EventRadarPage /></TenantGate>)} />
-                    <Route path="ai-araclari" element={guarded('recruitment:view', <TenantGate><AiToolsPage /></TenantGate>)} />
+                    <Route path="ai-araclari" element={mod('ml', guarded('recruitment:view', <TenantGate><AiToolsPage /></TenantGate>))} />
 
                     {/* ---------------- Yönetişim ---------------- */}
                     <Route path="denetim" element={guarded('employee:manage', <TenantGate><AuditPage /></TenantGate>)} />

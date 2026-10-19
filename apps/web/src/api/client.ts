@@ -38,6 +38,17 @@ const ASPNET_DEFAULT_TITLES = new Set([
   'an error occurred while processing your request.',
 ])
 
+export const MODULE_NOT_INSTALLED = 'module_not_installed'
+
+function isModuleNotInstalled(status: number, detail: unknown): boolean {
+  return status === 404 && typeof detail === 'object' && detail !== null && (detail as { code?: unknown }).code === MODULE_NOT_INSTALLED
+}
+
+/** Hata, kurulumda kapalı bir modülün ucundan mı geldi? */
+export function isModuleNotInstalledError(e: unknown): boolean {
+  return e instanceof ApiError && isModuleNotInstalled(e.status, e.detail)
+}
+
 /** Backend hata gövdesinden okunabilir bir Türkçe mesaj çıkarır. */
 async function toApiError(res: Response): Promise<ApiError> {
   let detail: unknown
@@ -79,9 +90,11 @@ async function toApiError(res: Response): Promise<ApiError> {
     /* gövde okunamadı */
   }
 
+  // Kurulumda kapalı modül ("Hafif"): gateway {"code":"module_not_installed","module":"..."} ile 404 döner.
+  if (isModuleNotInstalled(res.status, detail)) message = tx('Bu modül bu kurulumda açık değil.')
   // ASP.NET'in varsayılan İngilizce iletileri (NotFound()/ProblemDetails title, model doğrulama)
   // kullanıcıya ham gösterilmez: doğrulama özel iletiyle, diğerleri durum koduna göre Türkçeleşir.
-  if (/^One or more validation errors occurred\.?$/i.test(message.trim())) message = tx('Gönderilen bilgiler geçersiz.')
+  else if (/^One or more validation errors occurred\.?$/i.test(message.trim())) message = tx('Gönderilen bilgiler geçersiz.')
   else if (ASPNET_DEFAULT_TITLES.has(message.trim().toLowerCase())) message = ''
 
   if (!message) {

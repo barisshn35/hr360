@@ -10,6 +10,7 @@ import { flattenItems, navGroups } from '@/components/layout/nav-config'
 import { formatNumber, formatRelativeToNow } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 interface Insights {
   days: number
@@ -30,7 +31,9 @@ export function ProductInsightsPage() {
   const title = (path: string) => menu.find((m) => m.path === path)?.title ?? path
   const d = q.data
   const visited = new Set((d?.screens ?? []).filter((s) => s.views > 0).map((s) => s.path))
-  const unused = menu.filter((m) => !visited.has(m.path!))
+  // Kurulumda kapalı modüllerin ekranları "hiç açılmayan" sayılmaz.
+  const { isEnabled } = useModules()
+  const unused = menu.filter((m) => !visited.has(m.path!) && isEnabled(m.module ?? m.parent?.module))
   const max = Math.max(1, ...(d?.screens ?? []).map((s) => s.views))
 
   return (

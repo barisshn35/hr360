@@ -6,6 +6,7 @@ import { EmployeeAvatar } from '@/components/people/EmployeeAvatar'
 import { leaveApi } from '@/api/leave'
 import { engagementApi } from '@/api/engagement'
 import { learningW11Api } from '@/api/learningW11'
+import { useModules } from '@/lib/modules'
 import { useAuth } from '@/auth/useAuth'
 import { useMyTodos } from '@/features/todos/useMyTodos'
 import { localISODate } from '@/lib/dates'
@@ -32,11 +33,12 @@ function Row({ icon: Icon, label, children, to }: { icon: React.ElementType; lab
  */
 export function TeamBoardWidget() {
   const { can } = useAuth()
+  const { isEnabled, canQuery } = useModules()
   const today = localISODate()
   const cal = useQuery({ queryKey: ['leave', 'team-calendar', today, today, ''], queryFn: ({ signal }) => leaveApi.teamCalendar(today, today, undefined, signal), retry: false, staleTime: 5 * 60_000 })
   const ones = useQuery({ queryKey: ['engagement', 'one-on-ones', 'mine'], queryFn: ({ signal }) => engagementApi.oneOnOnes(undefined, signal), retry: false, staleTime: 5 * 60_000 })
   const cel = useQuery({ queryKey: ['engagement', 'celebrations', 7], queryFn: ({ signal }) => engagementApi.celebrations(7, signal), retry: false, staleTime: 30 * 60_000 })
-  const due = useQuery({ queryKey: ['learning', 'overdue', 'team'], queryFn: ({ signal }) => learningW11Api.overdue(undefined, 0, signal), enabled: can('learning:view'), retry: false, staleTime: 10 * 60_000 })
+  const due = useQuery({ queryKey: ['learning', 'overdue', 'team'], queryFn: ({ signal }) => learningW11Api.overdue(undefined, 0, signal), enabled: can('learning:view') && canQuery('learning'), retry: false, staleTime: 10 * 60_000 })
   const { items } = useMyTodos()
 
   const team = new Map((cal.data?.people ?? []).map((p) => [p.id, p]))
@@ -81,9 +83,9 @@ export function TeamBoardWidget() {
             ))}</ul>
           </Row>
         )}
-        <div className="grid grid-cols-2 divide-x divide-border">
+        <div className={isEnabled('learning') ? 'grid grid-cols-2 divide-x divide-border' : 'grid grid-cols-1'}>
           <Row icon={Inbox} label={tx('Onay bekleyen')} to="/panel/onaylar"><span className="text-[18px] font-semibold tabular-nums">{approvals}</span></Row>
-          <Row icon={BookX} label={tx('Gecikmiş eğitim')} to={can('learning:view') ? '/panel/egitim-takibi' : undefined}><span className={overdue ? 'text-[18px] font-semibold text-destructive tabular-nums' : 'text-[18px] font-semibold tabular-nums'}>{overdue}</span></Row>
+          {isEnabled('learning') && <Row icon={BookX} label={tx('Gecikmiş eğitim')} to={can('learning:view') ? '/panel/egitim-takibi' : undefined}><span className={overdue ? 'text-[18px] font-semibold text-destructive tabular-nums' : 'text-[18px] font-semibold tabular-nums'}>{overdue}</span></Row>}
         </div>
       </div>
     </Card>

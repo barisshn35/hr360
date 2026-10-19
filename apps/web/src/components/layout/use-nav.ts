@@ -4,11 +4,13 @@ import { useTenantScope } from '@/lib/tenant-scope'
 import { useEomWinners } from '@/api/eom'
 import { useRecognitionSettings } from '@/api/recognition'
 import { useCoffeeEnabled } from '@/api/coffee'
+import { useModules } from '@/lib/modules'
 import { filterByPermission, navGroups } from './nav-config'
 
 /**
  * Kullanıcının izinleriyle süzülmüş menü ağacı. İsteğe bağlı modüller (ör. ayın çalışanı) kiracıda
- * kapalıysa gizlenir; İK yine görür ki ayarlardan açabilsin.
+ * kapalıysa gizlenir; İK yine görür ki ayarlardan açabilsin. Kurulumda kapalı modüller ("Hafif")
+ * herkesten gizlenir.
  */
 export function useNavGroups() {
   const { can, roles } = useAuth()
@@ -17,5 +19,9 @@ export function useNavGroups() {
   const eom = useEomWinners(hasTenant && !isHr).data?.enabled === true
   const points = useRecognitionSettings(hasTenant && !isHr).data?.enabled === true
   const coffee = useCoffeeEnabled(hasTenant && !isHr).data === true
-  return useMemo(() => filterByPermission(navGroups, can, roles, hasTenant, { eom: isHr || eom, points: isHr || points, coffee: isHr || coffee }), [can, roles, hasTenant, isHr, eom, points, coffee])
+  const { isEnabled } = useModules()
+  return useMemo(
+    () => filterByPermission(navGroups, can, roles, hasTenant, { eom: isHr || eom, points: isHr || points, coffee: isHr || coffee }, isEnabled),
+    [can, roles, hasTenant, isHr, eom, points, coffee, isEnabled],
+  )
 }

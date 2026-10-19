@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/
 import { ml10Api, type Recommendation } from '@/api/wave10'
 import { errMsg } from '@/features/shared/kit'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 /**
  * Dalga 10 (madde 49): "Sana uygun" — beceri vektörü ve yetkinlik açıklarına göre iç ilan, mentor ve eğitim
@@ -38,6 +39,7 @@ function Column<T>({ title, icon: Icon, items, empty, render, to, toLabel }: {
 
 export function ForYouPanel() {
   const q = useQuery({ queryKey: ['growth', 'recommendations'], queryFn: ({ signal }) => ml10Api.recommendations(signal), staleTime: 5 * 60_000 })
+  const learning = useModules().isEnabled('learning')
   if (q.isPending) return <RowsSkeleton rows={4} />
   if (q.isError) return <ErrorState message={errMsg(q.error)} onRetry={() => void q.refetch()} />
   const d = q.data
@@ -54,13 +56,13 @@ export function ForYouPanel() {
           {d.gaps.map((g) => <StatusBadge key={g.id} tone="warning">{tx('{0} ({1}/{2})', [g.name, g.current, g.required])}</StatusBadge>)}
         </div>
       )}
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className={learning ? 'grid gap-4 xl:grid-cols-3' : 'grid gap-4 xl:grid-cols-2'}>
         <Column title={tx('İç ilanlar')} icon={Briefcase} items={d.postings} empty={tx('Becerilerinize uyan açık ilan yok.')} to="/panel/ic-ilanlar" toLabel={tx('Tüm ilanlar')}
           render={(r) => <><p className="text-[13.5px] font-medium">{r.info.title}</p><p className="text-[12px] text-muted-foreground">{r.info.department ?? tx('Genel')}{r.info.applied ? ` · ${tx('Başvurdunuz')}` : ''}</p></>} />
         <Column title={tx('Mentorlar')} icon={Users} items={d.mentors} empty={tx('Hedeflerinize uyan boş kapasiteli mentor yok.')} to="/panel/mentorluk" toLabel={tx('Mentorluk')}
           render={(r) => <><p className="text-[13.5px] font-medium">{r.info.name}</p><p className="text-[12px] text-muted-foreground">{r.info.department ?? '—'}</p></>} />
-        <Column title={tx('Eğitimler')} icon={GraduationCap} items={d.courses} empty={tx('Gelişim alanlarınıza uyan eğitim yok.')} to="/panel/egitim" toLabel={tx('Eğitim kataloğu')}
-          render={(r) => <><Link to={`/panel/egitim/${r.id}`} className="text-[13.5px] font-medium hover:text-primary hover:underline">{r.info.title}</Link><p className="text-[12px] text-muted-foreground">{r.info.category ?? ''}</p></>} />
+        {learning && <Column title={tx('Eğitimler')} icon={GraduationCap} items={d.courses} empty={tx('Gelişim alanlarınıza uyan eğitim yok.')} to="/panel/egitim" toLabel={tx('Eğitim kataloğu')}
+          render={(r) => <><Link to={`/panel/egitim/${r.id}`} className="text-[13.5px] font-medium hover:text-primary hover:underline">{r.info.title}</Link><p className="text-[12px] text-muted-foreground">{r.info.category ?? ''}</p></>} />}
       </div>
     </div>
   )

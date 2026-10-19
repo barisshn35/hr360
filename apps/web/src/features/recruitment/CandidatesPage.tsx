@@ -19,6 +19,7 @@ import { aiApi } from '@/api/ai'
 import { ChipInput, errMsg } from '@/features/shared/kit'
 import { SkillSuggest } from '@/features/shared/SkillSuggest'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 interface DuplicateInfo { message: string; existingCandidateId?: string; canForce?: boolean }
 
@@ -69,6 +70,7 @@ function NewCandidateModal({ open, onClose }: { open: boolean; onClose: () => vo
     },
   })
 
+  const cvReader = useModules().isEnabled('ml')
   /** CV'den ön doldurma (ml-inference CV ayrıştırma): ad, e-posta, telefon, beceriler. Dosya saklanmaz. */
   async function parseCv(file: File) {
     if (file.size > 5 * 1024 * 1024) return toast.stop(tx('Dosya 5 MB\'tan büyük olamaz'))
@@ -133,13 +135,13 @@ function NewCandidateModal({ open, onClose }: { open: boolean; onClose: () => vo
       }
     >
       <form id="new-candidate" onSubmit={submit} noValidate className="space-y-4">
-        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2.5 text-[13px] hover:border-primary/50">
+        {cvReader && <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2.5 text-[13px] hover:border-primary/50">
           {parsing ? <LoaderCircle className="size-4 animate-spin" /> : <FileUp className="size-4 text-primary" />}
           <span>{tx('CV\'den doldur (PDF, DOCX, TXT · en fazla 5 MB)')}</span>
           <span className="ml-auto text-[11.5px] text-muted-foreground">{tx('Dosya saklanmaz')}</span>
           <input type="file" accept=".pdf,.docx,.txt" className="sr-only" disabled={parsing}
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void parseCv(f) }} />
-        </label>
+        </label>}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField

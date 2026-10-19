@@ -100,6 +100,10 @@ export interface SiteSettings {
   termsMd: string | null
   faq: FaqItem[]
   searchIndexing: boolean
+  /** Kurulumda açık isteğe bağlı modüller (yoksa: eski sunucu, hepsi açık). */
+  modules?: string[]
+  /** Tek şirketli ya da çok kiracılı kurulum (yoksa: multi). */
+  tenancy?: 'single' | 'multi'
 }
 
 export interface SiteInput {
