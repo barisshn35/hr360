@@ -36,7 +36,8 @@ case "$a" in
   "exec hr360-restore-drill-"*"governance_audit_anchors"*) echo "2 0" ;;
   "exec hr360-restore-drill-"*"select count(*) from"*) echo 3 ;;
   "exec hr360-restore-drill-"*"random()"*) : ;;
-  *"compose config --format json"*) echo '{"name":"hr360test","services":{"postgres":{"image":"postgres:16-alpine"}}}' ;;
+  # Kapali modul (scale 0) saglik denetimine ve derlemeye girmez (scripts/modules.sh).
+  *"compose config --format json"*) echo '{"name":"hr360test","services":{"postgres":{"image":"postgres:16-alpine"},"employee-service":{"build":{}},"leave-service":{"build":{}},"recruitment-service":{"build":{},"scale":0},"gateway":{}}}' ;;
   *"compose config --services"*) printf 'employee-service\nleave-service\ngateway\npostgres\n' ;;
   *"compose ps --status running --services"*) echo postgres ;;
   *"select 1 from pg_database where datname='hr360_operational'"*) echo 1 ;;
@@ -301,6 +302,7 @@ check "  once yedek alindi, durum kaydedildi" eval 'grep -q "^backup=backups/hr3
 check "  goc betikleri uygulandi, imajlar yeniden kuruldu" eval 'grep -q "psql -U hr360admin -d hr360_operational -v ON_ERROR_STOP=1 -q -f -" "$HR360_TEST_LOG" && grep -q "compose build" "$HR360_TEST_LOG"'
 check "  kurulu ve yeni urun surumu (VERSION) yazildi" eval 'grep -q "Kurulu surum: 1.0.0" <<< "$out" && grep -q "Yeni surum: 1.0.1" <<< "$out" && grep -q "Guncelleme tamamlandi: 1.0.1" <<< "$out"'
 check "  tum servislerin saglik ucu denetlendi" eval 'grep -q "wget -qO- -T 5 http://employee-service:8080/health" "$HR360_TEST_LOG" && grep -q "leave-service:8080/health" "$HR360_TEST_LOG"'
+check "  kapali modul derlenmedi ve denetlenmedi" eval '! grep -q "recruitment-service" "$HR360_TEST_LOG" && grep -q "compose build employee-service leave-service" "$HR360_TEST_LOG"'
 out="$(scripts/update.sh --yes --timeout 1 2>&1)"; rc=$?
 check "zaten guncel" eval '[ $rc = 0 ] && grep -q "Zaten guncel" <<< "$out"'
 

@@ -54,6 +54,11 @@ dc() { docker compose ${COMPOSE[@]+"${COMPOSE[@]}"} "$@"; }
 DEFAULT_SERVICES="employee-service organization-service workflow-service leave-service onboarding-service timeshift-service
 engagement-service governance-service expense-service notification-service tenant-service ml-inference"
 read -r -d '' -a SVCS <<< "${SERVICES:-$DEFAULT_SERVICES}" || true
+# Kapali moduller (scripts/modules.sh) baslatilmaz; beklenirse donus hic bitmezdi.
+if [ -f scripts/lib/modules.sh ]; then
+  . scripts/lib/modules.sh
+  read -r -a SVCS <<< "$(mod_filter_services "${SVCS[@]}")"
+fi
 [ "${#SVCS[@]}" -gt 0 ] || die "servis listesi bos"
 WAIT_SECONDS="${WAIT_SECONDS:-180}"
 

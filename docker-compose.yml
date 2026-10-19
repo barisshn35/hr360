@@ -342,6 +342,9 @@ services:
     mem_limit: "512m"
 
   recruitment-service:
+    # İsteğe bağlı modül (scripts/modules.sh): HR360_MOD_RECRUITMENT=0 ise çalışmaz (yoksa 1). Profil yerine
+    # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
+    scale: ${HR360_MOD_RECRUITMENT:-1}
     <<: *dotnet-service
     build: ./apps/services/recruitment-service
     environment:
@@ -363,6 +366,9 @@ services:
     mem_limit: "512m"
 
   onboarding-service:
+    # İsteğe bağlı modül (scripts/modules.sh): HR360_MOD_ONBOARDING=0 ise çalışmaz (yoksa 1). Profil yerine
+    # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
+    scale: ${HR360_MOD_ONBOARDING:-1}
     <<: *dotnet-service
     build: ./apps/services/onboarding-service
     environment:
@@ -379,6 +385,9 @@ services:
     mem_limit: "512m"
 
   timeshift-service:
+    # İsteğe bağlı modül (scripts/modules.sh): HR360_MOD_TIMESHIFT=0 ise çalışmaz (yoksa 1). Profil yerine
+    # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
+    scale: ${HR360_MOD_TIMESHIFT:-1}
     <<: *dotnet-service
     build: ./apps/services/timeshift-service
     environment:
@@ -398,6 +407,9 @@ services:
     mem_limit: "512m"
 
   performance-service:
+    # İsteğe bağlı modül (scripts/modules.sh): HR360_MOD_PERFORMANCE=0 ise çalışmaz (yoksa 1). Profil yerine
+    # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
+    scale: ${HR360_MOD_PERFORMANCE:-1}
     <<: *dotnet-service
     build: ./apps/services/performance-service
     environment:
@@ -413,6 +425,9 @@ services:
     mem_limit: "512m"
 
   learning-service:
+    # İsteğe bağlı modül (scripts/modules.sh): HR360_MOD_LEARNING=0 ise çalışmaz (yoksa 1). Profil yerine
+    # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
+    scale: ${HR360_MOD_LEARNING:-1}
     <<: *dotnet-service
     build: ./apps/services/learning-service
     environment:
@@ -518,6 +533,9 @@ services:
     mem_limit: "384m"
 
   compensation-service:
+    # İsteğe bağlı modül (scripts/modules.sh): HR360_MOD_COMPENSATION=0 ise çalışmaz (yoksa 1). Profil yerine
+    # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
+    scale: ${HR360_MOD_COMPENSATION:-1}
     <<: *dotnet-service
     build: ./apps/services/compensation-service
     environment:
@@ -661,6 +679,9 @@ services:
   # ML alt sistemi
   # --------------------------------------------------------------------- #
   mlflow:
+    # İsteğe bağlı modül (scripts/modules.sh): HR360_MOD_ML=0 ise çalışmaz (yoksa 1). Profil yerine
+    # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
+    scale: ${HR360_MOD_ML:-1}
     build: ./apps/ml-platform
     restart: unless-stopped
     environment:
@@ -692,6 +713,9 @@ services:
       - "127.0.0.1:5000:5000"
 
   ml-inference:
+    # İsteğe bağlı modül (scripts/modules.sh): HR360_MOD_ML=0 ise çalışmaz (yoksa 1). Profil yerine
+    # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
+    scale: ${HR360_MOD_ML:-1}
     build: ./apps/ml-inference
     restart: unless-stopped
     # Model dosyalari calisma aninda indirildiginden kok dosya sistemi yazilabilir kalir.
@@ -934,6 +958,7 @@ services:
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./deploy/nginx/keycloak-admin:/etc/nginx/keycloak-admin:ro
+      - ./deploy/nginx/modules:/etc/nginx/modules:ro
       - ./deploy/nginx/tls:/etc/nginx/tls:ro
       # Let's Encrypt (scripts/tls.sh enable --letsencrypt): certbot'un sertifikalari
       # ve HTTP-01 dogrulama dosyalari.

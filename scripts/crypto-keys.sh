@@ -207,6 +207,11 @@ cmd_status() {
 
 cmd_rollout() {
   read -r -a svcs <<< "$CRYPTO_SERVICES"
+  # Kapali modulun servisi baslatilmaz; acilinca yeni anahtarla yeniden sifreler.
+  if [ -f scripts/lib/modules.sh ]; then
+    . scripts/lib/modules.sh
+    read -r -a svcs <<< "$(mod_filter_services "${svcs[@]}")"
+  fi
   info "Yeniden olusturuluyor: ${svcs[*]}"
   dc up -d --no-deps --force-recreate "${svcs[@]}"
   echo "Yeniden sifreleme servis acilisindan ~1 dk sonra baslar. Ilerleme: $0 status"

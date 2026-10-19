@@ -64,10 +64,24 @@ fi
 [ -f .env ] || die ".env bulunamadi; once install.sh calistirin."
 git rev-parse --git-dir >/dev/null 2>&1 || die "bu dizin bir git deposu degil"
 
+# Compose servisleri: kapali moduller (scale 0, scripts/modules.sh) haric. ALAN: "build" yalnizca derlenenler.
+active_services() { # active_services [build]
+  docker compose config --format json 2>/dev/null | python3 -c '
+import json, sys
+want_build = len(sys.argv) > 1 and sys.argv[1] == "build"
+try:
+    services = json.load(sys.stdin)["services"]
+except (ValueError, KeyError):
+    sys.exit(0)  # okunamazsa bos: derleme tum servislere, saglik denetimi yalnizca gatewaye duser
+for name, svc in services.items():
+    if svc.get("scale", 1) == 0 or (want_build and "build" not in svc):
+        continue
+    print(name)' "${1:-}"
+}
+
 # Calisan servislerin /health uclari (gateway konteyneri uzerinden, ic agda).
 SERVICES=()
-while IFS= read -r s; do SERVICES+=("$s"); done < <(
-  docker compose config --services 2>/dev/null | grep -E -- '-service$' || true)
+while IFS= read -r s; do SERVICES+=("$s"); done < <(active_services | grep -E -- '-service$' || true)
 
 healthy() {
   local deadline=$(( $(date +%s) + TIMEOUT )) bad
@@ -120,6 +134,8 @@ deploy() {
   # Paralel derleme, calisan servislerin yaninda kucuk sunucularda bellegi tuketebilir: ya npm "cannot
   # allocate memory" ile duser ya da hic dusmeden saatlerce takas yapar. Bos bellek azsa bastan sirayla
   # derle; paralel derleme basarisiz olursa da (gecici ag hatasi vb.) servis servis bir kez daha dene.
+  # Yalnizca acik modullerin imajlari derlenir (kapali modul: scale 0).
+  local targets; targets="$(active_services build | tr '\n' ' ')"
   local avail_kb cg_max cg_cur; avail_kb="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
   # Konteyner/LXC icinde /proc/meminfo makinenin tamamini gosterir; cgroup siniri daha darsa onu kullan.
   cg_max="$(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo max)"; cg_cur="$(cat /sys/fs/cgroup/memory.current 2>/dev/null || echo 0)"
@@ -128,10 +144,10 @@ deploy() {
   fi
   if [ "${avail_kb:-0}" -lt "${HR360_PARALLEL_BUILD_MIN_KB:-6291456}" ]; then
     echo "==> Bos bellek az ($((${avail_kb:-0} / 1024)) MB): imajlar sirayla derleniyor" >&2
-    local s; for s in $(docker compose config --services); do docker compose build "$s" >/dev/null || return 1; done
-  else docker compose build >/dev/null || {
+    local s; for s in $targets; do docker compose build "$s" >/dev/null || return 1; done
+  else docker compose build $targets >/dev/null || {
     echo "UYARI: imaj derlemesi basarisiz; servisler sirayla yeniden derleniyor." >&2
-    local s; for s in $(docker compose config --services); do docker compose build "$s" >/dev/null || return 1; done
+    local s; for s in $targets; do docker compose build "$s" >/dev/null || return 1; done
   } || return 1; fi
   docker compose up -d --remove-orphans >/dev/null || return 1
 }
