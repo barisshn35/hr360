@@ -76,7 +76,7 @@ check("VERBİS: şirket faaliyet ekler", code == 200 and created.get("key", "").
 cid = created.get("id") if code == 200 else None
 code, upd = api("admin", "PUT", f"{P}/verbis/items/{cid}", {**body, "purpose": "Bina ve çalışan güvenliği", "transferProviders": ["slack"]})
 check("VERBİS: düzenleme değişen alanları döner", code == 200 and set(upd.get("changed", [])) == {"purpose", "transferProviders"}, (code, upd))
-aud = psql(f"""SELECT count(*) FROM audit_log WHERE "TenantSlug" = 'demo' AND "EntityType" = 'VerbisInventory' AND "Action" = 'Updated' AND "Changes"::text LIKE '%Bina ve çalışan%'""")
+aud = psql("""SELECT count(*) FROM audit_log WHERE "TenantSlug" = 'demo' AND "EntityType" = 'VerbisInventory' AND "Action" = 'Updated' AND "Changes"::text LIKE '%Bina ve çalışan%'""")
 check("VERBİS: düzenleme denetim kaydında önceki/sonraki değerle", aud.isdigit() and int(aud) >= 1, aud)
 st, ctype, raw = download("admin", f"{P}/verbis/export?format=csv")
 csv = raw.decode("utf-8-sig") if st == 200 else ""

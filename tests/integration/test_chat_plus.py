@@ -511,7 +511,7 @@ mine = next((x for x in pl if x["id"] == p["id"]), {})
 check("B12: 5 yanıtla dağılım görünür", mine.get("hidden") is False and sum(mine.get("distribution") or []) == 5, mine)
 survey = sql(f"""SELECT "SurveyId" FROM governance_chat_pulses WHERE "Id" = '{p['id']}'""")
 check("B12: yanıtlar kimliksiz (rastgele anahtar, departman yok)", sql(f"""SELECT count(*) FROM engagement_survey_responses WHERE "SurveyId" = '{survey}' AND "RespondentKey" LIKE 'chat-%' AND "DepartmentName" IS NULL""") == "5"
-      and sql(f"""SELECT count(*) FROM information_schema.columns WHERE table_name = 'governance_chat_pulse_answered' AND column_name IN ('Score','SurveyResponseId')""") == "0")
+      and sql("""SELECT count(*) FROM information_schema.columns WHERE table_name = 'governance_chat_pulse_answered' AND column_name IN ('Score','SurveyResponseId')""") == "0")
 
 # ====================================================================== B18 birebir hatırlatmaları
 to = time.time()

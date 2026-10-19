@@ -19,7 +19,7 @@ import time
 import uuid
 
 sys.path.insert(0, os.path.dirname(__file__))
-from common import AYSE, FAIL, api, check, ensure_transfers, http, mock_calls, tok, wait_for  # noqa: E402
+from common import AYSE, FAIL, api, check, ensure_transfers, http, tok, wait_for  # noqa: E402
 
 G = "/api/governance"
 DISCLAIMER_TR = "Basit elektronik imza — 5070 sayılı Kanun kapsamında nitelikli (güvenli) elektronik imza değildir."

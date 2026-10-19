@@ -13,7 +13,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
-from common import AYSE, FAIL, G, api, check, http, mock  # noqa: E402
+from common import AYSE, FAIL, G, api, check, mock  # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 P = f"{G}/privacy"

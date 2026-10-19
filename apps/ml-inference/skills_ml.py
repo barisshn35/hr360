@@ -328,7 +328,6 @@ def _gap_targets(gaps: list[Gap]) -> list[Gap]:
 def recommend(req: RecommendRequest) -> dict:
     mine = skill_keys(req.me.skills)
     gaps = _gap_targets(req.me.gaps)
-    gap_names = {g.id: g.name for g in gaps}
 
     # İç ilanlar: ilan metnindeki beceriler (sözlük) ile benimkilerin örtüşmesi.
     postings = []

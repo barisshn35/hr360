@@ -107,7 +107,7 @@ def cleanup():
             psql(f"""DELETE FROM "{t}" WHERE "EmployeeId" IN ({ids})""")
         psql(f"""DELETE FROM notification_messages WHERE "RecipientEmployeeId" IN ({ids})""")
         psql(f"""DELETE FROM employee_assignments WHERE "EmployeeId" IN ({ids}); DELETE FROM employee_employees WHERE "Id" IN ({ids})""")
-    psql(f"""DELETE FROM tenant_directory_users WHERE "TenantSlug" = 'demo' AND ("Email" LIKE 'test.scim%@example.com' OR "Email" LIKE 'testldap.%@example.com'
+    psql("""DELETE FROM tenant_directory_users WHERE "TenantSlug" = 'demo' AND ("Email" LIKE 'test.scim%@example.com' OR "Email" LIKE 'testldap.%@example.com'
              OR "UserName" LIKE 'testldap.%')""")
     psql("""DELETE FROM tenant_directory_settings WHERE "TenantSlug" = 'demo'""")
     psql(f"""DELETE FROM tenant_scim_tokens WHERE "Name" LIKE 'TEST-scim-{RUN}%'""")

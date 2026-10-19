@@ -43,7 +43,7 @@ def as_platform(method, path, body=None, tenant="demo"):
 
 
 # Önceki koşulardan kalan test izinleri kapatılır (kapı önbelleği 15 sn).
-psql(f"""UPDATE platform_access_grants SET "RevokedAt" = now() WHERE "Reason" LIKE 'TEST-2A%' AND "RevokedAt" IS NULL""")
+psql("""UPDATE platform_access_grants SET "RevokedAt" = now() WHERE "Reason" LIKE 'TEST-2A%' AND "RevokedAt" IS NULL""")
 time.sleep(16)
 
 # ============================================================ break-glass

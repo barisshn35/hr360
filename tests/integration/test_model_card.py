@@ -5,7 +5,6 @@ Prometheus hr360_model_feature_psi), yeniden eğitim yetkisi ve governance uyuml
 Ön koşul: HR360 çalışıyor (ml-inference + MLflow). Yeniden eğitim yalnızca dry_run ile
 çağrılır: aday MLflow'a "promoted=false" olarak yazılır, yayındaki sürüm değişmez.
 """
-import json
 import os
 import random
 import subprocess

@@ -163,7 +163,7 @@ try:
     check("Geçersiz puan reddedilir", code in (400, 409), code)
     cols = psql("""SELECT string_agg(column_name, ',') FROM information_schema.columns WHERE table_name = 'performance_f360_responses'""")
     check("Yanıt tablosunda değerlendiren kimliği/zamanı yok", not any(w in cols for w in ("Reviewer", "Employee", "At", "Relationship")), cols)
-    leak = psql(f"""SELECT count(*) FROM audit_log WHERE "EntityType" IN ('F360Response') OR ("Changes"::text LIKE '%TEST11P açık iletişim%')""")
+    leak = psql("""SELECT count(*) FROM audit_log WHERE "EntityType" IN ('F360Response') OR ("Changes"::text LIKE '%TEST11P açık iletişim%')""")
     check("Yanıt içeriği denetim kaydına düşmez", leak == "0", leak)
     code, r = api("admin", "GET", f"{P}/feedback360/{RID}/results")
     check("Açık talepte sonuç gizli", code == 200 and r["hidden"] is True and r["competencies"] == [], (code, r))

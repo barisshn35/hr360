@@ -1,0 +1,8 @@
+# Python denetimi (ML servisi, testler, betikler): yalnızca gerçek hata yakalayan kurallar —
+# sözdizimi (E9) ve pyflakes (F: tanımsız ad, kullanılmayan içe aktarma/değişken, boş f-string).
+# Biçim kuralları bilerek kapalı: mevcut kodu toplu yeniden biçimlemek geçmişi gürültüye boğar.
+target-version = "py311"
+extend-exclude = ["apps/web", "apps/mobile", "data", "backups", "ops-logs", "dist"]
+
+[lint]
+select = ["E9", "F"]

@@ -78,7 +78,7 @@ g = next(p for p in st["providers"] if p["provider"] == "Google")
 txt = json.dumps(st)
 check("Google: servis hesabı e-postası gösterilir, anahtar yanıtta yok",
       g["clientId"] == "hr360-prov@hr360-test.iam.gserviceaccount.com" and g["hasCredentials"] and "PRIVATE KEY" not in txt, g)
-enc = psql(f"""SELECT "CredentialsEnc" FROM governance_provisioning_configs WHERE "TenantSlug" = 'demo' AND "Provider" = 'Google'""")
+enc = psql("""SELECT "CredentialsEnc" FROM governance_provisioning_configs WHERE "TenantSlug" = 'demo' AND "Provider" = 'Google'""")
 check("Google: servis hesabı anahtarı şifreli saklanır", enc and "PRIVATE KEY" not in enc and "client_email" not in enc, enc[:40])
 
 code, r = api("admin", "POST", f"{P}/configs/google/test")

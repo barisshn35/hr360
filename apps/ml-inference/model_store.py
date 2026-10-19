@@ -97,7 +97,7 @@ class MlflowModelStore:
         import mlflow.sklearn
 
         mlflow.set_experiment(TRAIN_EXPERIMENT)
-        with mlflow.start_run(run_name=f"attrition-{meta.get('trained_at', '')}") as run:
+        with mlflow.start_run(run_name=f"attrition-{meta.get('trained_at', '')}"):
             mlflow.log_params(params)
             mlflow.log_metrics({k: v for k, v in metrics.items() if isinstance(v, (int, float)) and v == v})
             mlflow.set_tags({"hr360.source": meta.get("training_source", ""), "hr360.promoted": str(promote).lower()})

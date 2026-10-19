@@ -23,7 +23,6 @@ from __future__ import annotations
 import io
 import math
 import re
-import unicodedata
 import zipfile
 from collections import Counter
 from datetime import date

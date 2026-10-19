@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import numpy as np
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
