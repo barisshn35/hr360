@@ -8,6 +8,7 @@
 #   scripts/backup.sh unschedule                                         Zamanlanmis yedegi kaldir
 #   scripts/backup.sh verify [ARSIV]                                     Geri yukleme testi (gecici veritabaninda)
 #   scripts/backup.sh status                                             Son yedek, zamanlama, son dogrulama
+#   (Anlik geri donus aciksa — scripts/pitr.sh — her yedekte temel yedegi de yenilenir.)
 #
 #   --out DIZIN   Arsivin yazilacagi dizin (varsayilan: ./backups)
 #   --keep N      Bu dizinde en yeni N yedek kalsin, eskiler silinsin (varsayilan: 14)
@@ -334,3 +335,9 @@ fi
   echo "# TYPE hr360_backup_last_offsite gauge"
   echo "hr360_backup_last_offsite $([ "$S3" = 1 ] || [ "$TO_MINIO" = 1 ] && echo 1 || echo 0)"
 } | metrics_write hr360_backup
+
+# Anlik geri donus (scripts/pitr.sh) aciksa temel yedek de yenilenir: geri donus WAL oynatma suresi kisa
+# kalir ve eski WAL parcalari temizlenir. Basarisizligi gecelik yedegi basarisiz saymaz.
+if [ -x scripts/pitr.sh ] && scripts/pitr.sh enabled 2>/dev/null; then
+  scripts/pitr.sh base || echo "UYARI: anlik geri donus temel yedegi alinamadi (scripts/pitr.sh status)." >&2
+fi

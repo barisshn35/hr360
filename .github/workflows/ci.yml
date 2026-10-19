@@ -189,6 +189,8 @@ jobs:
         run: tests/install/test_install.sh
       - name: Yedek ve guncelleme (sifreleme, dis depo, geri yukleme testi, otomatik geri donus)
         run: tests/install/test_backup_update.sh
+      - name: Anlik geri donus (PITR; gercek PostgreSQL ile)
+        run: tests/install/test_pitr.sh
       - name: Sirlar dosyada ve anahtar halkasi (secrets-migrate, crypto-keys)
         run: tests/install/test_secrets.sh
       - name: Veritabani rolleri (uretilen GRANT listesi koda uygun)

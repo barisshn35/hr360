@@ -26,6 +26,7 @@ ve testler. Kurulum, güncelleme ve yedekleme özeti ana [README](../../README.m
 | Gece yedeği + haftalık geri yükleme testi | `scripts/backup.sh schedule --at 03:15 --keep 30 --verify-weekly`, kaldırmak için `unschedule`, durum `scripts/backup.sh status` |
 | Yedeği doğrula (geçici veritabanına geri yükler) | `scripts/backup.sh verify [arşiv]` |
 | Yedekten dön | `scripts/restore.sh backups/hr360-….tar.gz[.enc] [--with-env] [--only-db] [--yes]` |
+| Anlık geri dönüş (PITR: veritabanını geçmişteki bir dakikaya döndür) | `scripts/pitr.sh enable / status / disable [--purge]`; dönüş `scripts/pitr.sh restore --to "2026-10-19 14:05" --yes` (İstanbul saati), sonra `scripts/pitr.sh cleanup`. Ayrıntı aşağıda |
 
 Tüm ortam değişkenlerinin açıklamalı listesi: [.env.example](../../.env.example).
 
@@ -91,6 +92,30 @@ kurulumu durdurur, yine de devam etmek için `HR360_MAIL_IGNORE_CHECKS=1`):
 davetleri birkaç güne yayın. Gmail ve Outlook itibar oluşana kadar e-postaları istenmeyen klasörüne
 atabilir. Teslim durumunu `docker compose logs mailer` ile izleyin; ertelenen e-postalar 2 gün
 yeniden denenir. Paylaşımlı ya da kara listedeki bir IP'de bu kip uygun değildir.
+
+## Anlık geri dönüş (PITR)
+
+Gece yedeği (`scripts/backup.sh`) bir günlük veri kaybına kadar korur. Yanlışlıkla toplu silme ya
+da hatalı bir içe aktarma gibi durumlarda veritabanını o işlemden **hemen önceki dakikaya** döndürmek
+için PostgreSQL WAL arşivi kullanılır:
+
+- `scripts/pitr.sh enable` arşivlemeyi açar ve ilk temel yedeği alır. Açıkken gece yedeği temel yedeği
+  de yeniler (en yeni 2 tanesi kalır; eskilerin WAL parçaları silinir). En kötü durumda son 5 dakika
+  kaybolur (`archive_timeout=300`).
+- `scripts/pitr.sh status`: durum, arşiv boyutu, temel yedekler (geri dönülebilecek en eski an, en eski
+  temel yedeğin bitişidir), son arşivlenen WAL ve arşiv hataları.
+- `scripts/pitr.sh restore --to "YYYY-AA-GG SS:DD" --yes`: tüm veritabanlarını (uygulama, Keycloak,
+  MLflow) o ana döndürür; servisler kısa süre durur. Mevcut veri `pitr/pre-restore-…` olarak saklanır,
+  doğrulayınca `scripts/pitr.sh cleanup` ile silin. Dönüşten sonra KVKK saklama politikaları yeniden
+  çalışır (o andan sonra imha edilmiş kayıtlar geri gelmesin).
+- Nesne deposu (MinIO: belgeler, fotoğraflar) geri dönmez; o andan sonra yüklenen dosyalar kayıtsız
+  kalır, sonra silinen dosyalar eksik görünebilir.
+- Arşiv ve temel yedekler PostgreSQL hacmindedir, yani diskin kendisini korumaz: disk kaybına karşı
+  şifreli gece yedeği ve dış depo kopyası (S3/MinIO) sürmelidir. Arşivin boyutu yazma yoğunluğuna
+  bağlıdır; `status` ile izleyin.
+- `archive_mode` her zaman açıktır; arşivleme `pitr/wal/ENABLED` dosyasıyla açılıp kapandığından
+  özelliği açmak veritabanını yeniden başlatmaz. (Bu ayardan önceki bir kurulumda postgres bir kez
+  yeniden başlatılmalıdır; güncelleme bunu kendisi yapar.)
 
 ## İzleme
 

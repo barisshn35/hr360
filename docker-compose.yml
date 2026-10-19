@@ -58,7 +58,11 @@ services:
     # Baglanti butcesi: 15 servis x (12 ana + 3 kiraci durum) havuzu + Keycloak (20) + MLflow.
     # Onceden varsayilan 100'du; her servis 100'luk havuzla acildigindan yuk altinda
     # "too many clients" ile 500 donuyordu (k6 stress testiyle bulundu).
-    command: ["postgres", "-c", "max_connections=300"]
+    # Anlik geri donus (PITR, scripts/pitr.sh): archive_mode hep acik; WAL yalnizca pitr/wal/ENABLED varken
+    # arsivlenir (deploy/postgres/archive-wal.sh), boylece ozellik yeniden baslatmadan acilip kapanir.
+    # archive_timeout: en kotu durumda son 5 dakika kaybolur.
+    command: ["postgres", "-c", "max_connections=300", "-c", "archive_mode=on",
+              "-c", "archive_command=/usr/local/bin/hr360-archive-wal %p %f", "-c", "archive_timeout=300"]
     environment:
       POSTGRES_USER: hr360admin
       POSTGRES_PASSWORD: ${HR360_DB_PASSWORD}
@@ -72,6 +76,7 @@ services:
       - postgres-data:/var/lib/postgresql
       - ./deploy/postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-init-databases.sh:ro
       - ./data/migrations/sql-all-schemas.sql:/docker-entrypoint-initdb.d/02-sql-all-schemas.sql:ro
+      - ./deploy/postgres/archive-wal.sh:/usr/local/bin/hr360-archive-wal:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hr360admin -d hr360_operational"]
       interval: 5s
