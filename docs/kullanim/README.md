@@ -173,6 +173,11 @@ Uygulama verisi Android yedeğine alınmaz. **Ayarlar › Android uygulaması** 
 `~/.hr360-android/` altında ilk derlemede oluşur ve **yedeklenmelidir**: kaybolursa kurulu uygulamalar
 güncellenemez). Anlık bildirim Android uygulamasında yoktur (tarayıcı/PWA'da vardır).
 
+Hafif kurulumlar için ayrı bir uygulama da vardır: **HR360 Lite** (`/indir/HR360-Lite.apk`, derleme
+`scripts/android-build.sh --lite`). Ekranlar aynıdır (kapalı modülleri sunucu gizler); ayrı uygulama
+kimliği taşıdığı için Tam sürümle aynı telefona yan yana kurulabilir. Ayarlar'daki indirme kartı,
+kurulumda kapalı modül varsa önce Lite'ı önerir.
+
 ### Mobil uygulama (PWA)
 
 Uygulama telefona kurulur (Hesap menüsü › Uygulama olarak yükle). **Profilim › Güvenlik ›

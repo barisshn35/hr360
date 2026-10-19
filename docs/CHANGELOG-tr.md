@@ -8,6 +8,15 @@ Değiştirdikten sonra arayüz verisini üretin ve çevirileri tamamlayın:
 cd apps/web && node scripts/changelog.mjs && node scripts/i18n-check.mjs --write && node scripts/i18n-check.mjs --missing
 ```
 
+## 17 · 2026-10-19 · Hafif sürüm, modüller ve anlık geri dönüş
+- Kurulumda Tam, Hafif ya da Özel seçilir: Hafif yalnızca çekirdek ile puantaj ve bordroyu kurar, daha az bellekle çalışır. Kullanılmayan modüller Platform › Bakım › Modüller'den kapatılır, gerektiğinde yeniden açılır; kapatılan modülün verisi silinmez.
+- Tek şirket kipi: kurulum şirketi kendisi oluşturur, şirket listesi ve herkese açık kayıt gizlenir; şirket yöneticisi sistem ayarları ve bakım ekranlarını da Yönetim menüsünde görür. Birden çok şirket için çok şirket kipi aynen sürer.
+- Anlık geri dönüş: açıldığında veritabanı son 5 dakikaya kadar herhangi bir ana döndürülebilir (Platform › Bakım), örneğin yanlışlıkla yapılan bir toplu silmeden önceye.
+- İşe alıştırma planları ve demirbaş listesi büyük şirketlerde de hızlı: sayfa sayfa yüklenir, arama Türkçe harflerle çalışır.
+- Android'de HR360 Lite: Hafif kurulumlar için ayrı uygulama, Tam sürümle aynı telefona kurulabilir.
+- Hata kayıtlarında her isteğin kimliği tutulur; bildirilen bir sorun hızlıca bulunur.
+- Küçük sunucularda güncelleme ve ilk kurulum daha güvenilir: bellek azsa imajlar sırayla derlenir, yavaş makinede kurulum yarıda kalmaz.
+
 ## 16 · 2026-10-18 · SMS ve güvenlik iyileştirmeleri
 - SMS bildirimleri: şirket yöneticisi Ayarlar'da Netgsm ya da İleti Merkezi hesabını bağlar, deneme SMS'i gönderir ve günlük gönderim sınırı koyar. Telefon numaraları yurt dışına aktarılmaz.
 - Çalışanlar Profilim › Bildirimler'den SMS almayı kapatabilir; sessiz saatlerde SMS ertelenir, güvenlik iletileri her zaman gider.

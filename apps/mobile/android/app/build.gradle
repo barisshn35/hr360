@@ -10,11 +10,17 @@ def signingProps = new Properties()
 def signingFile = System.getenv("HR360_ANDROID_SIGNING") ? new File(System.getenv("HR360_ANDROID_SIGNING")) : null
 if (signingFile != null && signingFile.exists()) signingFile.withInputStream { signingProps.load(it) }
 
+// Hafif sürüm APK'sı (scripts/android-build.sh --lite): ayrı uygulama kimliği ve ad; Tam sürümle aynı
+// telefona yan yana kurulabilir. Ekranlar sunucudan gelir (kapalı modülleri sunucu gizler).
+def hr360Lite = project.findProperty("hr360Variant") == "lite"
+
 android {
     namespace "tr.com.staffware.hr360"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "tr.com.staffware.hr360"
+        applicationId hr360Lite ? "tr.com.staffware.hr360.lite" : "tr.com.staffware.hr360"
+        resValue "string", "app_name", hr360Lite ? "HR360 Lite" : "HR360"
+        resValue "string", "title_activity_main", hr360Lite ? "HR360 Lite" : "HR360"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode hr360Code

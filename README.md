@@ -76,7 +76,7 @@ Hesap açma ve parola sıfırlama süreli, tek kullanımlık davet linkiyle (kop
 | ✅ | **Onay ve belgeler** | Çok adımlı onay akışları, vekâlet, e-postadan tek tıkla karar, belge talebi ve doğrulama kodu, basit elektronik imza, duyurular ve doküman kütüphanesi |
 | ⚖️ | **Uyum** | KVKK ekranları (envanter, açık rıza, başvurular, saklama ve imha), değiştirilemez denetim kaydı, etik hattı, İSG, disiplin |
 | 💬 | **Çalışan deneyimi ve içgörü** | Takdir duvarı, takdir puanları ve ödül kataloğu, ayın çalışanı oylaması (departman bazında, katsayılı ve gizli oy, kazananlar sıralaması), fikir kutusu, etkinlikler ve gönüllülük, grup kartı, kahve eşleştirme, rozet koleksiyonu, duyurulara tepki ve yorum, Yapılacaklarım listesi, ilk 90 gün ve haftalık check-in, anket ve eNPS, ekip sağlığı paneli, 1:1 defteri, analitik ve doğal dilde rapor, devir riski modeli (yalnızca öneri) |
-| 🔌 | **Entegrasyonlar** | Slack ve Microsoft Teams'ten onay, Google/Microsoft 365 takvim ve Zoom, SSO, SCIM 2.0 ve LDAP/AD, webhook ve açık REST API (Zapier, n8n), PWA, Android uygulaması, anlık bildirim ve SMS (Netgsm, İleti Merkezi) |
+| 🔌 | **Entegrasyonlar** | Slack ve Microsoft Teams'ten onay, Google/Microsoft 365 takvim ve Zoom, SSO, SCIM 2.0 ve LDAP/AD, webhook ve açık REST API (Zapier, n8n), PWA, Android uygulaması (Tam ve Lite), anlık bildirim ve SMS (Netgsm, İleti Merkezi) |
 
 Panel **Türkçe ve İngilizcedir**. "AI" etiketli özellikler yerel, kural tabanlı ve istatistiksel
 yöntemlerle çalışır; büyük dil modeli (LLM) yalnızca isterseniz ve şirket yöneticisi açarsa kullanılır.
@@ -119,6 +119,17 @@ Betik birkaç soru sorar; parola ve anahtarlar için Enter'a basarsanız güçl�
 yalnızca yerel `.env` dosyasında (git'e girmez) saklanır. İlk kurulum, imajlar derlendiği için birkaç
 dakika sürer.
 
+Kurulum iki şey daha sorar:
+
+- **Kurulum türü:** *Tam* (tüm modüller), *Hafif* (çekirdek + puantaj + bordro; daha az bellek) ya da
+  *Özel* (modülleri tek tek seçin). Çekirdek her zaman kurulur: çalışanlar, organizasyon, izin, onaylar,
+  bildirimler, belgeler, KVKK. Modüller sonradan **Platform › Bakım › Modüller**'den açılıp kapatılır;
+  kapatılan modülün verisi silinmez.
+- **Şirket kipi:** *Tek şirket* (yalnızca kendi şirketiniz; şirket kurulumda oluşur, günlük yönetim
+  `yonetici` hesabıyla yapılır) ya da *Çok şirket* (barındırma, holding, muhasebe/bordro bürosu).
+  Soru sormadan: `--edition full|lite|custom`, `--modules timeshift,compensation`, `--tenancy single|multi`,
+  `--company "Şirket A.Ş."`.
+
 > [!TIP]
 > Kendi bilgisayarınızda denemek için `./install.sh --demo` çalıştırıp soruları boş geçin:
 > uygulama örnek `demo` şirketiyle `http://localhost` adresinde açılır.
@@ -137,7 +148,7 @@ HR360_SMTP_PASSWORD='uygulama-sifresi' ./install.sh --yes \
 |---|---|
 | İşletim sistemi | Ubuntu, Debian, RHEL, Rocky, AlmaLinux, Oracle Linux, Fedora, Amazon Linux, openSUSE/SLES, Arch, Alpine (Windows'ta WSL2, macOS'ta Docker Desktop). Sisteme özel adımlar: [docs/kurulum/isletim-sistemleri.md](docs/kurulum/isletim-sistemleri.md) |
 | Yazılım | Docker Engine + Docker Compose v2 eklentisi (yoksa `install.sh` kurmayı teklif eder), `curl`, `openssl` |
-| İşlemci ve bellek | En az **2 vCPU / 8 GB** RAM, önerilen 4 vCPU / 16 GB. Çalışırken yaklaşık 4 GB kullanılır; kurulum ve güncellemedeki imaj derlemesi daha fazlasını ister (8 GB altında derleme sırayla yeniden denenir ve uzun sürer) |
+| İşlemci ve bellek | **Tam** kurulum: en az **2 vCPU / 8 GB** RAM, önerilen 4 vCPU / 16 GB; çalışırken yaklaşık 4 GB kullanılır. **Hafif** kurulum (çekirdek + puantaj + bordro, `--edition lite`): en az **2 vCPU / 6 GB**; çalışırken yaklaşık 2–3 GB. Kurulum ve güncellemedeki imaj derlemesi daha fazlasını ister (bellek azsa imajlar sırayla derlenir ve uzun sürer) |
 | Disk | En az **40 GB** boş alan (imajlar ve derleme yaklaşık 20 GB tutar) |
 | DNS | Alan adının (ör. `hr.sirket.com`) A kaydı sunucunun genel IP'sini göstermeli |
 | Ağ | Dışarıya yalnızca **80** ve **443/tcp** açık; SSH (22) yalnızca yönetim IP'lerine (Keycloak paneli `port` moduna alınırsa 8090 da) |

@@ -1,7 +1,7 @@
 {
   "name": "hr360-mobile",
   "private": true,
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "HR360 Android kabuğu: kurulumun kendi arayüzünü açar (yenilik haritası #6)",
   "scripts": {
     "sync": "cap sync android"

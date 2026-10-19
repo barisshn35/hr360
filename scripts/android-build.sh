@@ -4,6 +4,7 @@
 # Kullanım:
 #   scripts/android-build.sh            İmzalı sürüm APK'sı → dist/HR360-<sürüm>.apk
 #   scripts/android-build.sh --debug    Hata ayıklama APK'sı (imza anahtarı gerekmez)
+#   scripts/android-build.sh --lite     Hafif sürüm: "HR360 Lite", ayrı uygulama kimliği → dist/HR360-Lite-<sürüm>.apk
 #
 # İmza anahtarı repoda DEĞİL: varsayılan ~/.hr360-android/ (HR360_ANDROID_DIR ile değişir). Yoksa ilk
 # derlemede oluşturulur (release.jks + signing.properties, yalnızca sahibi okuyabilir; parola ekrana
@@ -15,8 +16,14 @@ ROOT="$(pwd)"
 die() { echo "HATA: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 
-MODE=release
-if [ "${1:-}" = "--debug" ]; then MODE=debug; fi
+MODE=release; VARIANT=""
+for a in "$@"; do
+  case "$a" in
+    --debug) MODE=debug ;;
+    --lite) VARIANT=lite ;;   # Hafif sürüm: HR360 Lite (ayrı uygulama kimliği), dist/HR360-Lite-<sürüm>.apk
+    *) die "bilinmeyen seçenek: $a (--debug, --lite)" ;;
+  esac
+done
 VERSION="$(cat VERSION)"
 KEYDIR="${HR360_ANDROID_DIR:-$HOME/.hr360-android}"
 IMAGE=hr360-android-build
@@ -51,7 +58,7 @@ docker run --rm -v "$ROOT:/repo" -v hr360-gradle:/root/.gradle "${SIGN_ARGS[@]}"
   trap 'chown -R $(id -u):$(id -g) /repo/apps/mobile' EXIT
   npm ci --no-audit --no-fund >/dev/null 2>&1 || npm install --no-audit --no-fund >/dev/null
   npx cap sync android >/dev/null
-  cd android && ./gradlew --no-daemon -q $TASK
+  cd android && ./gradlew --no-daemon -q clean $TASK ${VARIANT:+-Phr360Variant=$VARIANT}
 "
 
 mkdir -p dist
@@ -59,14 +66,15 @@ SRC="apps/mobile/android/app/build/outputs/apk/$MODE/app-$MODE.apk"
 [ -f "$SRC" ] || die "APK üretilemedi"
 SUFFIX=""
 if [ "$MODE" = debug ]; then SUFFIX="-debug"; fi
-OUT="dist/HR360-$VERSION$SUFFIX.apk"
+NAME=HR360; [ "$VARIANT" = lite ] && NAME=HR360-Lite
+OUT="dist/$NAME-$VERSION$SUFFIX.apk"
 cp "$SRC" "$OUT"
 if [ "$MODE" = release ]; then
   docker run --rm -v "$ROOT:/repo" "$IMAGE" apksigner verify --print-certs "/repo/$OUT" | grep -E "Signer #1 certificate (DN|SHA-256)" || die "imza doğrulanamadı"
 fi
 if [ "$MODE" = release ]; then
   # Sunucudan indirilebilsin: /indir/HR360.apk (gateway deploy/downloads'u salt okunur bağlar).
-  cp "$OUT" deploy/downloads/HR360.apk.tmp && mv deploy/downloads/HR360.apk.tmp deploy/downloads/HR360.apk
-  info "Sunucuda yayında: /indir/HR360.apk"
+  cp "$OUT" "deploy/downloads/$NAME.apk.tmp" && mv "deploy/downloads/$NAME.apk.tmp" "deploy/downloads/$NAME.apk"
+  info "Sunucuda yayında: /indir/$NAME.apk"
 fi
 info "Hazır: $OUT ($(du -h "$OUT" | cut -f1))"

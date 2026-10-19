@@ -6,6 +6,15 @@ export interface ChangelogEntry { id: string; date: string; title: string; items
 
 /** En yeni dalga başta. Metinler arayüz dilinde döner. */
 export const changelog = (): ChangelogEntry[] => [
+  { id: '17', date: '2026-10-19', title: tx('Hafif sürüm, modüller ve anlık geri dönüş'), items: [
+    tx('Kurulumda Tam, Hafif ya da Özel seçilir: Hafif yalnızca çekirdek ile puantaj ve bordroyu kurar, daha az bellekle çalışır. Kullanılmayan modüller Platform › Bakım › Modüller\'den kapatılır, gerektiğinde yeniden açılır; kapatılan modülün verisi silinmez.'),
+    tx('Tek şirket kipi: kurulum şirketi kendisi oluşturur, şirket listesi ve herkese açık kayıt gizlenir; şirket yöneticisi sistem ayarları ve bakım ekranlarını da Yönetim menüsünde görür. Birden çok şirket için çok şirket kipi aynen sürer.'),
+    tx('Anlık geri dönüş: açıldığında veritabanı son 5 dakikaya kadar herhangi bir ana döndürülebilir (Platform › Bakım), örneğin yanlışlıkla yapılan bir toplu silmeden önceye.'),
+    tx('İşe alıştırma planları ve demirbaş listesi büyük şirketlerde de hızlı: sayfa sayfa yüklenir, arama Türkçe harflerle çalışır.'),
+    tx('Android\'de HR360 Lite: Hafif kurulumlar için ayrı uygulama, Tam sürümle aynı telefona kurulabilir.'),
+    tx('Hata kayıtlarında her isteğin kimliği tutulur; bildirilen bir sorun hızlıca bulunur.'),
+    tx('Küçük sunucularda güncelleme ve ilk kurulum daha güvenilir: bellek azsa imajlar sırayla derlenir, yavaş makinede kurulum yarıda kalmaz.'),
+  ] },
   { id: '16', date: '2026-10-18', title: tx('SMS ve güvenlik iyileştirmeleri'), items: [
     tx('SMS bildirimleri: şirket yöneticisi Ayarlar\'da Netgsm ya da İleti Merkezi hesabını bağlar, deneme SMS\'i gönderir ve günlük gönderim sınırı koyar. Telefon numaraları yurt dışına aktarılmaz.'),
     tx('Çalışanlar Profilim › Bildirimler\'den SMS almayı kapatabilir; sessiz saatlerde SMS ertelenir, güvenlik iletileri her zaman gider.'),
