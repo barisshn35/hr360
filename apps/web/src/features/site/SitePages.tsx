@@ -49,7 +49,12 @@ export function FaqPage() {
   const q = usePublicSite()
   const reduced = useReducedMotion()
   const [query, setQuery] = useState('')
-  const items = q.data?.faq?.length ? q.data.faq : defaultFaq(lang)
+  // Tek şirket kipinde şirket kaydı yok: kayıt sayfasına yönlendiren sorular gösterilmez.
+  const single = q.data?.tenancy === 'single'
+  const items = useMemo(
+    () => (q.data?.faq?.length ? q.data.faq : defaultFaq(lang)).filter((i) => !(single && i.a.includes('](/kayit)'))),
+    [q.data?.faq, single],
+  )
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase(lang === 'en' ? 'en' : 'tr')
     if (!needle) return items

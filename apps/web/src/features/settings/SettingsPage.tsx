@@ -12,6 +12,7 @@ import { formatDate, formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { CompanyNamePanel, BrandingPanel } from './BrandingPanel'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 import { PasswordMethodPanel } from '@/features/access/PasswordLinksPanel'
 import { SampleDataPanel } from './SampleDataPanel'
 import { SmsPanel } from './SmsPanel'
@@ -26,6 +27,7 @@ const THEMES: Array<{ value: Theme; label: string; icon: React.ElementType }> = 
 
 export function SettingsPage() {
   const { user, roles, tenant, tenantSlug, tenantError, accountUrl, logout, can } = useAuth()
+  const { tenancy } = useModules()
   const { theme, setTheme } = useTheme()
 
   const permissions = [...permissionsFor(roles)].sort()
@@ -80,7 +82,11 @@ export function SettingsPage() {
         <Panel>
           <PanelHead title={tx('Şirket')} note={tx('Bağlı olduğunuz kiracı')} />
           <PanelBody className="space-y-4">
-            {!tenantSlug && roles.includes('platform-admin') ? (
+            {!tenantSlug && roles.includes('platform-admin') && tenancy === 'single' ? (
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
+                {tx('Tek şirket kipi: şirket ekranları için yonetici hesabıyla giriş yapın. Platform yöneticisi hesabı yalnızca acil durum ve bakım içindir.')}
+              </p>
+            ) : !tenantSlug && roles.includes('platform-admin') ? (
               // Platform yöneticisi hiçbir kiracıya bağlı değildir; uyarı yanlış alarm olurdu (AppShell ile aynı kural).
               <p className="text-[13px] leading-relaxed text-muted-foreground">
                 {tx('Platform yöneticisi olarak hiçbir şirkete bağlı değilsiniz. Şirketleri')}{' '}

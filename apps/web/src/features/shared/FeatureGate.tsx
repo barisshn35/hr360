@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { useTenantScope } from '@/lib/tenant-scope'
 import { useAuth } from '@/auth/useAuth'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 /**
  * Kiracısız oturumda şirket düzeyindeki ekran yerine gösterilen kart (TenantGate ve TenantOnly ortak).
@@ -15,11 +16,14 @@ import { tx } from '@/lib/i18n'
 export function NoTenantNotice() {
   const { roles } = useAuth()
   const platform = roles.includes('platform-admin')
+  const single = useModules().tenancy === 'single'
   return (
     <Card className="mx-auto mt-10 max-w-lg items-center gap-3 p-8 text-center">
       <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><Building2 className="size-5" /></span>
       <h2 className="text-[17px] font-semibold">{tx('Bu ekran şirket düzeyindedir')}</h2>
-      {platform ? (
+      {platform && single ? (
+        <p className="text-[13.5px] text-muted-foreground">{tx('Tek şirket kipi: şirket ekranları için yonetici hesabıyla giriş yapın. Platform yöneticisi hesabı yalnızca acil durum ve bakım içindir.')}</p>
+      ) : platform ? (
         <>
           <p className="text-[13.5px] text-muted-foreground">{tx('Platform yöneticisi hiçbir şirkete bağlı değildir; şirket verisini Kiracılar ekranından yönetir.')}</p>
           <Button asChild className="mt-2">

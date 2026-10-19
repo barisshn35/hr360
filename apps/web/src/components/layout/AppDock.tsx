@@ -8,8 +8,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { Command, Settings } from 'lucide-react'
 import { FloatingDock, type DockItem } from '@/components/fx/floating-dock'
 import { cn } from '@/lib/utils'
-import { flattenItems, locate, overviewItem } from './nav-config'
-import { useNavGroups } from './use-nav'
+import { flattenItems, overviewItem } from './nav-config'
+import { useLocate, useNavGroups } from './use-nav'
 import { tx } from '@/lib/i18n'
 
 /** Rıhtıma girecek modüller, öncelik sırasıyla; yetkisi olmayanlar atlanır. */
@@ -17,7 +17,7 @@ const PREFERRED = ['approvals', 'leave', 'workplace', 'kudos', 'expense', 'emplo
 
 export function AppDock({ unreadCount, onOpenCommandPalette }: { unreadCount: number; onOpenCommandPalette: () => void }) {
   const { pathname } = useLocation()
-  const here = locate(pathname)
+  const here = useLocate(pathname)
 
   const groups = useNavGroups()
   const modules = useMemo(() => {

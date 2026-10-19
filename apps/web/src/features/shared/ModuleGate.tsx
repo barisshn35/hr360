@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ErrorScene } from '@/components/errors/ErrorScene'
@@ -23,6 +23,7 @@ export const moduleLabels = (): Record<ModuleId, string> => ({
 /** Kurulumda kapalı modülün ekranı açılınca: ne olduğunu ve kimin açabileceğini söyler. */
 export function ModuleNotInstalled({ module, standalone = false }: { module: ModuleId; standalone?: boolean }) {
   const { can, status } = useAuth()
+  const { tenancy } = useModules()
   // Herkese açık sayfalarda (kariyer, kiosk) oturum yok: yönetici satırı gösterilmez.
   const admin = !standalone && status === 'authenticated' && (can('platform:manage') || can('tenant:manage'))
   return (
@@ -35,7 +36,7 @@ export function ModuleNotInstalled({ module, standalone = false }: { module: Mod
       detail={
         <>
           {tx('{0} modülü bu kurulumda açık değil.', [moduleLabels()[module]])}{' '}
-          {standalone ? null : admin ? tx('Platform › Bakım › Modüller\'den açabilirsiniz.') : tx('Yöneticinize başvurun.')}
+          {standalone ? null : admin ? (tenancy === 'single' ? tx('Yönetim › Bakım › Modüller\'den açabilirsiniz.') : tx('Platform › Bakım › Modüller\'den açabilirsiniz.')) : tx('Yöneticinize başvurun.')}
         </>
       }
       actions={
@@ -57,5 +58,12 @@ export function RequireModule({ module, standalone = false, children }: { module
   const { isEnabled, loading } = useModules()
   if (loading) return standalone ? <FullPageSpinner /> : <CenteredSpinner />
   if (!isEnabled(module)) return <ModuleNotInstalled module={module} standalone={standalone} />
+  return <>{children}</>
+}
+
+/** Rota sarmalayıcısı: tek şirket kipinde olmayan ekranlar (şirket kaydı, kiracı listesi) `to` adresine yönlenir. */
+export function MultiTenantOnly({ to, children }: { to: string; children: ReactNode }) {
+  const { tenancy } = useModules()
+  if (tenancy === 'single') return <Navigate to={to} replace />
   return <>{children}</>
 }

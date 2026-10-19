@@ -88,6 +88,7 @@ Kullanim: ./install.sh [secenekler]
                           8090/tcp dis guvenlik duvarinda yonetim IP'lerine kisitlanir.
   --demo                  Demo verisi kur: ornek "demo" sirketi ve demo.admin kullanicisi
                           (deneme/sunum icin; uretimde kullanmayin). Varsayilan: kurulmaz.
+                          Yalnizca cok sirket kipinde (--tenancy multi).
   --no-signup             Herkese acik sirket kaydini kapat (giris ekranindaki "Sirketinizi
                           kaydedin"); sirketleri yalnizca platform.admin olusturur.
   --edition TUR           full (Tam: tum moduller) | lite (Hafif: cekirdek + puantaj + bordro) |
@@ -153,6 +154,12 @@ fi
 case "$OPT_TLS" in ""|letsencrypt|self-signed|none|cert) ;; *) echo "Gecersiz --tls: $OPT_TLS"; exit 2 ;; esac
 case "$OPT_EDITION" in ""|full|lite|custom) ;; *) echo "Gecersiz --edition: $OPT_EDITION (full|lite|custom)"; exit 2 ;; esac
 case "$OPT_TENANCY" in ""|single|multi) ;; *) echo "Gecersiz --tenancy: $OPT_TENANCY (single|multi)"; exit 2 ;; esac
+demo_single_err() {
+  echo "--demo tek sirket kipinde kullanilamaz: demo verisi ayri bir \"demo\" sirketi olusturur."
+  echo "Demo icin --tenancy multi ile ayri bir kurulum yapin."
+  exit 2
+}
+[ "$OPT_DEMO" = true ] && [ "$OPT_TENANCY" = single ] && demo_single_err
 if [ -n "$OPT_MODULES" ]; then
   [ -z "$OPT_EDITION" ] && OPT_EDITION=custom
   [ "$OPT_EDITION" = custom ] || { echo "--modules yalnizca --edition custom ile (ya da tek basina) verilir."; exit 2; }
@@ -839,7 +846,8 @@ esac
 TENANCY="$OPT_TENANCY"
 if [ -z "$TENANCY" ]; then
   if [ "$ASSUME_YES" = 1 ]; then
-    if [ "$EDITION" = full ]; then TENANCY=multi; else TENANCY=single; fi
+    # --demo ayri bir "demo" sirketi demektir: kip verilmediyse cok sirket.
+    if [ "$EDITION" = full ] || [ "$OPT_DEMO" = true ]; then TENANCY=multi; else TENANCY=single; fi
   else
     echo ""
     echo "Sirket kipi:"
@@ -863,6 +871,9 @@ if [ "$TENANCY" = single ]; then
     fi
   done
   COMPANY_NAME="${COMPANY_NAME:-Sirketim}"
+  # Tek sirkette demo sirketi olmaz (kipi --yes ya da Hafif secimi belirlediyse de).
+  [ "$OPT_DEMO" = true ] && demo_single_err
+  OPT_DEMO=false
 fi
 info "Kurulum: $( case "$EDITION" in full) echo Tam ;; lite) echo Hafif ;; *) echo Ozel ;; esac ) (moduller: ${MODULES_SEL:-yalniz cekirdek}), $( [ "$TENANCY" = single ] && echo "tek sirket: $COMPANY_NAME" || echo "cok sirket" )"
 
@@ -1132,6 +1143,16 @@ else
   DEMO_ADMIN_PASSWORD=""
 fi
 ask_secret PLATFORM_ADMIN_PASSWORD    "Platform yoneticisi (platform.admin) parolasi" 12
+# Tek sirket kipi: gunluk yonetim hesabi "yonetici" (sirketin tenant-admin'i). Yonetici e-postasi ona verilir;
+# platform.admin (acil durum/bakim) ayri adres alir: Keycloak'ta ayni e-posta iki kullanicida olamaz.
+if [ "$TENANCY" = single ]; then
+  ask_secret COMPANY_ADMIN_PASSWORD   "Sirket yoneticisi (yonetici) parolasi" 12
+  COMPANY_ADMIN_EMAIL="${ADMIN_EMAIL:-yonetici@hr360.local}"
+  PLATFORM_ADMIN_EMAIL=platform.admin@hr360.local
+else
+  COMPANY_ADMIN_PASSWORD=""; COMPANY_ADMIN_EMAIL=""
+  PLATFORM_ADMIN_EMAIL="${ADMIN_EMAIL:-platform.admin@hr360.local}"
+fi
 
 KEYCLOAK_ADMIN_USER=admin
 MINIO_ROOT_USER=hr360minio
@@ -1205,6 +1226,15 @@ SMTP_FROM_NAME='${SMTP_FROM_NAME}'
 HR360_ADMIN_EMAIL=${ADMIN_EMAIL}
 ALERT_EMAIL_TO=${ADMIN_EMAIL}
 EOF
+if [ "$TENANCY" = single ]; then
+  cat >> .env <<EOF
+
+# Sirket yoneticisi (tek sirket kipi): gunluk yonetim hesabi "yonetici". tenant-service sirketi ilk
+# acilista olusturur ve bu e-postadaki kullaniciyi sirketin yoneticisi yapar.
+COMPANY_ADMIN_EMAIL=${COMPANY_ADMIN_EMAIL}
+COMPANY_ADMIN_PASSWORD=${COMPANY_ADMIN_PASSWORD}
+EOF
+fi
 if [ "$MAIL_MODE" = self ]; then
   cat >> .env <<EOF
 
@@ -1248,7 +1278,9 @@ for pair in \
   "__TENANT_ADMIN_CLIENT_SECRET__=${KEYCLOAK_TENANT_ADMIN_CLIENT_SECRET}" \
   "__DEMO_ADMIN_PASSWORD__=${DEMO_ADMIN_PASSWORD}" \
   "__PLATFORM_ADMIN_PASSWORD__=${PLATFORM_ADMIN_PASSWORD}" \
-  "__PLATFORM_ADMIN_EMAIL__=${ADMIN_EMAIL:-platform.admin@hr360.local}" \
+  "__PLATFORM_ADMIN_EMAIL__=${PLATFORM_ADMIN_EMAIL}" \
+  "__COMPANY_ADMIN_PASSWORD__=${COMPANY_ADMIN_PASSWORD}" \
+  "__COMPANY_ADMIN_EMAIL__=${COMPANY_ADMIN_EMAIL}" \
   "__PUBLIC_ORIGIN__=${PUBLIC_ORIGIN}" \
   "__SMTP_HOST__=${SMTP_HOST}" \
   "__SMTP_PORT__=${SMTP_PORT}" \
@@ -1262,16 +1294,19 @@ for pair in \
   key="${pair%%=*}"; val="$(json_escape "${pair#*=}")"
   realm="${realm//"$key"/$val}"
 done
-# Demo verisi istenmediyse demo.admin kullanicisi realm'den cikarilir (platform.admin kalir).
-if [ "$HR360_DEMO" != true ]; then
-  realm="$(printf '%s\n' "$realm" | awk '
+# realm_drop_user KULLANICI: kullanicinin blogunu realm'den cikarir (platform.admin son blok, hep kalir).
+realm_drop_user() {
+  realm="$(printf '%s\n' "$realm" | awk -v u="\"username\": \"$1\"" '
     /^    \{$/ { buf = $0; inb = 1; next }
     inb { buf = buf "\n" $0
-          if ($0 ~ /^    \},?$/) { inb = 0; if (buf !~ /"username": "demo\.admin"/) print buf }
+          if ($0 ~ /^    \},?$/) { inb = 0; if (index(buf, u) == 0) print buf }
           next }
     { print }')"
-  if printf '%s' "$realm" | grep -q '"demo\.admin'; then echo "demo.admin realm'den cikarilamadi."; exit 1; fi
-fi
+  if printf '%s' "$realm" | grep -qF "\"username\": \"$1\""; then echo "$1 realm'den cikarilamadi."; exit 1; fi
+}
+# Demo verisi istenmediyse demo.admin, cok sirket kipinde sirket yoneticisi (yonetici) cikarilir.
+if [ "$HR360_DEMO" != true ]; then realm_drop_user demo.admin; fi
+if [ "$TENANCY" != single ]; then realm_drop_user yonetici; fi
 printf '%s\n' "$realm" > deploy/keycloak/realm-export.json
 if grep -q "__[A-Z_]*__" deploy/keycloak/realm-export.json; then
   echo "Realm sablonunda doldurulmamis alan kaldi."; exit 1
@@ -1440,17 +1475,22 @@ printf '%s\n' "$verify_out" | sed 's/^/  /'
 [ "$verify_ok" = 1 ] || warn "Dogrulamada sorun var; ayrinti: scripts/tls.sh verify, docker compose ps"
 echo ""
 echo "Ilk giris:"
-echo "  Platform yonetimi: platform.admin / (.env icindeki PLATFORM_ADMIN_PASSWORD)  - tum kiracilar; paylasmayin"
-if [ "$HR360_DEMO" = true ]; then
-  echo "  Demo giris:        demo.admin / (.env icindeki DEMO_ADMIN_PASSWORD)  - yalnizca demo sirketinin yoneticisi"
+if [ "$TENANCY" = single ]; then
+  echo "  Sirket yonetimi:   yonetici / (.env icindeki COMPANY_ADMIN_PASSWORD)  - gunluk kullanim"
+  echo "  Platform yonetimi: platform.admin / (.env icindeki PLATFORM_ADMIN_PASSWORD)  - yalnizca acil durum ve bakim; paylasmayin"
 else
-  echo "  Ilk sirket:        platform.admin ile giris yapip Platform yonetiminden sirketi olusturun"
-  echo "                     (demo verisi kurulmadi; denemek icin: ./install.sh --demo ile ayri bir kurulum)."
-fi
-if [ "$PUBLIC_SIGNUP_ENABLED" = true ]; then
-  echo "  Sirket kaydi:      herkese acik (${PUBLIC_ORIGIN}/kayit). Kapatmak: .env PUBLIC_SIGNUP_ENABLED=false"
-else
-  echo "  Sirket kaydi:      kapali (PUBLIC_SIGNUP_ENABLED=false); sirketleri platform.admin olusturur."
+  echo "  Platform yonetimi: platform.admin / (.env icindeki PLATFORM_ADMIN_PASSWORD)  - tum kiracilar; paylasmayin"
+  if [ "$HR360_DEMO" = true ]; then
+    echo "  Demo giris:        demo.admin / (.env icindeki DEMO_ADMIN_PASSWORD)  - yalnizca demo sirketinin yoneticisi"
+  else
+    echo "  Ilk sirket:        platform.admin ile giris yapip Platform yonetiminden sirketi olusturun"
+    echo "                     (demo verisi kurulmadi; denemek icin: ./install.sh --demo ile ayri bir kurulum)."
+  fi
+  if [ "$PUBLIC_SIGNUP_ENABLED" = true ]; then
+    echo "  Sirket kaydi:      herkese acik (${PUBLIC_ORIGIN}/kayit). Kapatmak: .env PUBLIC_SIGNUP_ENABLED=false"
+  else
+    echo "  Sirket kaydi:      kapali (PUBLIC_SIGNUP_ENABLED=false); sirketleri platform.admin olusturur."
+  fi
 fi
 if [ "$KEYCLOAK_ADMIN_MODE" = port ]; then
   echo ""

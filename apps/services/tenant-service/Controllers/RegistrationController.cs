@@ -36,7 +36,8 @@ public partial class RegistrationController : ControllerBase
     private static partial Regex SlugRegex();
 
 
-    private static readonly HashSet<string> ReservedSlugs = new(StringComparer.Ordinal)
+    /// <summary>Sirket kisa adi olarak alinamayan adlar (tek sirket kipi tohumlayicisi da kullanir).</summary>
+    public static readonly IReadOnlySet<string> ReservedSlugs = new HashSet<string>(StringComparer.Ordinal)
 
     {
 

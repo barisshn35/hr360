@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { motion, useReducedMotion } from 'motion/react'
 import { ChevronRight } from 'lucide-react'
 import { TextReveal } from '@/components/fx/text-reveal'
-import { locate } from './nav-config'
+import { useLocate } from './use-nav'
 
 /**
  * Her modül sayfasının üst bandı.
@@ -27,7 +27,7 @@ export function PageHeader({
 }) {
   const { pathname } = useLocation()
   const reduced = useReducedMotion()
-  const here = locate(pathname)
+  const here = useLocate(pathname)
   // Sayfa başlığı (WCAG 2.4.2): her ekranın kendi adı sekme başlığında.
   useEffect(() => {
     document.title = `${title} · HR360`

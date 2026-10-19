@@ -45,7 +45,8 @@
       { "name": "accounting", "description": "Muhasebe / bordro uzmanı" },
       { "name": "hr-admin", "description": "İK yöneticisi" },
       { "name": "tenant-admin", "description": "Şirket yöneticisi" },
-      { "name": "platform-admin", "description": "Platform süper yöneticisi" }
+      { "name": "platform-admin", "description": "Platform süper yöneticisi" },
+      { "name": "single-platform-manage", "description": "Tek şirket kipi: şirket yöneticisine sistem ayarları ve bakım ekranları (yalnız HR360_TENANCY=single iken geçerli)" }
     ]
   },
   "clients": [
@@ -107,6 +108,18 @@
         { "type": "password", "value": "__DEMO_ADMIN_PASSWORD__", "temporary": false }
       ],
       "realmRoles": ["tenant-admin"]
+    },
+    {
+      "username": "yonetici",
+      "email": "__COMPANY_ADMIN_EMAIL__",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Şirket",
+      "lastName": "Yöneticisi",
+      "credentials": [
+        { "type": "password", "value": "__COMPANY_ADMIN_PASSWORD__", "temporary": false }
+      ],
+      "realmRoles": ["tenant-admin", "single-platform-manage"]
     },
     {
       "username": "platform.admin",

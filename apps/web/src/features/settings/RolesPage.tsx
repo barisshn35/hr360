@@ -14,6 +14,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useCompanies, useDepartmentList } from '@/api/queries'
 import { tenantApi } from '@/api/tenant'
 import { permissionsFor, roleLabels, type Permission, type Role } from '@/auth/roles'
+import { useModules } from '@/lib/modules'
 import { tx } from '@/lib/i18n'
 import { passwordLinkApi, passwordLinkKeys } from '@/api/password-links'
 import { PasswordLinksPanel } from '@/features/access/PasswordLinksPanel'
@@ -149,6 +150,8 @@ export function RolesPage() {
   const toast = useToast()
   const queryClient = useQueryClient()
   const { roles: myRoles } = useAuth()
+  // Tek şirket kipinde kiracı yönetimi yok: platform:manage ek izni sunulmaz (bakım yonetici hesabındadır).
+  const single = useModules().tenancy === 'single'
   const canGrantExtraPermissions = myRoles.includes('tenant-admin') || myRoles.includes('platform-admin')
   // Parola linkleri (liste, sıfırlama linki): İK yöneticisi ve üstü (backend RequireHrAdmin).
   const canManageLinks = canGrantExtraPermissions || myRoles.includes('hr-admin')
@@ -355,22 +358,26 @@ export function RolesPage() {
    * sütunu hiç göstermemek, yetkisi olmayan birinin boş bir "+" ile
    * karşılaşıp 403 almasını da önlüyor).
    */
+  const permLabel = (perm: string) =>
+    single && perm === 'platform:manage'
+      ? tx('Bakım ve sistem ayarları (tek şirket kipi)')
+      : (PERMISSION_LABELS[perm as Permission] ?? perm)
   const extraPermColumn: Column<RoleRow> = {
     id: 'extra-permissions',
     header: tx('Ek izinler'),
     cell: (r) => {
       if (!r.hasLoginAccess) return <span className="text-[12px] text-muted-foreground">—</span>
       const available = Array.from(PERMISSIONS_WITH_BACKEND_SUPPORT).filter(
-        (p) => !r.extraPermissions.includes(p),
+        (p) => !r.extraPermissions.includes(p) && !(single && p === 'platform:manage'),
       )
       return (
         <div className="flex flex-wrap items-center gap-1.5">
           {r.extraPermissions.map((perm) => (
             <StatusBadge key={perm} tone="warning" className="group gap-1">
-              {PERMISSION_LABELS[perm as Permission] ?? perm}
+              {permLabel(perm)}
               <button
                 type="button"
-                aria-label={tx('{0} iznini kaldır', [PERMISSION_LABELS[perm as Permission] ?? perm])}
+                aria-label={tx('{0} iznini kaldır', [permLabel(perm)])}
                 className="cursor-pointer opacity-60 hover:opacity-100"
                 disabled={removePermMutation.isPending}
                 onClick={() =>

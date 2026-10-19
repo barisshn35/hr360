@@ -122,6 +122,25 @@ ile tek seferde uygulanır:
 Geçişte yalnızca `.env` değişir ve servisler `docker compose up -d` ile yeni ortamı alır; veri ve şirket adı
 (`HR360_COMPANY_NAME`) değişmez.
 
+**Tek şirket kipinde hesaplar.** Kurulum (`install.sh`, tek şirket seçilince) iki ayrı hesap açar:
+
+| Hesap | Ne için | Parola |
+|---|---|---|
+| `yonetici` (e-posta `COMPANY_ADMIN_EMAIL`) | Günlük kullanım: şirketin tüm ekranları (Şirket Yöneticisi) ve **Yönetim** menüsündeki **Sistem ayarları** ile **Bakım** | `.env` içindeki `COMPANY_ADMIN_PASSWORD` |
+| `platform.admin` | Yalnızca acil durum ve bakım (yönetici hesabı kilitlenirse, Keycloak sorunu); şirket verisini görmez | `.env` içindeki `PLATFORM_ADMIN_PASSWORD` |
+
+- Şirket ilk açılışta tenant-service tarafından `HR360_COMPANY_NAME` adıyla bir kez oluşturulur ve `yonetici`
+  o şirketin üyesi yapılır (herhangi bir şirket zaten varsa hiçbir şey yapılmaz). Diğer yeni şirketler gibi
+  iki adımlı doğrulama ilk girişte kurulur.
+- `yonetici` hesabı `tenant-admin` ve `single-platform-manage` rollerini taşır. İkinci rol yalnızca tek şirket
+  kipinde ve yalnızca sistem ayarları, bakım ve şirket kaydı uçlarında geçerlidir; platform yöneticisi gibi
+  kiracı filtresini atlatmaz. Çok şirketli kipe geçilince kendiliğinden etkisiz kalır (hesap yalnızca
+  şirket yöneticisi olarak devam eder; platform ekranları `platform.admin`'e döner).
+- Tek şirket kipinde **Kiracılar** ekranı, şirket değiştirici, herkese açık şirket kaydı (`/kayit`) ve yeni
+  şirket oluşturma kapalıdır; şirket askıya alınamaz. Demo verisi (`--demo`) bu kiple birlikte kullanılamaz.
+- Çok şirketliden tek şirket kipine geçen kurulumlarda `yonetici` hesabı yoktur: mevcut şirket yöneticisi
+  şirket ekranlarını, `platform.admin` sistem ayarları ve bakımı kullanmaya devam eder.
+
 **Sunucudan:**
 
 ```bash

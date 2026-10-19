@@ -49,6 +49,7 @@ import { useAuth } from '@/auth/useAuth'
 import { usePublicConfig } from '@/api/queries-tenant'
 import { EASE } from '@/motion/primitives'
 import { tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 import { IntegrationsMarquee } from './IntegrationsMarquee'
 import { SiteFooter } from '@/features/site/SiteChrome'
 import { CustomDomainBrandBadge, loginWithTenantHint, useCustomDomainBranding } from './CustomDomainBranding'
@@ -76,8 +77,13 @@ export function SignInPage() {
   const [params] = useSearchParams()
   const next = params.get('devam') || '/panel'
   const brand = useCustomDomainBranding()
+  const config = usePublicConfig().data
+  const { tenancy } = useModules()
+  // Tek şirket kipinde kurulum tek şirkete aittir: kayıt girişi yok, şirket adı gösterilir.
+  const single = tenancy === 'single' || config?.tenancy === 'single'
   // Herkese açık kayıt kapalıysa (PUBLIC_SIGNUP_ENABLED=false) "Şirketinizi kaydedin" gizlenir.
-  const signupEnabled = usePublicConfig().data?.signupEnabled !== false
+  const signupEnabled = config?.signupEnabled !== false && !single
+  const companyName = single ? config?.companyName?.trim() || null : null
 
   if (status === 'loading') return <AppShellSkeleton label={tx('Oturum doğrulanıyor')} />
   if (status === 'authenticated') return <Navigate to={next} replace />
@@ -109,7 +115,7 @@ export function SignInPage() {
           className="mt-2 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3.5 py-1 text-[12px] font-medium text-muted-foreground backdrop-blur"
         >
           <span className="size-1.5 animate-pulse rounded-full bg-primary" />
-          {tx('HR360 Enterprise')}
+          {companyName ?? tx('HR360 Enterprise')}
         </motion.div>
 
         <h1 className="mt-5 text-center text-[38px] leading-[1.05] font-semibold tracking-[-0.045em] sm:text-[52px]">

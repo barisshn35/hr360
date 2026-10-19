@@ -154,6 +154,19 @@ export function hasPermission(roles: string[], permission: Permission): boolean 
 }
 
 /**
+ * Tek şirket kipinde şirket yöneticisine (yonetici) verilen realm rolü: Sistem ayarları ve Bakım
+ * ekranlarını açar. platform-admin değildir (kiracı filtresi/erişim izni kapısı devreye girmez);
+ * tenant-service de bu rolü yalnızca HR360_TENANCY=single iken kabul eder.
+ */
+export const SINGLE_PLATFORM_ROLE = 'single-platform-manage';
+
+/** hasPermission + kurulum kipi: tek şirket kipinde SINGLE_PLATFORM_ROLE platform:manage sayılır. */
+export function hasPermissionIn(roles: string[], permission: Permission, tenancy: 'single' | 'multi'): boolean {
+  if (permission === 'platform:manage' && tenancy === 'single' && roles.includes(SINGLE_PLATFORM_ROLE)) return true;
+  return hasPermission(roles, permission);
+}
+
+/**
  * "Ek izin" (ext-*) rollerini SAYMADAN, kullanıcının gerçekten bu sabit
  * rollerden birine sahip olup olmadığını kontrol eder.
  *

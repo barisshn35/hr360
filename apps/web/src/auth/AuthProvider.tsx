@@ -10,7 +10,8 @@ import {
   scopeForTenant,
   writePreferredTenant,
 } from './keycloak'
-import { hasPermission, type Permission, type Role } from './roles'
+import { hasPermissionIn, type Permission, type Role } from './roles'
+import { useModules } from '@/lib/modules'
 import { platformTenantFor, readGrantTenant, writeGrantTenant } from './platformAccess'
 import { AuthContext, type AuthContextValue, type AuthUser } from './AuthContext'
 import { clearSessionExpired, markSessionExpired } from './sessionExpiry'
@@ -117,10 +118,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const roles = useMemo(() => user?.roles ?? [], [user])
-  const can = useCallback((permission: Permission) => hasPermission(roles, permission), [roles])
+  const { tenancy } = useModules()
+  const can = useCallback((permission: Permission) => hasPermissionIn(roles, permission, tenancy), [roles, tenancy])
 
   const isAuthenticated = status === 'authenticated'
-  const canSwitchTenant = isAuthenticated && can('platform:manage')
+  // Tek şirket kipinde seçilecek başka şirket yok.
+  const canSwitchTenant = isAuthenticated && tenancy !== 'single' && can('platform:manage')
 
   // Kiracıya bağlı olmayan oturum (platform.admin) için /my-tenant her sayfada 404
   // dönüyordu; kiracı bilgisi yoksa istenmez.

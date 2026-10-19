@@ -177,7 +177,18 @@ public class PublicTenantController : ControllerBase
         // passwordResetByEmail: "Parolamı unuttum" e-postayla mı (platform ya da en az bir şirketin SMTP'si var),
         // yoksa "İK yöneticinize başvurun" mu gösterilecek.
         var resetByEmail = (await settings.SmtpAsync(ct)).Configured || await _db.Tenants.AnyAsync(t => t.SmtpHost != null, ct);
-        return Ok(new { signupEnabled = await settings.SignupEnabledAsync(ct), passwordResetByEmail = resetByEmail });
+        // tenancy/companyName: tek şirket kipinde giriş ekranı şirket adını gösterir, kayıt girişini hiç sunmaz.
+        string? companyName = null;
+        if (HR360.Platform.Modules.IsSingleTenant)
+            companyName = await _db.Tenants.Where(t => t.Status == TenantStatus.Active).OrderBy(t => t.CreatedAt)
+                .Select(t => t.Name).FirstOrDefaultAsync(ct) ?? SingleTenantRules.CompanyNameFromEnv();
+        return Ok(new
+        {
+            signupEnabled = await settings.SignupEnabledAsync(ct),
+            passwordResetByEmail = resetByEmail,
+            tenancy = HR360.Platform.Modules.Tenancy,
+            companyName,
+        });
     }
 
     [HttpGet("branding")]

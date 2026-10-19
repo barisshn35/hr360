@@ -31,6 +31,7 @@ import { defaultFaq, defaultPrivacy, defaultTerms } from '@/features/site/defaul
 import { formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { lang, tx } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 function useSave<TIn>(fn: (input: TIn) => Promise<SystemSettings>, okText: string) {
   const qc = useQueryClient()
@@ -231,6 +232,8 @@ function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onCh
 
 function AccessPanel({ s }: { s: SystemSettings }) {
   const reduced = useReducedMotion()
+  // Tek şirket kipinde herkese açık kayıt hiç açılamaz (sunucu da reddeder): anahtar gösterilmez.
+  const single = useModules().tenancy === 'single'
   const [ttl, setTtl] = useState(String(s.inviteTtlHours))
   const save = useSave((input: { signupEnabled?: boolean; passwordMethod?: PasswordMethod; inviteTtlHours?: number }) => passwordLinkApi.saveGeneral(input), tx('Ayar kaydedildi.'))
   const methods: Array<{ value: PasswordMethod; title: string; detail: string; disabled?: boolean }> = [
@@ -245,13 +248,13 @@ function AccessPanel({ s }: { s: SystemSettings }) {
     <Panel>
       <PanelHead title={tx('Hesaplar ve parolalar')} note={tx('Şirketler kendi ayarlarında yöntemi değiştirebilir')} action={<SavedTick at={save.savedAt} />} />
       <PanelBody className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
+        {!single && <div className="flex items-start justify-between gap-4">
           <div>
             <p className="flex items-center gap-2 text-[13px] font-medium"><UserPlus className="size-4 text-primary" />{tx('Herkese açık şirket kaydı')}</p>
             <p className="mt-1 text-[12px] text-muted-foreground">{tx('Açıkken giriş sayfasında "Şirketinizi kaydedin" görünür. Kapalıyken şirketleri yalnızca platform yöneticisi açar.')}</p>
           </div>
           <Toggle checked={s.signupEnabled} onChange={(v) => save.mutate({ signupEnabled: v })} label={tx('Herkese açık şirket kaydı')} disabled={save.isPending} />
-        </div>
+        </div>}
 
         <div className="space-y-2.5">
           <p className="flex items-center gap-2 text-[13px] font-medium"><ShieldCheck className="size-4 text-primary" />{tx('Varsayılan parola belirleme yöntemi')}</p>

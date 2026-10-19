@@ -65,6 +65,10 @@ export interface PublicConfig {
   signupEnabled: boolean
   /** "Parolamı unuttum" e-postayla mı (yoksa "İK yöneticinize başvurun"). */
   passwordResetByEmail?: boolean
+  /** Kurulum kipi; eski sunucuda yok (çok şirketli sayılır). */
+  tenancy?: 'single' | 'multi'
+  /** Tek şirket kipinde şirket adı (HR360_COMPANY_NAME); aksi hâlde null. */
+  companyName?: string | null
 }
 
 export interface TenantRegistrationInput {

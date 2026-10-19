@@ -20,7 +20,7 @@ import {
 import type { Permission, Role } from '@/auth/roles'
 import { hasStandardRole } from '@/auth/roles'
 import { tx } from '@/lib/i18n'
-import type { ModuleId } from '@/lib/modules'
+import type { ModuleId, Tenancy } from '@/lib/modules'
 
 export type NavItemData = {
   id: string
@@ -254,6 +254,22 @@ export const navGroups: NavGroupData[] = [
   },
 ]
 
+/**
+ * Tek şirket kipi: ayrı "Platform" bölümü yok; Kiracılar gizlenir, Sistem ayarları ve Bakım
+ * "Yönetim"in sonuna taşınır. Çok şirketli kipte ağaç olduğu gibi döner.
+ */
+const singleNavGroups: NavGroupData[] = (() => {
+  const platform = navGroups.find((g) => g.id === 'platform')
+  const moved = (platform?.items ?? []).filter((i) => i.id !== 'tenants')
+  return navGroups
+    .filter((g) => g.id !== 'platform')
+    .map((g) => (g.id === 'admin' ? { ...g, items: [...g.items, ...moved] } : g))
+})()
+
+export function navGroupsFor(tenancy: Tenancy): NavGroupData[] {
+  return tenancy === 'single' ? singleNavGroups : navGroups
+}
+
 /** İzni olmayan girdileri (ve boş kalan grupları) ağaçtan çıkarır. */
 export function filterByPermission(
   groups: NavGroupData[],
@@ -292,11 +308,14 @@ export function flattenItems(groups: NavGroupData[]): Array<NavItemData & { grou
 }
 
 /** Adres çubuğundaki yolu menüdeki konuma çevirir (bölüm, üst modül, sayfa). */
-export function locate(pathname: string): { group?: NavGroupData; parent?: NavItemData; item?: NavItemData } {
+export function locate(
+  pathname: string,
+  groups: NavGroupData[] = navGroups,
+): { group?: NavGroupData; parent?: NavItemData; item?: NavItemData } {
   if (pathname === '/panel' || pathname === '/panel/') return { item: overviewItem }
   let best: { group?: NavGroupData; parent?: NavItemData; item?: NavItemData } = {}
   let bestLen = 0
-  for (const entry of flattenItems(navGroups)) {
+  for (const entry of flattenItems(groups)) {
     if (entry.path && pathname.startsWith(entry.path) && entry.path.length > bestLen) {
       bestLen = entry.path.length
       best = { group: entry.group, parent: entry.parent, item: entry }

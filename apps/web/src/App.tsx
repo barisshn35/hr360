@@ -17,7 +17,7 @@ import { NotFoundPage } from '@/features/NotFoundPage'
 import { PasswordLinkDialogProvider } from '@/features/access/PasswordLinkCard'
 import { NoTenantNotice, TenantGate } from '@/features/shared/FeatureGate'
 import { CookieNotice, RobotsMeta } from '@/features/site/CookieNotice'
-import { RequireModule } from '@/features/shared/ModuleGate'
+import { MultiTenantOnly, RequireModule } from '@/features/shared/ModuleGate'
 import type { ModuleId } from '@/lib/modules'
 
 /**
@@ -263,9 +263,11 @@ export function App() {
                 <Route
                   path="/kayit"
                   element={
-                    <Suspense fallback={<FullPageSpinner />}>
-                      <RegisterCompanyWizard />
-                    </Suspense>
+                    <MultiTenantOnly to="/giris">
+                      <Suspense fallback={<FullPageSpinner />}>
+                        <RegisterCompanyWizard />
+                      </Suspense>
+                    </MultiTenantOnly>
                   }
                 />
 
@@ -458,7 +460,7 @@ export function App() {
                     {/* Platform yönetimi — çok kiracılılık */}
                     <Route
                       path="platform/kiracilar"
-                      element={guarded('platform:manage', <TenantsPage />)}
+                      element={<MultiTenantOnly to="/panel">{guarded('platform:manage', <TenantsPage />)}</MultiTenantOnly>}
                     />
                     <Route
                       path="platform/sistem"

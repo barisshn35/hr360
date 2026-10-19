@@ -694,6 +694,9 @@ services:
       HR360_LOG_FORMAT: "${HR360_LOG_FORMAT:-json}"
       HR360_MODULES: "${HR360_MODULES:-all}"
       HR360_TENANCY: "${HR360_TENANCY:-multi}"
+      # Tek şirket kipi: tenant-service ilk açılışta bu adla şirketi açar ve "yonetici" hesabını (bu e-posta) ekler.
+      HR360_COMPANY_NAME: "${HR360_COMPANY_NAME:-}"
+      COMPANY_ADMIN_EMAIL: "${COMPANY_ADMIN_EMAIL:-}"
     depends_on:
       postgres:
         condition: service_healthy

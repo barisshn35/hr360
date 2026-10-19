@@ -175,6 +175,8 @@ public partial class PlatformSettingsController : ControllerBase
     [HttpPut("general")]
     public async Task<IActionResult> PutGeneral([FromBody] GeneralRequest r, CancellationToken ct)
     {
+        if (r.SignupEnabled == true && HR360.Platform.Modules.IsSingleTenant)
+            return TenantsController.SingleTenantConflict("Tek şirket kipinde herkese açık şirket kaydı açılamaz.");
         if (r.PasswordMethod is not null && !PasswordSetupMethods.Valid(r.PasswordMethod))
             return BadRequest(new { field = "passwordMethod", message = "Yöntem 'invite' ya da 'keycloak' olmalı" });
         if (r.InviteTtlHours is { } h && (h < PlatformSettingsService.MinInviteTtlHours || h > PlatformSettingsService.MaxInviteTtlHours))

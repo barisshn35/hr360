@@ -155,6 +155,19 @@ public class TenantProvisioningService
     /// <summary>Slug'i normalize eder ve benzersiz olmasini saglar.</summary>
     public async Task<string> BuildUniqueSlugAsync(string name, CancellationToken ct)
     {
+        var baseSlug = BaseSlug(name);
+        var slug = baseSlug;
+        var suffix = 2;
+        while (await _db.Tenants.AnyAsync(t => t.Slug == slug, ct))
+        {
+            slug = $"{baseSlug}-{suffix++}";
+        }
+        return slug;
+    }
+
+    /// <summary>Addan benzersizlik eki olmadan kisa ad uretir (veritabanina bakmaz).</summary>
+    public static string BaseSlug(string name)
+    {
         var map = new Dictionary<char, char>
         {
             ['ç'] = 'c', ['ğ'] = 'g', ['ı'] = 'i', ['ö'] = 'o', ['ş'] = 's', ['ü'] = 'u',
@@ -175,13 +188,6 @@ public class TenantProvisioningService
         if (baseSlug.Length > 34) baseSlug = baseSlug[..34].Trim('-');
         if (string.IsNullOrWhiteSpace(baseSlug)) baseSlug = "sirket";
         else if (baseSlug.Length < 3) baseSlug = $"{baseSlug}-sirket";
-
-        var slug = baseSlug;
-        var suffix = 2;
-        while (await _db.Tenants.AnyAsync(t => t.Slug == slug, ct))
-        {
-            slug = $"{baseSlug}-{suffix++}";
-        }
-        return slug;
+        return baseSlug;
     }
 }

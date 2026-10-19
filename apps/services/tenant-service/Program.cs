@@ -51,6 +51,9 @@ builder.Services.AddHostedService(sp => new TenantService.Security.KeyRotationJo
 // eski kurulum kabul edilir ve demo acik kalir). Bkz. ProductSettings.
 if (ProductSettings.DemoEnabled)
     builder.Services.AddHostedService<DemoTenantSeederHostedService>();
+// Tek şirket kipi: kurulumda adı verilen şirketi ve "yonetici" hesabının üyeliğini bir kez oluşturur.
+if (SingleTenantRules.ShouldRegister(HR360.Platform.Modules.IsSingleTenant, SingleTenantRules.CompanyNameFromEnv()))
+    builder.Services.AddHostedService<SingleTenantSeederHostedService>();
 builder.Services.AddHostedService<KeycloakHardeningHostedService>();
 // Guvenlik dalgasi 2A: iki adimli dogrulama politikasi, supheli giris tespiti (Keycloak
 // LOGIN/LOGIN_ERROR olaylari), platform yoneticisi sureli erisim izni bildirimleri.
@@ -131,9 +134,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
+    // Tek şirket kipinde şirket yöneticisi (single-platform-manage) de sistem ayarları ve bakım
+    // ekranlarını kullanır. Bu rol yalnızca bu serviste ve yalnızca tek şirket kipinde tanınır;
+    // diğer servislerde kiracı filtresini atlatan IsPlatformAdmin yalnız "platform-admin"dir.
     options.AddPolicy("RequirePlatformAdmin", policy =>
-        policy.RequireAssertion(ctx =>
-            ctx.User.IsInRole("platform-admin") || ctx.User.IsInRole("ext-platform-manage")));
+        policy.RequireAssertion(ctx => SingleTenantRules.CanManagePlatform(ctx.User)));
     // GUVENLIK: "RequireTenantAdmin" MyTenantController'da (tenant:manage
     // izni) genisletiliyor - ama TeamMembersController.AssignExtraPermission/
     // RemoveExtraPermission (Ek izin atama/kaldirma) AYNI policy adini

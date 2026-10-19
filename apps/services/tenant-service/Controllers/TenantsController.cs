@@ -36,8 +36,14 @@ public class TenantsController : ControllerBase
     public Task<IActionResult> Create(
         [FromBody] RegisterCompanyRequest request,
         [FromServices] TenantProvisioningService provisioning, [FromServices] PasswordLinkService links, CancellationToken ct)
-        => RegistrationController.CreateTenantAsync(this, _db, provisioning, _logger, request, links, LinkDisplay.Show,
-            PasswordLinkService.ActorOf(User), ct);
+        => HR360.Platform.Modules.IsSingleTenant
+            ? Task.FromResult<IActionResult>(SingleTenantConflict("Tek şirket kipinde yeni şirket oluşturulamaz. Çok şirketli kipe Bakım ekranından geçilebilir."))
+            : RegistrationController.CreateTenantAsync(this, _db, provisioning, _logger, request, links, LinkDisplay.Show,
+                PasswordLinkService.ActorOf(User), ct);
+
+    /// <summary>Tek şirket kipinde izin verilmeyen işlem (409, code=single_tenant_mode).</summary>
+    public static ObjectResult SingleTenantConflict(string message) =>
+        new ConflictObjectResult(new { code = "single_tenant_mode", message });
 
     /// <summary>
     /// Şirket yöneticisinin parola linkini yeniden üretir (ilk kurulumda link kaybolduysa). Link yanıtta bir
@@ -179,6 +185,9 @@ public class TenantsController : ControllerBase
     public async Task<IActionResult> Suspend(
         Guid id, [FromBody] SuspendRequest request, CancellationToken ct)
     {
+        // Tek şirket kipinde tek şirketi askıya almak herkesi (yöneticisi dahil) dışarıda bırakır.
+        if (HR360.Platform.Modules.IsSingleTenant)
+            return SingleTenantConflict("Tek şirket kipinde şirket askıya alınamaz.");
         var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == id, ct);
         if (tenant is null) return NotFound();
         if (tenant.Status == TenantStatus.Suspended)

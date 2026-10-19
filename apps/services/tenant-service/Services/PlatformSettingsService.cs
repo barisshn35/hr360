@@ -53,8 +53,10 @@ public sealed class PlatformSettingsService
         return row;
     }
 
+    /// <summary>Tek şirket kipinde herkese açık kayıt her zaman kapalıdır (ayar ne olursa olsun).</summary>
     public async Task<bool> SignupEnabledAsync(CancellationToken ct) =>
-        (await GetRowAsync(ct)).SignupEnabled ?? ProductSettings.PublicSignupEnabled;
+        !HR360.Platform.Modules.IsSingleTenant
+        && ((await GetRowAsync(ct)).SignupEnabled ?? ProductSettings.PublicSignupEnabled);
 
     public async Task<string> DefaultPasswordMethodAsync(CancellationToken ct) =>
         (await GetRowAsync(ct)).PasswordMethod is { } m && PasswordSetupMethods.Valid(m) ? m : PasswordSetupMethods.Invite;

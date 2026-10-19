@@ -292,9 +292,30 @@ check "Hafif kurulum basarili" [ "$rc" = 0 ]
 check "Hafif: puantaj, bordro, masraf acik; digerleri 0" eval '[ "$(envv "$d" HR360_MODULES)" = "timeshift,compensation,expense" ] && [ "$(envv "$d" HR360_MOD_RECRUITMENT)" = 0 ] && [ "$(envv "$d" HR360_MOD_ML)" = 0 ] && [ -z "$(envv "$d" HR360_MOD_TIMESHIFT)" ]'
 check "Hafif: tek sirket, ad yazildi, kayit kapali" eval '[ "$(envv "$d" HR360_TENANCY)" = single ] && [ "$(envv "$d" HR360_COMPANY_NAME)" = "'\''Acme Lojistik A.Ş.'\''" ] && [ "$(envv "$d" PUBLIC_SIGNUP_ENABLED)" = false ]'
 check "ozet: kurulum turu ve sirket kipi" eval 'grep -q "Kurulum turu:     Hafif" <<< "$out" && grep -q "Sirket kipi:      tek sirket (Acme Lojistik A.Ş.)" <<< "$out"'
+check "tek sirket: demo kapali, demo sorusu yok" eval '[ "$(envv "$d" HR360_DEMO)" = false ] && [ -z "$(envv "$d" DEMO_ADMIN_PASSWORD)" ] && ! grep -q "Demo verisi kurulsun" <<< "$out"'
+check "tek sirket: sirket yoneticisi e-postasi ve parolasi .env'de" eval '[ "$(envv "$d" COMPANY_ADMIN_EMAIL)" = yonetici@hr360.local ] && [ "$(envv "$d" COMPANY_ADMIN_PASSWORD | wc -c)" -ge 13 ]'
+check "tek sirket: realm gecerli; yonetici var, demo.admin yok" eval 'realm_ok "$d" && has_user "$d" yonetici && has_user "$d" platform.admin && ! has_user "$d" demo.admin'
+check "tek sirket: yonetici rolleri tenant-admin + single-platform-manage" python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); u=next(u for u in d["users"] if u["username"]=="yonetici"); sys.exit(0 if sorted(u["realmRoles"])==["single-platform-manage","tenant-admin"] and not u["credentials"][0]["temporary"] else 1)' "$d/deploy/keycloak/realm-export.json"
+check "tek sirket: yonetici parolasi realm'e yazildi" grep -q "\"value\": \"$(envv "$d" COMPANY_ADMIN_PASSWORD)\"" "$d/deploy/keycloak/realm-export.json"
+check "realm: single-platform-manage rolu tanimli" python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if any(r["name"]=="single-platform-manage" for r in d["roles"]["realm"]) else 1)' "$d/deploy/keycloak/realm-export.json"
+check "tek sirket: e-posta yokken iki hesap ayri varsayilan adres" eval '[ "$(user_email "$d" yonetici)" = yonetici@hr360.local ] && [ "$(user_email "$d" platform.admin)" = platform.admin@hr360.local ]'
+check "ozet: sirket yonetimi yonetici, platform.admin acil durum" eval 'grep -q "Sirket yonetimi:   yonetici / (.env icindeki COMPANY_ADMIN_PASSWORD)" <<< "$out" && grep -q "platform.admin .*yalnizca acil durum ve bakim" <<< "$out"'
+check "ozet: tek sirkette Ilk sirket / Sirket kaydi satiri yok" eval '! grep -q "Ilk sirket:" <<< "$out" && ! grep -q "Sirket kaydi:" <<< "$out" && ! grep -q "tum kiracilar" <<< "$out"'
+d="$(new_copy single)"
+out="$(run_in single "$d" ./install.sh --url http://10.0.0.5 --tenancy single --edition full --email admin@example.com --yes 2>&1)"; rc=$?
+check "tek sirket + --email: kurulum basarili" [ "$rc" = 0 ]
+check "tek sirket + --email: yonetici = --email, platform.admin ayri adres" eval '[ "$(user_email "$d" yonetici)" = admin@example.com ] && [ "$(envv "$d" COMPANY_ADMIN_EMAIL)" = admin@example.com ] && [ "$(user_email "$d" platform.admin)" = platform.admin@hr360.local ]'
+check "tek sirket + --email: uyari alicisi yine --email" [ "$(envv "$d" ALERT_EMAIL_TO)" = admin@example.com ]
+out="$(run_in opts "$d" ./install.sh --url http://10.0.0.5 --tenancy single --demo --yes 2>&1)"; rc=$?
+check "--demo + --tenancy single reddedilir (2), aciklamali" eval '[ "$rc" = 2 ] && grep -q "tek sirket kipinde kullanilamaz" <<< "$out"'
+d="$(new_copy litedemo)"
+out="$(run_in litedemo "$d" ./install.sh --url http://10.0.0.5 --edition lite --demo --yes 2>&1)"; rc=$?
+check "Hafif + --demo + --yes: kip verilmediyse cok sirket" eval '[ "$rc" = 0 ] && [ "$(envv "$d" HR360_TENANCY)" = multi ] && [ "$(envv "$d" HR360_DEMO)" = true ] && has_user "$d" demo.admin && ! has_user "$d" yonetici'
 d="$(new_copy custom)"
 out="$(run_in custom "$d" ./install.sh --url http://10.0.0.5 --modules recruitment,onboarding --tenancy multi --yes 2>&1)"; rc=$?
 check "Ozel: yalniz secilen moduller, cok sirket" eval '[ "$rc" = 0 ] && [ "$(envv "$d" HR360_MODULES)" = "recruitment,onboarding" ] && [ "$(envv "$d" HR360_TENANCY)" = multi ]'
+check "cok sirket: realm gecerli, yonetici yok, COMPANY_ADMIN_* yazilmadi" eval 'realm_ok "$d" && ! has_user "$d" yonetici && has_user "$d" platform.admin && ! grep -q "^COMPANY_ADMIN_" "$d/.env"'
+check "cok sirket: ozet bugunku gibi (Ilk sirket, Sirket kaydi)" eval 'grep -q "Ilk sirket:" <<< "$out" && grep -q "Sirket kaydi:" <<< "$out" && ! grep -q "Sirket yonetimi:" <<< "$out"'
 d="$(new_copy fullyes)"
 out="$(run_in fullyes "$d" ./install.sh --url http://10.0.0.5 --edition full --yes 2>&1)"; rc=$?
 check "Tam + --yes: tum moduller, cok sirket, HR360_MOD_ yok" eval '[ "$rc" = 0 ] && [ "$(envv "$d" HR360_MODULES)" = all ] && [ "$(envv "$d" HR360_TENANCY)" = multi ] && ! grep -q "^HR360_MOD_" "$d/.env"'

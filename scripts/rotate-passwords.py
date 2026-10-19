@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Yönetim parolalarını yeniler (platform.admin, varsa demo.admin, istenirse Keycloak master yöneticisi).
+"""Yönetim parolalarını yeniler (platform.admin, varsa demo.admin ve yonetici, istenirse Keycloak master yöneticisi).
 
 Parola bir yerde açığa çıktığında (sohbet, ekran paylaşımı, e-posta) ya da düzenli parola
 yenilemesinde kullanılır. Yeni parolalar rastgele üretilir ve EKRANA BASILMAZ; yalnızca şuralara
 yazılır (hepsi gitignore'da):
-  - .env                     PLATFORM_ADMIN_PASSWORD, DEMO_ADMIN_PASSWORD, --keycloak-admin ile
+  - .env                     PLATFORM_ADMIN_PASSWORD, DEMO_ADMIN_PASSWORD, COMPANY_ADMIN_PASSWORD, --keycloak-admin ile
                              KEYCLOAK_ADMIN_PASSWORD (sır scripts/secrets-migrate.sh ile secrets/*.txt'ye
                              taşınmışsa o dosyaya)
   - tests/credentials.json   YALNIZCA dosya varsa (test ortamı); aynı kullanıcı adlı kayıtlar güncellenir
   - deploy/keycloak/realm-export.json  ilk kurulum içe aktarımı; eski parola dosyada kalmasın
 
 Kullanım:
-  python3 scripts/rotate-passwords.py                    # platform.admin + (varsa) demo.admin
+  python3 scripts/rotate-passwords.py                    # platform.admin + (varsa) demo.admin ve yonetici
   python3 scripts/rotate-passwords.py platform.admin     # yalnızca seçilen kullanıcı(lar)
   python3 scripts/rotate-passwords.py --keycloak-admin   # Keycloak master yöneticisi de (keycloak + tenant-service yeniden oluşturulur)
   python3 scripts/rotate-passwords.py --keycloak-admin-only   # yalnızca Keycloak master yöneticisi
@@ -33,8 +33,9 @@ SECRETS_DIR = ROOT / "secrets"
 CRED = ROOT / "tests" / "credentials.json"
 REALM = ROOT / "deploy" / "keycloak" / "realm-export.json"
 # .env'de parolası tutulan hr360 kullanıcıları.
-ENV_KEYS = {"platform.admin": "PLATFORM_ADMIN_PASSWORD", "demo.admin": "DEMO_ADMIN_PASSWORD"}
-DEFAULT_USERS = ["platform.admin", "demo.admin"]
+# yonetici: tek şirket kipinin şirket yöneticisi (install.sh --tenancy single).
+ENV_KEYS = {"platform.admin": "PLATFORM_ADMIN_PASSWORD", "demo.admin": "DEMO_ADMIN_PASSWORD", "yonetici": "COMPANY_ADMIN_PASSWORD"}
+DEFAULT_USERS = ["platform.admin", "demo.admin", "yonetici"]
 COMPOSE = ["docker", "compose", *os.environ.get("COMPOSE_ARGS", "").split()]
 
 
@@ -128,7 +129,7 @@ def main(argv):
     for w in ([] if master_only else (wanted or DEFAULT_USERS)):
         username = creds[w][0] if w in creds else w
         if username not in ENV_KEYS and not any(v[0] == username for v in creds.values()):
-            raise SystemExit(f"{w}: yeni parola yazılacak yer yok (.env'de yalnızca platform.admin ve demo.admin; "
+            raise SystemExit(f"{w}: yeni parola yazılacak yer yok (.env'de yalnızca platform.admin, demo.admin ve yonetici; "
                              "diğer kullanıcılar için tests/credentials.json gerekir).")
         users.append(username)
 

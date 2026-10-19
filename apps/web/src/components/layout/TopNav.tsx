@@ -52,12 +52,11 @@ import { primaryRole, roleLabels } from '@/auth/roles'
 import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 import {
-  locate,
   overviewItem,
   type NavGroupData,
   type NavItemData,
 } from './nav-config'
-import { useNavGroups } from './use-nav'
+import { useLocate, useNavGroups } from './use-nav'
 import { useInstallPrompt } from '@/lib/pwa'
 import { usePrivacyScreen } from '@/lib/privacy-screen'
 import { tx } from '@/lib/i18n'
@@ -100,7 +99,7 @@ function Brand() {
 
 function MegaPanel({ group, onNavigate }: { group: NavGroupData; onNavigate: () => void }) {
   const { pathname } = useLocation()
-  const here = locate(pathname)
+  const here = useLocate(pathname)
   const Icon = group.icon
   const cols = group.items.length > 4 ? 'grid-cols-2' : group.items.length > 1 ? 'grid-cols-2' : 'grid-cols-1'
 
@@ -186,7 +185,7 @@ function MegaPanel({ group, onNavigate }: { group: NavGroupData; onNavigate: () 
 function SectionTabs() {
   const groups = useVisibleGroups()
   const { pathname } = useLocation()
-  const here = locate(pathname)
+  const here = useLocate(pathname)
   const [open, setOpen] = useState<string | null>(null)
   const closeTimer = useRef<number | undefined>(undefined)
   const reduced = useReducedMotion()
@@ -420,7 +419,7 @@ function AccountMenu() {
 function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const groups = useVisibleGroups()
   const { pathname } = useLocation()
-  const here = locate(pathname)
+  const here = useLocate(pathname)
   const navigate = useNavigate()
 
   useEffect(() => {

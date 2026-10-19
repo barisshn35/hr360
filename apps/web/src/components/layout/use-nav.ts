@@ -5,7 +5,7 @@ import { useEomWinners } from '@/api/eom'
 import { useRecognitionSettings } from '@/api/recognition'
 import { useCoffeeEnabled } from '@/api/coffee'
 import { useModules } from '@/lib/modules'
-import { filterByPermission, navGroups } from './nav-config'
+import { filterByPermission, locate, navGroupsFor } from './nav-config'
 
 /**
  * Kullanıcının izinleriyle süzülmüş menü ağacı. İsteğe bağlı modüller (ör. ayın çalışanı) kiracıda
@@ -19,9 +19,15 @@ export function useNavGroups() {
   const eom = useEomWinners(hasTenant && !isHr).data?.enabled === true
   const points = useRecognitionSettings(hasTenant && !isHr).data?.enabled === true
   const coffee = useCoffeeEnabled(hasTenant && !isHr).data === true
-  const { isEnabled } = useModules()
+  const { isEnabled, tenancy } = useModules()
   return useMemo(
-    () => filterByPermission(navGroups, can, roles, hasTenant, { eom: isHr || eom, points: isHr || points, coffee: isHr || coffee }, isEnabled),
-    [can, roles, hasTenant, isHr, eom, points, coffee, isEnabled],
+    () => filterByPermission(navGroupsFor(tenancy), can, roles, hasTenant, { eom: isHr || eom, points: isHr || points, coffee: isHr || coffee }, isEnabled),
+    [can, roles, hasTenant, isHr, eom, points, coffee, isEnabled, tenancy],
   )
+}
+
+/** Adresin menüdeki konumu; tek şirket kipinde Sistem ayarları/Bakım "Yönetim" altında görünür. */
+export function useLocate(pathname: string) {
+  const { tenancy } = useModules()
+  return useMemo(() => locate(pathname, navGroupsFor(tenancy)), [pathname, tenancy])
 }

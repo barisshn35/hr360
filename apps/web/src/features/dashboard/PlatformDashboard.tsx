@@ -8,7 +8,7 @@
  */
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Brain, Building2, ChevronRight, Shield } from 'lucide-react'
+import { ArrowUpRight, Brain, Building2, ChevronRight, HardDrive, Settings2, Shield } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatCard, StatCardsSkeleton } from '@/components/ui/StatCard'
@@ -19,6 +19,7 @@ import { useTenants } from '@/api/queries-tenant'
 import { tenantStatusLabels, type TenantStatus } from '@/api/tenant'
 import { formatNumber, formatRelativeToNow } from '@/lib/format'
 import { tx, appLocale } from '@/lib/i18n'
+import { useModules } from '@/lib/modules'
 
 const STATUS_TONE: Record<TenantStatus, StatusTone> = {
   Pending: 'warning',
@@ -29,7 +30,8 @@ const STATUS_TONE: Record<TenantStatus, StatusTone> = {
 
 export function PlatformDashboard() {
   const { user } = useAuth()
-  const tenants = useTenants()
+  const single = useModules().tenancy === 'single'
+  const tenants = useTenants({}, !single)
 
   const stats = useMemo(() => {
     const list = tenants.data ?? []
@@ -54,10 +56,16 @@ export function PlatformDashboard() {
     [tenants.data],
   )
 
-  const shortcuts: Array<{ to: string; label: string; icon: React.ElementType }> = [
-    { to: '/panel/platform/kiracilar', label: tx('Kiracılar'), icon: Shield },
-    { to: '/panel/model-karti', label: tx('Model kartı'), icon: Brain },
-  ]
+  // Tek şirket kipinde kiracı listesi yok: bakım ekranlarına kısayol.
+  const shortcuts: Array<{ to: string; label: string; icon: React.ElementType }> = single
+    ? [
+        { to: '/panel/platform/bakim', label: tx('Bakım'), icon: HardDrive },
+        { to: '/panel/platform/sistem', label: tx('Sistem ayarları'), icon: Settings2 },
+      ]
+    : [
+        { to: '/panel/platform/kiracilar', label: tx('Kiracılar'), icon: Shield },
+        { to: '/panel/model-karti', label: tx('Model kartı'), icon: Brain },
+      ]
 
   const firstName = user?.fullName?.split(' ')[0] ?? ''
 
@@ -71,7 +79,9 @@ export function PlatformDashboard() {
           {firstName ? tx('Hoş geldiniz, {0}', [firstName]) : tx('Hoş geldiniz')}
         </h2>
         <p className="mt-3 max-w-2xl text-[14.5px] leading-relaxed text-muted-foreground">
-          {tx('Platform yöneticisi olarak hiçbir şirkete bağlı değilsiniz. Şirketleri ve kurulum durumlarını Kiracılar ekranından yönetirsiniz.')}
+          {single
+            ? tx('Tek şirket kipi: şirket ekranları için yonetici hesabıyla giriş yapın. Platform yöneticisi hesabı yalnızca acil durum ve bakım içindir.')
+            : tx('Platform yöneticisi olarak hiçbir şirkete bağlı değilsiniz. Şirketleri ve kurulum durumlarını Kiracılar ekranından yönetirsiniz.')}
         </p>
         <div className="mt-6 flex flex-wrap gap-2">
           {shortcuts.map(({ to, label, icon: Icon }, i) => (
@@ -85,6 +95,7 @@ export function PlatformDashboard() {
         </div>
       </Card>
 
+      {!single && <>
       <div className="md:col-span-6 xl:col-span-12">
         {tenants.isPending ? (
           <StatCardsSkeleton count={4} />
@@ -139,6 +150,7 @@ export function PlatformDashboard() {
           </ul>
         )}
       </Card>
+      </>}
     </div>
   )
 }
