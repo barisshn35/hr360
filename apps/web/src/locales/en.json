@@ -2550,6 +2550,7 @@
  "Demirbaş silinemedi.": "The asset could not be deleted.",
  "Demirbaş ve atamalar": "Equipment and assignments",
  "Demirbaşı düzenle": "Edit asset",
+ "Demirbaşlar yüklenemedi.": "The assets could not be loaded.",
  "Dene": "Try",
  "deneme {0}": "attempt {0}",
  "Deneme bildirimi gönderildi": "Test notification sent",

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnboardingService.Data;
+using OnboardingService.Infrastructure;
 using OnboardingService.Models;
 using OnboardingService.Services;
 
@@ -37,29 +38,69 @@ public class AssetsController : ControllerBase
     /// (hardcore test sirasinda bulundu, 3. tur). Acik (ReturnedOn == null)
     /// atama varsa duz alanlar olarak eklenir.
     /// </summary>
+    /// <remarks>
+    /// Sayfalama: <c>page</c> yoksa eski biçim (düz dizi); varsa <c>{ items, total, page, pageSize }</c> (bkz. Paging).
+    /// Açık atamalar yalnızca dönen demirbaşlar için yüklenir. <c>q</c>: etiket/model/seri no'da katlamalı arama,
+    /// <c>qTypes</c> (adı eşleşen türler) ya da <c>qEmployeeIds</c> (adı eşleşen zimmetli kişiler; istemci çözer).
+    /// <c>sort</c>: tag (varsayılan, artan) | type | status | createdAt.
+    /// </remarks>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] AssetStatus? status, [FromQuery] AssetType? type)
+    public async Task<IActionResult> GetAll([FromQuery] AssetStatus? status, [FromQuery] AssetType? type, CancellationToken ct,
+        [FromQuery] int? page = null, [FromQuery] int? pageSize = null, [FromQuery] string? q = null,
+        [FromQuery] string? qTypes = null, [FromQuery] string? qEmployeeIds = null,
+        [FromQuery] string? sort = null, [FromQuery] string? dir = null)
     {
-        var q = _db.Assets.AsQueryable();
-        if (status.HasValue) q = q.Where(a => a.Status == status.Value);
-        if (type.HasValue) q = q.Where(a => a.Type == type.Value);
-        var assets = await q.OrderBy(a => a.AssetTag).ToListAsync();
-
-        var openAssignments = await _db.AssetAssignments
-            .Where(a => a.ReturnedOn == null)
-            .ToDictionaryAsync(a => a.AssetId, a => a);
-
-        return Ok(assets.Select(a =>
+        var query = _db.Assets.AsQueryable();
+        if (status.HasValue) query = query.Where(a => a.Status == status.Value);
+        if (type.HasValue) query = query.Where(a => a.Type == type.Value);
+        if (!string.IsNullOrWhiteSpace(q))
         {
-            openAssignments.TryGetValue(a.Id, out var open);
-            return new
+            var like = Paging.FoldLike(q);
+            var types = (qTypes ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(t => Enum.TryParse<AssetType>(t, true, out var at) ? (AssetType?)at : null)
+                .Where(t => t.HasValue).Select(t => t!.Value).Distinct().ToList();
+            var people = Paging.Guids(qEmployeeIds);
+            query = query.Where(a => EF.Functions.Like(OnboardingDbContext.Fold(a.AssetTag), like, "\\")
+                || EF.Functions.Like(OnboardingDbContext.Fold(a.Model ?? ""), like, "\\")
+                || EF.Functions.Like(OnboardingDbContext.Fold(a.SerialNumber ?? ""), like, "\\")
+                || types.Contains(a.Type)
+                || a.Assignments.Any(s => s.ReturnedOn == null && people.Contains(s.EmployeeId)));
+        }
+
+        var desc = Paging.Desc(dir);
+        IOrderedQueryable<Asset> ordered = (sort ?? "tag").ToLowerInvariant() switch
+        {
+            // Enum sırası (metin olarak saklandığından alfabetik değil).
+            "type" => desc
+                ? query.OrderByDescending(a => a.Type == AssetType.Laptop ? 0 : a.Type == AssetType.Phone ? 1 : a.Type == AssetType.Monitor ? 2 : a.Type == AssetType.AccessCard ? 3 : a.Type == AssetType.Vehicle ? 4 : 5)
+                : query.OrderBy(a => a.Type == AssetType.Laptop ? 0 : a.Type == AssetType.Phone ? 1 : a.Type == AssetType.Monitor ? 2 : a.Type == AssetType.AccessCard ? 3 : a.Type == AssetType.Vehicle ? 4 : 5),
+            "status" => desc
+                ? query.OrderByDescending(a => a.Status == AssetStatus.Available ? 0 : a.Status == AssetStatus.Assigned ? 1 : a.Status == AssetStatus.Maintenance ? 2 : a.Status == AssetStatus.Retired ? 3 : 4)
+                : query.OrderBy(a => a.Status == AssetStatus.Available ? 0 : a.Status == AssetStatus.Assigned ? 1 : a.Status == AssetStatus.Maintenance ? 2 : a.Status == AssetStatus.Retired ? 3 : 4),
+            "createdat" => desc ? query.OrderByDescending(a => a.CreatedAt) : query.OrderBy(a => a.CreatedAt),
+            _ => desc ? query.OrderByDescending(a => a.AssetTag) : query.OrderBy(a => a.AssetTag),
+        };
+
+        return await Paging.ListAsync(this, ordered.ThenBy(a => a.Id), page, pageSize, async assets =>
+        {
+            var ids = assets.Select(a => a.Id).ToList();
+            var openAssignments = ids.Count == 0
+                ? new Dictionary<Guid, AssetAssignment>()
+                : await _db.AssetAssignments
+                    .Where(a => a.ReturnedOn == null && ids.Contains(a.AssetId))
+                    .ToDictionaryAsync(a => a.AssetId, a => a, ct);
+            return assets.Select(a =>
             {
-                a.Id, a.AssetTag, a.Type, a.Model, a.SerialNumber, a.Status, a.CreatedAt, a.QrCode,
-                AssignedEmployeeId = open?.EmployeeId,
-                AssignedOn = open?.AssignedOn,
-                ExpectedReturnOn = open?.ExpectedReturnOn,
-            };
-        }));
+                openAssignments.TryGetValue(a.Id, out var open);
+                return new
+                {
+                    a.Id, a.AssetTag, a.Type, a.Model, a.SerialNumber, a.Status, a.CreatedAt, a.QrCode,
+                    AssignedEmployeeId = open?.EmployeeId,
+                    AssignedOn = open?.AssignedOn,
+                    ExpectedReturnOn = open?.ExpectedReturnOn,
+                };
+            }).ToList();
+        }, ct);
     }
 
     [HttpGet("{id}")]

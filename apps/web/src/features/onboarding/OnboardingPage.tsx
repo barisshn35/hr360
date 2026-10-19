@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LoaderCircle, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { DataTable, type Column } from '@/components/ui/DataTable'
+import { DataTable, type Column, type SortState } from '@/components/ui/DataTable'
 import { PlanStatusBadge } from '@/components/ui/ModuleBadges'
 import { ProgressBar } from '@/components/ui/Progress'
 import { Tabs, useTabParam, type TabDef } from '@/components/ui/Tabs'
@@ -15,15 +15,21 @@ import { EmployeePicker } from '@/components/ui/EmployeePicker'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/auth/useAuth'
 import { opsApi } from '@/api/opsPlus'
-import { useEmployees, useOnboardingPlans } from '@/api/queries'
+import { onboardingApi, type PlanPageParams } from '@/api/onboarding'
+import { useEmployees } from '@/api/queries'
 import { planStatusLabels, type OnboardingPlan, type PlanStatus } from '@/api/types'
-import { formatDate, fullName } from '@/lib/format'
+import { formatDate, fullName, normalizeSearch } from '@/lib/format'
+import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { tx } from '@/lib/i18n'
 import { localISODate } from '@/lib/dates'
 import { PersonSelect } from '@/features/shared/kit'
 import { TemplatesPanel, WelcomeSettingsPanel, displayPlanStatus } from './OnboardingOps'
 
 type TabKey = PlanStatus | 'all'
+
+const PAGE_SIZE = 10
+/** Sunucunun sıralayabildiği sütunlar (çalışan adları employee-service'te). */
+const SERVER_SORT: Record<string, PlanPageParams['sort']> = { startDate: 'startDate', progress: 'progress', status: 'status' }
 
 const TABS: Array<TabDef<TabKey>> = [
   { key: 'InProgress', label: tx('Sürüyor') },
@@ -196,7 +202,6 @@ export function OnboardingPage() {
   const [tab, setTab] = useTabParam<TabKey>('durum', 'InProgress')
   const [modalOpen, setModalOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
-  const plans = useOnboardingPlans({ status: tab === 'all' ? undefined : tab })
   const employees = useEmployees({ enabled: can('employee:viewAll') })
 
   const canManage = can('onboarding:manage')
@@ -206,6 +211,47 @@ export function OnboardingPage() {
     for (const e of employees.data ?? []) map.set(e.id, fullName(e))
     return (id: string) => map.get(id) ?? `${id.slice(0, 8)}…`
   }, [employees.data])
+
+  // Sunucu tarafı sayfalama: planlar sayfa sayfa gelir; arama ve sıralama sunucuda.
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<SortState | null>(null)
+  const query = useDebouncedValue(search.trim(), 300)
+  const [prevTab, setPrevTab] = useState(tab)
+  if (prevTab !== tab) {
+    setPrevTab(tab)
+    setPage(1)
+  }
+  // Çalışan adına göre arama: adlar employee-service'te, eşleşen kimlikler sunucuya gönderilir.
+  const qEmployeeIds = useMemo(() => {
+    if (!query) return undefined
+    const needle = normalizeSearch(query)
+    const ids = (employees.data ?? []).filter((e) => normalizeSearch(fullName(e)).includes(needle)).map((e) => e.id)
+    return ids.length ? ids.slice(0, 200).join(',') : undefined
+  }, [query, employees.data])
+  const params: Omit<PlanPageParams, 'page' | 'pageSize'> = {
+    status: tab === 'all' ? undefined : tab,
+    q: query || undefined,
+    qEmployeeIds,
+    sort: sort ? SERVER_SORT[sort.columnId] : undefined,
+    dir: sort?.dir,
+  }
+  const plans = useQuery({
+    queryKey: ['onboarding', 'plans', 'page', page, params],
+    queryFn: ({ signal }) => onboardingApi.pagePlans({ ...params, page, pageSize: PAGE_SIZE }, signal),
+    placeholderData: keepPreviousData,
+  })
+
+  /** CSV: filtreye uyan tüm planlar, 200'lük sayfalarla. */
+  const fetchAll = async () => {
+    const all: OnboardingPlan[] = []
+    for (let p = 1; p <= 100; p++) {
+      const res = await onboardingApi.pagePlans({ ...params, page: p, pageSize: 200 })
+      all.push(...res.items)
+      if (all.length >= res.total || res.items.length === 0) break
+    }
+    return all
+  }
 
   const columns: Array<Column<OnboardingPlan>> = [
     {
@@ -294,7 +340,7 @@ export function OnboardingPage() {
       <Tabs tabs={TABS} value={tab} onChange={setTab} label={tx('Plan durumu')} />
 
       <DataTable
-        rows={plans.data}
+        rows={plans.data?.items}
         rowKey={(p) => p.id}
         columns={columns}
         isLoading={plans.isPending}
@@ -303,6 +349,24 @@ export function OnboardingPage() {
         onRowClick={(p) => navigate(`/panel/onboarding/${p.id}`)}
         searchPlaceholder={tx('Çalışan veya şablon ara')}
         exportFileName="onboarding-planlari"
+        pageSize={PAGE_SIZE}
+        server={{
+          total: plans.data?.total ?? 0,
+          page,
+          onPageChange: setPage,
+          onQueryChange: (v) => {
+            setSearch(v)
+            setPage(1)
+          },
+          sort,
+          onSortChange: (next) => {
+            setSort(next)
+            setPage(1)
+          },
+          sortable: Object.keys(SERVER_SORT),
+          fetchAll,
+          fetching: plans.isPlaceholderData,
+        }}
         emptyTitle={tx('Bu durumda plan yok')}
         emptyDetail={tx('Yeni bir çalışan için plan açtığınızda burada görünür.')}
         emptyAction={

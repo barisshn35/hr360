@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnboardingService.Data;
+using OnboardingService.Infrastructure;
 using OnboardingService.Models;
 using OnboardingService.Services;
 
@@ -57,14 +58,43 @@ public class OnboardingPlansController : ControllerBase
         ("İş sağlığı ve güvenliği eğitimi", TaskCategory.Training, 7),
     };
 
+    /// <summary>
+    /// Plan listesi. <c>page</c> yoksa eski biçim (düz dizi); varsa <c>{ items, total, page, pageSize }</c> (bkz. Paging).
+    /// <c>q</c>: şablon adında katlamalı arama ya da <c>qEmployeeIds</c> (adı eşleşen çalışanlar; adlar
+    /// employee-service'te olduğundan istemci çözer). <c>sort</c>: createdAt (varsayılan, yeni önce) | startDate | status | progress.
+    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] Guid? employeeId, [FromQuery] PlanStatus? status, CancellationToken ct)
+    public async Task<IActionResult> GetAll([FromQuery] Guid? employeeId, [FromQuery] PlanStatus? status, CancellationToken ct,
+        [FromQuery] int? page = null, [FromQuery] int? pageSize = null, [FromQuery] string? q = null,
+        [FromQuery] string? qEmployeeIds = null, [FromQuery] string? sort = null, [FromQuery] string? dir = null)
     {
-        var q = await VisiblePlansAsync(_db.Plans.Include(p => p.Tasks).AsQueryable(), ct);
-        if (q is null) return Forbid();
-        if (employeeId.HasValue) q = q.Where(p => p.EmployeeId == employeeId.Value);
-        if (status.HasValue) q = q.Where(p => p.Status == status.Value);
-        return Ok(await q.OrderByDescending(p => p.CreatedAt).ToListAsync());
+        var query = await VisiblePlansAsync(_db.Plans.Include(p => p.Tasks).AsQueryable(), ct);
+        if (query is null) return Forbid();
+        if (employeeId.HasValue) query = query.Where(p => p.EmployeeId == employeeId.Value);
+        if (status.HasValue) query = query.Where(p => p.Status == status.Value);
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var like = Paging.FoldLike(q);
+            var ids = Paging.Guids(qEmployeeIds);
+            query = query.Where(p => EF.Functions.Like(OnboardingDbContext.Fold(p.TemplateName ?? ""), like, "\\")
+                || ids.Contains(p.EmployeeId));
+        }
+
+        var desc = sort is null || Paging.Desc(dir);
+        IOrderedQueryable<OnboardingPlan> ordered = (sort ?? "createdAt").ToLowerInvariant() switch
+        {
+            "startdate" => desc ? query.OrderByDescending(p => p.StartDate) : query.OrderBy(p => p.StartDate),
+            // Yaşam döngüsü sırası (metin olarak saklanan enum'un alfabetik sırası değil).
+            "status" => desc
+                ? query.OrderByDescending(p => p.Status == PlanStatus.NotStarted ? 0 : p.Status == PlanStatus.InProgress ? 1 : p.Status == PlanStatus.Completed ? 2 : 3)
+                : query.OrderBy(p => p.Status == PlanStatus.NotStarted ? 0 : p.Status == PlanStatus.InProgress ? 1 : p.Status == PlanStatus.Completed ? 2 : 3),
+            // Tamamlanan görev oranı (görevsiz plan 0).
+            "progress" => desc
+                ? query.OrderByDescending(p => p.Tasks.Count == 0 ? 0.0 : (double)p.Tasks.Count(t => t.Status == OnboardingTaskStatus.Done) / p.Tasks.Count)
+                : query.OrderBy(p => p.Tasks.Count == 0 ? 0.0 : (double)p.Tasks.Count(t => t.Status == OnboardingTaskStatus.Done) / p.Tasks.Count),
+            _ => desc ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt),
+        };
+        return await Paging.ListAsync(this, ordered.ThenBy(p => p.Id), page, pageSize, ct);
     }
 
     [HttpGet("{id}")]

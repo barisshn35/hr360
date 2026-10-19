@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LoaderCircle, Plus, Printer, ScanLine } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { DataTable, type Column } from '@/components/ui/DataTable'
+import { DataTable, type Column, type SortState } from '@/components/ui/DataTable'
 import { AssetStatusBadge } from '@/components/ui/ModuleBadges'
 import { Tabs, useTabParam, type TabDef } from '@/components/ui/Tabs'
 import { Modal } from '@/components/ui/Modal'
@@ -13,8 +13,8 @@ import { EmployeePicker } from '@/components/ui/EmployeePicker'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/Confirm'
 import { useAuth } from '@/auth/useAuth'
-import { onboardingApi } from '@/api/onboarding'
-import { useAssets, useEmployees } from '@/api/queries'
+import { onboardingApi, type AssetPageParams } from '@/api/onboarding'
+import { useEmployees } from '@/api/queries'
 import {
   assetStatusLabels,
   assetTypeLabels,
@@ -22,13 +22,18 @@ import {
   type AssetStatus,
   type AssetType,
 } from '@/api/types'
-import { formatDate, fullName } from '@/lib/format'
+import { formatDate, fullName, normalizeSearch } from '@/lib/format'
+import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { localISODate } from '@/lib/dates'
 import { tx } from '@/lib/i18n'
 import { Link } from 'react-router-dom'
 import { AssetDuePanels, ExpectedReturnModal, MaintenanceModal, QrLabelsModal } from './AssetOps'
 
 type TabKey = AssetStatus | 'all'
+
+const PAGE_SIZE = 12
+/** Sunucunun sıralayabildiği sütunlar (zimmetli kişinin adı employee-service'te). */
+const SERVER_SORT: Record<string, AssetPageParams['sort']> = { tag: 'tag', type: 'type', status: 'status' }
 
 const TABS: Array<TabDef<TabKey>> = [
   { key: 'all', label: tx('Tümü') },
@@ -499,7 +504,6 @@ export function AssetsPage() {
     if (ok) remove.mutate(a)
   }
 
-  const assets = useAssets({ status: tab === 'all' ? undefined : tab })
   const employees = useEmployees({ enabled: can('employee:viewAll') })
 
   const canManage = can('asset:manage')
@@ -509,6 +513,66 @@ export function AssetsPage() {
     for (const e of employees.data ?? []) map.set(e.id, fullName(e))
     return (id: string) => map.get(id) ?? `${id.slice(0, 8)}…`
   }, [employees.data])
+
+  // Sunucu tarafı sayfalama: envanter sayfa sayfa gelir; arama ve sıralama sunucuda.
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<SortState | null>(null)
+  const query = useDebouncedValue(search.trim(), 300)
+  const [prevTab, setPrevTab] = useState(tab)
+  if (prevTab !== tab) {
+    setPrevTab(tab)
+    setPage(1)
+  }
+  // Tür adları arayüzde çevrilir, kişi adları employee-service'te: eşleşenler sunucuya ayrıca gönderilir.
+  const qTypes = useMemo(() => {
+    if (!query) return undefined
+    const needle = normalizeSearch(query)
+    const types = Object.entries(assetTypeLabels).filter(([, label]) => normalizeSearch(label).includes(needle)).map(([key]) => key)
+    return types.length ? types.join(',') : undefined
+  }, [query])
+  const qEmployeeIds = useMemo(() => {
+    if (!query) return undefined
+    const needle = normalizeSearch(query)
+    const ids = (employees.data ?? []).filter((e) => normalizeSearch(fullName(e)).includes(needle)).map((e) => e.id)
+    return ids.length ? ids.slice(0, 200).join(',') : undefined
+  }, [query, employees.data])
+  const params: Omit<AssetPageParams, 'page' | 'pageSize'> = {
+    status: tab === 'all' ? undefined : tab,
+    q: query || undefined,
+    qTypes,
+    qEmployeeIds,
+    sort: sort ? SERVER_SORT[sort.columnId] : undefined,
+    dir: sort?.dir,
+  }
+  const assets = useQuery({
+    queryKey: ['onboarding', 'assets', 'page', page, params],
+    queryFn: ({ signal }) => onboardingApi.pageAssets({ ...params, page, pageSize: PAGE_SIZE }, signal),
+    placeholderData: keepPreviousData,
+  })
+  const total = assets.data?.total ?? 0
+
+  /** CSV ve toplu etiket: filtreye uyan tüm kayıtlar, 200'lük sayfalarla. */
+  const fetchAll = async () => {
+    const all: Asset[] = []
+    for (let p = 1; p <= 100; p++) {
+      const res = await onboardingApi.pageAssets({ ...params, page: p, pageSize: 200 })
+      all.push(...res.items)
+      if (all.length >= res.total || res.items.length === 0) break
+    }
+    return all
+  }
+  const [labelsLoading, setLabelsLoading] = useState(false)
+  const printAll = async () => {
+    setLabelsLoading(true)
+    try {
+      setLabelsFor(await fetchAll())
+    } catch (e) {
+      toast.stop(e instanceof Error ? e.message : tx('Demirbaşlar yüklenemedi.'))
+    } finally {
+      setLabelsLoading(false)
+    }
+  }
 
   const columns: Array<Column<Asset>> = [
     {
@@ -585,8 +649,8 @@ export function AssetsPage() {
               <Link to="/panel/zimmet/tara"><ScanLine className="size-4" />{tx('QR okut')}</Link>
             </Button>
             {canManage && (
-              <Button variant="outline" className="cursor-pointer" onClick={() => setLabelsFor(assets.data ?? [])} disabled={!assets.data?.length}>
-                <Printer className="size-4" />
+              <Button variant="outline" className="cursor-pointer" onClick={() => void printAll()} disabled={total === 0 || labelsLoading}>
+                {labelsLoading ? <LoaderCircle className="size-4 animate-spin" /> : <Printer className="size-4" />}
                 {tx('Etiketleri yazdır')}
               </Button>
             )}
@@ -603,7 +667,7 @@ export function AssetsPage() {
       <Tabs tabs={TABS} value={tab} onChange={setTab} label={tx('Zimmet durumu')} />
 
       <DataTable
-        rows={assets.data}
+        rows={assets.data?.items}
         rowKey={(a) => a.id}
         columns={columns}
         isLoading={assets.isPending}
@@ -611,7 +675,24 @@ export function AssetsPage() {
         onRetry={() => void assets.refetch()}
         searchPlaceholder={tx('Demirbaş no, model, seri no veya kişi')}
         exportFileName="zimmet-envanteri"
-        pageSize={12}
+        pageSize={PAGE_SIZE}
+        server={{
+          total,
+          page,
+          onPageChange: setPage,
+          onQueryChange: (v) => {
+            setSearch(v)
+            setPage(1)
+          },
+          sort,
+          onSortChange: (next) => {
+            setSort(next)
+            setPage(1)
+          },
+          sortable: Object.keys(SERVER_SORT),
+          fetchAll,
+          fetching: assets.isPlaceholderData,
+        }}
         emptyTitle={tx('Bu durumda demirbaş yok')}
         emptyDetail={canManage ? tx('Başka bir durum sekmesi seçin ya da yeni bir demirbaş ekleyin.') : tx('Başka bir durum sekmesi seçin.')}
         emptyAction={

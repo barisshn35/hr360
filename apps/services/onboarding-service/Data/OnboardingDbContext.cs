@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OnboardingService.Infrastructure;
 using OnboardingService.Models;
 using OnboardingService.Tenancy;
 
@@ -29,8 +30,16 @@ public class OnboardingDbContext : DbContext, ITenantAwareContext
     public DbSet<OnboardingSettings> Settings => Set<OnboardingSettings>();
     public DbSet<AssetMaintenance> AssetMaintenance => Set<AssetMaintenance>();
 
+    /// <summary>
+    /// Türkçe harf katlamalı küçük harf (SQL: public.hr360_fold, scripts/sql/2026-10-09_paging_indexes.sql).
+    /// PostgreSQL'de sorguda hr360_fold'a çevrilir; gövde yalnızca bellek içi sağlayıcıda (testler) çalışır.
+    /// </summary>
+    public static string Fold(string value) => Paging.Fold(value);
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDbFunction(typeof(OnboardingDbContext).GetMethod(nameof(Fold), new[] { typeof(string) })!)
+            .HasName("hr360_fold").HasSchema("public");
         modelBuilder.Entity<OnboardingPlan>().ConfigureTenantColumn();
         modelBuilder.Entity<OnboardingPlan>().ToTable("onboarding_plans");
         modelBuilder.Entity<OnboardingPlan>().Property(p => p.Status).HasConversion<string>();

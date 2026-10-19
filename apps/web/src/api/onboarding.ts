@@ -1,4 +1,4 @@
-import { apiFetch, qs } from './client'
+import { apiFetch, qs, type Paged } from './client'
 import { tx } from '@/lib/i18n'
 
 const BASE = '/api/onboarding'
@@ -142,6 +142,33 @@ export interface ReturnAssetInput {
   markAsRetired: boolean
 }
 
+/** Sunucu tarafı sayfalı plan listesi. `qEmployeeIds`: aramayla adı eşleşen çalışanlar
+ * (adlar employee-service'te olduğundan istemci çözer). Varsayılan sıra: en yeni önce. */
+export interface PlanPageParams {
+  page: number
+  pageSize: number
+  employeeId?: string
+  status?: PlanStatus
+  q?: string
+  qEmployeeIds?: string
+  sort?: 'createdAt' | 'startDate' | 'status' | 'progress'
+  dir?: 'asc' | 'desc'
+}
+
+/** Sunucu tarafı sayfalı demirbaş listesi. `qTypes` / `qEmployeeIds`: aramayla adı eşleşen
+ * türler ve zimmetli kişiler. Varsayılan sıra: etikete göre artan. */
+export interface AssetPageParams {
+  page: number
+  pageSize: number
+  status?: AssetStatus
+  type?: AssetType
+  q?: string
+  qTypes?: string
+  qEmployeeIds?: string
+  sort?: 'tag' | 'type' | 'status' | 'createdAt'
+  dir?: 'asc' | 'desc'
+}
+
 /* ------------------------------------------------------------------ servis */
 
 export const onboardingApi = {
@@ -149,6 +176,9 @@ export const onboardingApi = {
     filters: { employeeId?: string; status?: PlanStatus } = {},
     signal?: AbortSignal,
   ) => apiFetch<OnboardingPlan[]>(`${BASE}/onboarding-plans${qs(filters)}`, { signal }),
+
+  pagePlans: (params: PlanPageParams, signal?: AbortSignal) =>
+    apiFetch<Paged<OnboardingPlan>>(`${BASE}/onboarding-plans${qs(params)}`, { signal }),
 
   getPlan: (id: string, signal?: AbortSignal) =>
     apiFetch<OnboardingPlan>(`${BASE}/onboarding-plans/${id}`, { signal }),
@@ -170,6 +200,9 @@ export const onboardingApi = {
 
   listAssets: (filters: { status?: AssetStatus; type?: AssetType } = {}, signal?: AbortSignal) =>
     apiFetch<Asset[]>(`${BASE}/assets${qs(filters)}`, { signal }),
+
+  pageAssets: (params: AssetPageParams, signal?: AbortSignal) =>
+    apiFetch<Paged<Asset>>(`${BASE}/assets${qs(params)}`, { signal }),
 
   getAsset: (id: string, signal?: AbortSignal) =>
     apiFetch<Asset>(`${BASE}/assets/${id}`, { signal }),

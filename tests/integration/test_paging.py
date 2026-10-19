@@ -2,10 +2,10 @@
 """G24: sunucu tarafı sayfalama, X-Total-Count, sort/q ve sayfasız (eski) biçimle uyumluluk.
 
 Uçlar: çalışanlar, izin talepleri, izin bakiyeleri, departmanlar (60 sn önbellekli), ekipler,
-performans değerlendirmeleri ve hedefleri.
+performans değerlendirmeleri ve hedefleri, işe alışma planları ve demirbaşlar.
 
 Ön koşul: HR360 çalışıyor, scripts/sql/2026-10-09_paging_indexes.sql uygulanmış.
-Test yalnızca TEST-PG önekli departmanlar oluşturur ve sonunda siler.
+Test yalnızca TEST-PG önekli departmanlar ve demirbaşlar oluşturur ve sonunda siler.
 """
 import json
 import os
@@ -60,6 +60,7 @@ def all_pages(who, path, size, **params):
 
 def cleanup():
     psql(f"""DELETE FROM organization_departments WHERE "Name" LIKE '{PREFIX}%'""")
+    psql(f"""DELETE FROM onboarding_assets WHERE "AssetTag" LIKE '{PREFIX}%'""")
 
 
 cleanup()
@@ -208,12 +209,96 @@ check("Değerlendirmeler: çalışan sayfalı istekte yalnızca yetkili kayıtla
 code, rs, _ = get("admin", "/api/performance/reviews", page=1, pageSize=50, submitted="true")
 check("Değerlendirmeler: submitted=true filtresi", code == 200 and all(r["submittedAt"] for r in rs["items"]), rs and rs["total"])
 
+# ---------------------------------------------------------------------- işe alışma planları
+OP = "/api/onboarding/onboarding-plans"
+code, legacy, hdr = get("admin", OP)
+check("Planlar: sayfasız eski biçim + X-Total-Count", code == 200 and isinstance(legacy, list) and hdr == len(legacy), (code, hdr))
+created = [x["createdAt"] for x in legacy or []]
+check("Planlar: sayfasız sıra değişmedi (en yeni önce)", created == sorted(created, reverse=True))
+check("Planlar: sayfasız yanıtta görevler gömülü", all("tasks" in x for x in legacy or []))
+n = len(legacy or [])
+code, p1, hdr = get("admin", OP, page=1, pageSize=2)
+check("Planlar: sayfalı yanıt {items,total,page,pageSize}", code == 200 and set(p1) >= {"items", "total", "page", "pageSize"}
+      and len(p1["items"]) == min(2, n) and p1["total"] == n and hdr == n, (p1 and p1.get("total"), hdr, n))
+items, total = all_pages("admin", OP, 2)
+check("Planlar: tüm sayfalar = sayfasız liste (örtüşmesiz, aynı sıra)",
+      items is not None and [x["id"] for x in items] == [x["id"] for x in legacy], (len(items or []), n))
+code, big, _ = get("admin", OP, page=1, pageSize=500)
+check("Planlar: pageSize en fazla 200'e kırpılır", code == 200 and big["pageSize"] == 200, big and big.get("pageSize"))
+code, ip, hdr = get("admin", OP, page=1, pageSize=200, status="InProgress")
+check("Planlar: status filtresi + toplam", code == 200 and all(x["status"] == "InProgress" for x in ip["items"])
+      and ip["total"] == sum(1 for x in legacy if x["status"] == "InProgress") and hdr == ip["total"], ip and ip["total"])
+code, sd, _ = get("admin", OP, page=1, pageSize=200, sort="startDate", dir="asc")
+starts = [x["startDate"] for x in (sd or {}).get("items", [])]
+check("Planlar: sort=startDate asc", code == 200 and starts == sorted(starts), starts[:5])
+code, qe, _ = get("admin", OP, page=1, pageSize=200, q="zzz-yok", qEmployeeIds=AYSE)
+check("Planlar: qEmployeeIds ile çalışan adı araması", code == 200
+      and qe["total"] == sum(1 for x in legacy if x["employeeId"] == AYSE) and all(x["employeeId"] == AYSE for x in qe["items"]), qe and qe["total"])
+code, pct, _ = get("admin", OP, page=1, pageSize=20, q="%")
+check("Planlar: q'daki % joker olarak yorumlanmaz", code == 200 and pct["total"] == 0, pct and pct["total"])
+code, own, _ = get("ayse", OP, page=1, pageSize=50)
+code2, own_legacy, hdr = get("ayse", OP)
+check("Planlar: çalışan sayfalı/sayfasız yalnızca görebildiği planları alır (aynı küme)",
+      code == 200 and code2 == 200 and isinstance(own_legacy, list) and own["total"] == len(own_legacy) == hdr
+      and {x["id"] for x in own["items"]} <= {x["id"] for x in legacy}, (own and own.get("total"), hdr))
+
+# ---------------------------------------------------------------------- demirbaşlar
+A = "/api/onboarding/assets"
+asset_ids = []
+for i, (typ, model) in enumerate((("Laptop", "Çalışma İstasyonu"), ("Phone", "Telefon"), ("Laptop", "Dizüstü"),
+                                  ("Monitor", "Ekran"), ("Laptop", "Dizüstü"))):
+    code, a = api("admin", "POST", A, {"assetTag": f"{PREFIX}-{i + 1}", "type": typ, "model": model, "serialNumber": f"SN_{i}%"})
+    if code in (200, 201):
+        asset_ids.append(a["id"])
+check("TEST demirbaşları oluşturuldu", len(asset_ids) == 5, asset_ids)
+code, legacy, hdr = get("admin", A)
+check("Demirbaşlar: sayfasız eski biçim + X-Total-Count", code == 200 and isinstance(legacy, list) and hdr == len(legacy), (code, hdr))
+tags = [x["assetTag"] for x in legacy or [] if x["assetTag"].startswith(PREFIX)]
+check("Demirbaşlar: sayfasız sıra değişmedi (etikete göre artan)", tags == [f"{PREFIX}-{i}" for i in range(1, 6)], tags)
+check("Demirbaşlar: sayfasız yanıtta zimmet alanları var",
+      all({"assignedEmployeeId", "assignedOn", "expectedReturnOn"} <= set(x) for x in legacy or []))
+n = len(legacy or [])
+items, total = all_pages("admin", A, 2)
+check("Demirbaşlar: tüm sayfalar = sayfasız liste (örtüşmesiz, aynı sıra)",
+      items is not None and total == n and [x["id"] for x in items] == [x["id"] for x in legacy], (len(items or []), n))
+by_id = {x["id"]: x for x in legacy or []}
+check("Demirbaşlar: sayfadaki zimmet alanları sayfasız listeyle aynı",
+      items is not None and all(x["assignedEmployeeId"] == by_id[x["id"]]["assignedEmployeeId"] for x in items))
+code, big, _ = get("admin", A, page=1, pageSize=500)
+check("Demirbaşlar: pageSize en fazla 200'e kırpılır", code == 200 and big["pageSize"] == 200, big and big.get("pageSize"))
+code, p, hdr = get("admin", A, page=1, pageSize=2, q=PREFIX.lower())
+check("Demirbaşlar: q + sayfa (etikete göre artan)", code == 200 and p["total"] == 5 and hdr == 5
+      and [x["assetTag"] for x in p["items"]] == [f"{PREFIX}-1", f"{PREFIX}-2"], p)
+code, pd, _ = get("admin", A, page=1, pageSize=2, q=PREFIX, dir="desc")
+check("Demirbaşlar: dir=desc", code == 200 and [x["assetTag"] for x in pd["items"]] == [f"{PREFIX}-5", f"{PREFIX}-4"], pd)
+code, qf, _ = get("admin", A, page=1, pageSize=50, q="calisma istasyonu")
+check("Demirbaşlar: q Türkçe harf katlamalı arar (model)", code == 200 and f"{PREFIX}-1" in [x["assetTag"] for x in qf["items"]], qf)
+code, qs_, _ = get("admin", A, page=1, pageSize=50, q="SN_3%")
+check("Demirbaşlar: q'daki % ve _ joker değil (seri no)", code == 200 and [x["assetTag"] for x in qs_["items"]] == [f"{PREFIX}-4"], qs_)
+code, ql, _ = get("admin", A, page=1, pageSize=200, q=PREFIX, type="Laptop")
+check("Demirbaşlar: type filtresi + q", code == 200 and ql["total"] == 3 and all(x["type"] == "Laptop" for x in ql["items"]), ql and ql["total"])
+code, qt, _ = get("admin", A, page=1, pageSize=200, q="zzz-yok", qTypes="Monitor")
+check("Demirbaşlar: qTypes ile tür adı araması", code == 200 and qt["total"] == sum(1 for x in legacy if x["type"] == "Monitor")
+      and all(x["type"] == "Monitor" for x in qt["items"]), qt and qt["total"])
+held = next((x for x in legacy or [] if x.get("assignedEmployeeId")), None)
+if held:
+    code, qe, _ = get("admin", A, page=1, pageSize=200, q="zzz-yok", qEmployeeIds=held["assignedEmployeeId"])
+    check("Demirbaşlar: qEmployeeIds ile zimmetli kişi araması", code == 200 and held["id"] in [x["id"] for x in qe["items"]]
+          and all(x["assignedEmployeeId"] == held["assignedEmployeeId"] for x in qe["items"]), qe and qe["total"])
+code, av, hdr = get("admin", A, page=1, pageSize=200, status="Available")
+check("Demirbaşlar: status filtresi + toplam", code == 200 and all(x["status"] == "Available" for x in av["items"])
+      and av["total"] == sum(1 for x in legacy if x["status"] == "Available") and hdr == av["total"], av and av["total"])
+for i in asset_ids:
+    api("admin", "DELETE", f"{A}/{i}")
+
 # ---------------------------------------------------------------------- temizlik
 for i in ids:
     api("admin", "DELETE", f"{D}/{i}")
 cleanup()
 left = psql(f"""SELECT count(*) FROM organization_departments WHERE "Name" LIKE '{PREFIX}%'""")
 check("Temizlik: TEST departmanları silindi", left.strip() == "0", left)
+left = psql(f"""SELECT count(*) FROM onboarding_assets WHERE "AssetTag" LIKE '{PREFIX}%'""")
+check("Temizlik: TEST demirbaşları silindi", left.strip() == "0", left)
 
 print(f"\nFAILS: {len(FAIL)}")
 for f in FAIL:
