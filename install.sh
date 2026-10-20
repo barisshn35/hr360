@@ -652,8 +652,13 @@ if [ -f .env ]; then
       docker compose exec -T postgres psql -U hr360admin -d postgres -c "CREATE DATABASE keycloak OWNER hr360admin;"
     fi
 
-    # shellcheck disable=SC2046
-    docker compose build $( ENV_FILE=.env; . scripts/lib/modules.sh; mod_build_targets )
+    # Hazir imaj (scripts/lib/images.sh): CI'nin bu commit icin yayinladigi imzali imajlar indirilir;
+    # yoksa ya da imza dogrulanamazsa sunucuda derlenir.
+    build_targets="$( ENV_FILE=.env; . scripts/lib/modules.sh; mod_build_targets )"
+    # shellcheck source=scripts/lib/images.sh
+    . scripts/lib/images.sh; images_use_tag
+    # shellcheck disable=SC2086
+    images_pull $build_targets || docker compose build $build_targets
     docker compose up -d
     scripts/modules.sh sync >/dev/null 2>&1 || true
 
@@ -1343,8 +1348,13 @@ scripts/migrate.sh >/dev/null || { echo "Goc betikleri uygulanamadi (scripts/mig
 
 info "Imajlar build ediliyor ve servisler baslatiliyor (ilk calistirmada birkac dakika surebilir)..."
 # Yalnizca acik modullerin imajlari derlenir (scripts/lib/modules.sh).
-# shellcheck disable=SC2046
-docker compose build $( ENV_FILE=.env; . scripts/lib/modules.sh; mod_build_targets )
+# Hazir imaj (scripts/lib/images.sh): CI'nin bu commit icin yayinladigi imzali imajlar indirilir;
+# yoksa ya da imza dogrulanamazsa sunucuda derlenir.
+build_targets="$( ENV_FILE=.env; . scripts/lib/modules.sh; mod_build_targets )"
+# shellcheck source=scripts/lib/images.sh
+. scripts/lib/images.sh; images_use_tag
+# shellcheck disable=SC2086
+images_pull $build_targets || docker compose build $build_targets
 docker compose up -d
 scripts/modules.sh sync >/dev/null 2>&1 || true
 

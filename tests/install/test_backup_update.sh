@@ -26,6 +26,11 @@ a="$*"
 case "$a" in
   "info"*) exit 0 ;;
   *"retention info"*) [ "${FAKE_NOLOCK:-0}" = 1 ] && exit 1; exit 0 ;;
+  # Hazir imaj (scripts/lib/images.sh): indirme, ozet, imza (cosign), eski imajlar.
+  "pull -q "*) [ "${FAKE_PULL_FAIL:-0}" = 1 ] && exit 1; exit 0 ;;
+  "image inspect --format"*RepoDigests*) img="${*: -1}"; echo "${img%:*}@sha256:$(printf %s "$img" | sha256sum | cut -c1-64)" ;;
+  "run --rm ghcr.io/sigstore/cosign/"*) [ "${FAKE_SIGN_BAD:-0}" = 1 ] && exit 1; exit 0 ;;
+  "image ls"*) printf '%s\n' ${FAKE_IMAGES:-} ;;
   "image inspect"*) exit 0 ;;
   *"python /dec.py"*) cat >/dev/null; if [ "${FAKE_DEC_FAIL:-0}" = 1 ]; then echo "engagement_profiles.Iban 1 1 0 0"; else echo "engagement_profiles.Iban 3 0 0 1"; fi; exit 0 ;;
   "exec hr360-restore-drill-"*"to_regclass"*) echo t ;;
@@ -37,7 +42,8 @@ case "$a" in
   "exec hr360-restore-drill-"*"select count(*) from"*) echo 3 ;;
   "exec hr360-restore-drill-"*"random()"*) : ;;
   # Kapali modul (scale 0) saglik denetimine ve derlemeye girmez (scripts/modules.sh).
-  *"compose config --format json"*) echo '{"name":"hr360test","services":{"postgres":{"image":"postgres:16-alpine"},"employee-service":{"build":{}},"leave-service":{"build":{}},"recruitment-service":{"build":{},"scale":0},"gateway":{}}}' ;;
+  *"compose config --format json"*) t="${HR360_IMAGE_TAG:-local}"; r=ghcr.io/barisshn35/hr360
+    echo '{"name":"hr360test","services":{"postgres":{"image":"postgres:16-alpine"},"employee-service":{"build":{},"image":"'"$r/employee-service:$t"'"},"leave-service":{"build":{},"image":"'"$r/leave-service:$t"'"},"recruitment-service":{"build":{},"scale":0},"gateway":{}}}' ;;
   *"compose config --services"*) printf 'employee-service\nleave-service\ngateway\npostgres\n' ;;
   *"compose ps --status running --services"*) echo postgres ;;
   *"select 1 from pg_database where datname='hr360_operational'"*) echo 1 ;;
@@ -272,6 +278,7 @@ cd "$U" || exit 1
 git config user.email t@t; git config user.name t
 mkdir -p scripts/sql
 cp "$ROOT/scripts/update.sh" scripts/
+mkdir -p scripts/lib; cp "$ROOT/scripts/lib/images.sh" "$ROOT/scripts/lib/secrets.sh" scripts/lib/
 cat > scripts/backup.sh <<'EOF'
 #!/usr/bin/env bash
 mkdir -p backups && touch backups/hr360-test.tar.gz.enc
@@ -295,6 +302,8 @@ T="$WORK/t"; git clone -q "$O" "$T" 2>/dev/null
 V2="$(cd "$T" && git rev-parse HEAD)"
 ( cd "$T" && touch BROKEN && git add -A && git commit -qm v3 && git tag v3 && git push -q origin HEAD:refs/heads/bozuk 2>/dev/null && git push -q origin v3 2>/dev/null )
 
+# Asagidaki senaryolarda CI imaji yok: sunucuda derlenir (hazir imaj senaryolari en sonda).
+export FAKE_PULL_FAIL=1
 : > "$HR360_TEST_LOG"
 out="$(scripts/update.sh --yes --timeout 1 2>&1)"; rc=$?
 check "guncelleme basarili (v1 → v2)" eval '[ $rc = 0 ] && [ "$(git rev-parse HEAD)" = "$V2" ]'
@@ -327,6 +336,33 @@ out="$(scripts/update.sh rollback --yes --timeout 1 2>&1)"; rc=$?
 check "elle geri donus (rollback) onceki surume" eval '[ $rc = 0 ] && [ "$(git rev-parse HEAD)" = "$V1" ]'
 out="$(scripts/update.sh status 2>&1)"
 check "durum komutu" eval 'grep -q "Son guncelleme" <<< "$out" && grep -q "Kurulu surum: 1.0.0" <<< "$out"'
+
+echo "== hazir imaj"
+unset FAKE_PULL_FAIL
+git reset -q --hard "$V1"; rm -f .update-state; : > "$HR360_TEST_LOG"
+out="$(scripts/update.sh --yes --timeout 1 2>&1)"; rc=$?
+check "hazir imaj: indirildi, imza dogrulandi, derlenmedi" eval '[ $rc = 0 ] && grep -q "docker pull -q ghcr.io/barisshn35/hr360/employee-service:sha-$V2" "$HR360_TEST_LOG" && ! grep -q "compose build" "$HR360_TEST_LOG"'
+check "  imza: ozet (digest) ve bu deponun CI kimligi" eval 'grep "run --rm ghcr.io/sigstore/cosign/" "$HR360_TEST_LOG" | grep -qF "certificate-identity-regexp ^https://github\.com/barisshn35/hr360/\.github/workflows/ci\.yml@refs/heads/main\$ ghcr.io/barisshn35/hr360/employee-service@sha256:"'
+check "  kapali modulun imaji indirilmedi" eval '! grep -q "pull -q.*recruitment-service" "$HR360_TEST_LOG"'
+check "  etiket .env'de, durum kaydedildi" eval 'grep -qx "HR360_IMAGE_TAG=sha-$V2" .env && grep -q "^images_mode=hazir" .update-state'
+check "  durum komutu hazir imaji gosterir" eval 'scripts/update.sh status | grep -q "Imajlar: hazir imaj"'
+
+git reset -q --hard "$V1"; rm -f .update-state; : > "$HR360_TEST_LOG"
+out="$(FAKE_SIGN_BAD=1 scripts/update.sh --yes --timeout 1 2>&1)"; rc=$?
+check "imza dogrulanamazsa imaj silinir, sunucuda derlenir" eval '[ $rc = 0 ] && grep -q "imzasi dogrulanamadi" <<< "$out" && grep -q "docker image rm ghcr.io/barisshn35/hr360/employee-service:sha-$V2" "$HR360_TEST_LOG" && grep -q "compose build" "$HR360_TEST_LOG" && grep -q "^images_mode=derlendi" .update-state'
+
+git reset -q --hard "$V1"; rm -f .update-state; : > "$HR360_TEST_LOG"
+echo HR360_PREBUILT_IMAGES=0 >> .env
+out="$(scripts/update.sh --yes --timeout 1 2>&1)"; rc=$?
+check "HR360_PREBUILT_IMAGES=0: indirme yok, local etiketiyle derlenir" eval '[ $rc = 0 ] && ! grep -q "docker pull" "$HR360_TEST_LOG" && grep -q "compose build" "$HR360_TEST_LOG" && grep -qx "HR360_IMAGE_TAG=local" .env'
+sed -i '/^HR360_PREBUILT_IMAGES=/d' .env
+
+# Eski imajlar: onceki surumunki (geri donus) ve gecerli kalir, digerleri silinir.
+git reset -q --hard "$V1"; : > "$HR360_TEST_LOG"
+printf 'images=sha-%s\n' "$V1" >> .update-state
+R=ghcr.io/barisshn35/hr360
+out="$(FAKE_IMAGES="$R/web:sha-eski $R/web:sha-$V1 $R/web:sha-$V2 $R/web:local hr360test-employee-service:latest hr360test-baska:latest postgres:16-alpine" scripts/update.sh --yes --timeout 1 2>&1)"; rc=$?
+check "eski imajlar temizlenir (onceki ve gecerli kalir)" eval '[ $rc = 0 ] && grep -q "docker image rm $R/web:sha-eski hr360test-employee-service:latest$" "$HR360_TEST_LOG"'
 
 echo
 if [ "$FAILS" -gt 0 ]; then echo "BASARISIZ: $FAILS"; exit 1; fi

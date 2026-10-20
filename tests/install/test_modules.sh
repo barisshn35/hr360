@@ -11,7 +11,7 @@ check() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
 
 mkdir -p "$T/repo/scripts/lib" "$T/bin"
 cp "$ROOT/scripts/modules.sh" "$T/repo/scripts/"
-cp "$ROOT/scripts/lib/modules.sh" "$ROOT/scripts/lib/backup-common.sh" "$T/repo/scripts/lib/"
+cp "$ROOT/scripts/lib/modules.sh" "$ROOT/scripts/lib/backup-common.sh" "$ROOT/scripts/lib/images.sh" "$ROOT/scripts/lib/secrets.sh" "$T/repo/scripts/lib/"
 cp "$ROOT/VERSION" "$T/repo/"
 printf 'HR360_DB_PASSWORD=x\nCOMPOSE_PROFILES=letsencrypt\n' > "$T/repo/.env"
 cat > "$T/bin/docker" <<'EOF'

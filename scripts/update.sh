@@ -15,7 +15,7 @@
 #   --timeout SN   Saglik denetimi icin bekleme (varsayilan 300 sn)
 #
 # Adimlar: on denetim (depo temiz mi) → yedek (scripts/backup.sh) → surum degisikligi (git) →
-# goc betikleri (scripts/sql) → imajlar ve servisler → saglik denetimi (tum servislerin /health
+# goc betikleri (scripts/sql) → imajlar (CI'nin imzali hazir imajlari; yoksa sunucuda derleme) ve servisler → saglik denetimi (tum servislerin /health
 # ucu ve gateway). Saglik denetimi gecmezse onceki surume donulur ve servisler yeniden kurulur.
 # Durum .update-state dosyasinda tutulur.
 set -euo pipefail
@@ -55,6 +55,10 @@ if [ "$CMD" = status ]; then
   if [ -f "$STATE" ]; then
     echo "Son guncelleme: $(state at) — $(state from) → $(state to) [$(state result)]"
     [ -n "$(state backup)" ] && echo "Guncelleme oncesi yedek: $(state backup)"
+    case "$(state images_mode)" in
+      hazir) echo "Imajlar: hazir imaj (imzasi dogrulandi, $(state images | cut -c1-16))" ;;
+      derlendi) echo "Imajlar: sunucuda derlendi" ;;
+    esac
   else
     echo "Son guncelleme: kayit yok"
   fi
@@ -131,11 +135,27 @@ deploy() {
   if [ -x scripts/db-isolation.sh ]; then
     scripts/db-isolation.sh ensure || echo "UYARI: veritabani yalitimi acilamadi (scripts/db-isolation.sh ensure)." >&2
   fi
-  # Paralel derleme, calisan servislerin yaninda kucuk sunucularda bellegi tuketebilir: ya npm "cannot
-  # allocate memory" ile duser ya da hic dusmeden saatlerce takas yapar. Bos bellek azsa bastan sirayla
-  # derle; paralel derleme basarisiz olursa da (gecici ag hatasi vb.) servis servis bir kez daha dene.
-  # Yalnizca acik modullerin imajlari derlenir (kapali modul: scale 0).
+  # Yalnizca acik modullerin imajlari (kapali modul: scale 0).
   local targets; targets="$(active_services build | tr '\n' ' ')"
+  # Hazir imaj (scripts/lib/images.sh): CI'nin bu commit icin yayinladigi imzali imajlar indirilir;
+  # yoksa ya da imza dogrulanamazsa asagida sunucuda derlenir. Eski surume donuste betik yoksa derlenir.
+  if [ -f scripts/lib/images.sh ]; then
+    # shellcheck source=scripts/lib/images.sh
+    . scripts/lib/images.sh; images_use_tag
+  else unset -f images_pull 2>/dev/null || true; fi
+  # shellcheck disable=SC2086
+  if declare -F images_pull >/dev/null && images_pull $targets; then IMAGES_MODE=hazir
+  else IMAGES_MODE=derlendi; build_images "$targets" || return 1; fi
+  docker compose up -d --remove-orphans >/dev/null || return 1
+  # Modül durumu (ağ geçidi işaretleri, HR360_MODULES, izleme metriği) .env'den yeniden yazılır.
+  if [ -x scripts/modules.sh ]; then scripts/modules.sh sync >/dev/null 2>&1 || true; fi
+}
+
+# Paralel derleme, calisan servislerin yaninda kucuk sunucularda bellegi tuketebilir: ya npm "cannot
+# allocate memory" ile duser ya da hic dusmeden saatlerce takas yapar. Bos bellek azsa bastan sirayla
+# derle; paralel derleme basarisiz olursa da (gecici ag hatasi vb.) servis servis bir kez daha dene.
+build_images() { # build_images "SERVIS ..."
+  local targets="$1"
   local avail_kb cg_max cg_cur; avail_kb="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
   # Konteyner/LXC icinde /proc/meminfo makinenin tamamini gosterir; cgroup siniri daha darsa onu kullan.
   cg_max="$(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo max)"; cg_cur="$(cat /sys/fs/cgroup/memory.current 2>/dev/null || echo 0)"
@@ -149,9 +169,6 @@ deploy() {
     echo "UYARI: imaj derlemesi basarisiz; servisler sirayla yeniden derleniyor." >&2
     local s; for s in $targets; do docker compose build "$s" >/dev/null || return 1; done
   } || return 1; fi
-  docker compose up -d --remove-orphans >/dev/null || return 1
-  # Modül durumu (ağ geçidi işaretleri, HR360_MODULES, izleme metriği) .env'den yeniden yazılır.
-  if [ -x scripts/modules.sh ]; then scripts/modules.sh sync >/dev/null 2>&1 || true; fi
 }
 
 record() { # record key=value ...
@@ -225,8 +242,12 @@ info "Surum degistiriliyor"
 git reset -q --hard "$TARGET"
 
 info "Goc betikleri, imajlar ve servisler"
+PREV_IMAGES="$(state images)"
 if deploy && healthy; then
-  record "result=basarili"
+  record "result=basarili" "images=${HR360_IMAGE_TAG:-local}" "images_mode=${IMAGES_MODE:-derlendi}"
+  # Eski imajlar: gecerli ve onceki surumunkiler (geri donus) kalir. Ilk hazir imajli guncellemede
+  # onceki surumun imaj adi bilinmediginden hicbiri silinmez.
+  if [ -n "$PREV_IMAGES" ] && declare -F images_prune >/dev/null; then images_prune "$PREV_IMAGES"; fi
   # Guvenlik dalgasi 2A (bir kez): tenant-service'in Keycloak yonetim API servis hesabi yoksa
   # olusturulur (anahtar .env'e eklenir, parola politikasi ve giris olaylari uygulanir).
   if [ -x scripts/keycloak-service-account.sh ] && ! grep -q '^KEYCLOAK_TENANT_ADMIN_CLIENT_SECRET=.' .env; then

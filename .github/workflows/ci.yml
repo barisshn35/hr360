@@ -1,6 +1,8 @@
 # HR360 surekli entegrasyon: her push / PR'da arayuz, .NET servisleri,
 # ML servisi, dagitim dosyalari ve guvenlik taramasi (Trivy, npm audit, NuGet) dogrulanir. main'e push'ta ek olarak Docker
-# imajlari derlenir (yayinlanmaz).
+# imajlari derlenir, taranir ve hazir imaj olarak yayinlanir: ghcr.io/<depo>/<servis>:sha-<commit>, cosign ile
+# anahtarsiz imzali (bu is akisinin GitHub kimligi) + SBOM tasdiki. Sunucu guncellemede bunlari indirir ve imzayi
+# dogrular (scripts/lib/images.sh); imaj adlari docker-compose.yml'deki servis adlaridir.
 name: CI
 
 on:
@@ -149,6 +151,12 @@ jobs:
           done
       - name: docker compose config (tum profiller)
         run: docker compose --profile monitoring --profile letsencrypt --profile mailer config -q
+      - name: Hazir imaj listesi compose ile esit (images isi; scripts/lib/images.sh)
+        run: |
+          docker compose --profile monitoring --profile letsencrypt --profile mailer config --format json \
+            | python3 -c 'import json,sys; print("\n".join(sorted(n for n,s in json.load(sys.stdin)["services"].items() if "build" in s)))' > /tmp/compose-builds
+          grep -oE '^          - \{ name: [a-z0-9-]+' .github/workflows/ci.yml | awk '{print $NF}' | LC_ALL=C sort > /tmp/ci-images
+          diff /tmp/compose-builds /tmp/ci-images || { echo "docker-compose.yml'de derlenen servisler ile ci.yml images matrisi farkli"; exit 1; }
       - name: nginx -t
         run: docker run --rm --network none -v "$PWD/deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:1.27-alpine nginx -t
       - name: Prometheus kurallari
@@ -249,12 +257,21 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [web, dotnet, dotnet-tests, ml, deploy-config, security]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # ghcr.io/<depo>/<servis>
+      id-token: write   # cosign anahtarsiz imza: GitHub Actions OIDC kimligi (saklanacak anahtar yok)
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}/${{ matrix.name }}:sha-${{ github.sha }}
     strategy:
       fail-fast: false
       matrix:
+        # name = docker-compose.yml'deki servis adi (imaj adi da odur).
         include:
           - { name: web, context: apps/web }
           - { name: ml-inference, context: apps/ml-inference }
+          - { name: mlflow, context: apps/ml-platform }
+          - { name: mailer, context: deploy/mailer }
           - { name: compensation-service, context: apps/services/compensation-service }
           - { name: employee-service, context: apps/services/employee-service }
           - { name: engagement-service, context: apps/services/engagement-service }
@@ -272,13 +289,23 @@ jobs:
           - { name: workflow-service, context: apps/services/workflow-service }
     steps:
       - uses: actions/checkout@v7
+      # Arayuz hesap menusunde surumu gosterir (web imajinin derleme argumani; digerleri yok sayar).
+      - name: Surum
+        run: echo "HR360_VERSION=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_ENV"
       - uses: docker/setup-buildx-action@v4
       - uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           push: false
           load: true
-          tags: hr360-${{ matrix.name }}:ci
+          tags: |
+            hr360-${{ matrix.name }}:ci
+            ${{ env.IMAGE }}
+          build-args: HR360_VERSION=${{ env.HR360_VERSION }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.HR360_VERSION }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
       - name: Trivy — imaj (duzeltmesi yayimlanmis kritik aciklar)
@@ -286,6 +313,12 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy:0.57.1@sha256:5c59e08f980b5d4d503329773480fcea2c9bdad7e381d846fbf9f2ecb8050f6b \
             image --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 1 hr360-${{ matrix.name }}:ci
+      # Imajlar herkese acik yayinlanir: icinde sir (anahtar, parola, .env) olmamali. Sirlar kurulumda sunucuda uretilir.
+      - name: Trivy — imajda sir yok
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.57.1@sha256:5c59e08f980b5d4d503329773480fcea2c9bdad7e381d846fbf9f2ecb8050f6b \
+            image --scanners secret --exit-code 1 hr360-${{ matrix.name }}:ci
       # Guvenlik dalgasi 1: her imajin yazilim bilesen listesi (SBOM, CycloneDX). Yeni bir acik
       # duyuruldugunda hangi imajin etkilendigi bu listeden bulunur; 90 gun saklanir.
       - name: SBOM (CycloneDX)
@@ -300,3 +333,23 @@ jobs:
           name: sbom-${{ matrix.name }}
           path: sbom/hr360-${{ matrix.name }}.cdx.json
           retention-days: 90
+      # Yayin: yalnizca taramalardan gecen imaj. Imza ve SBOM ozete (digest) baglanir; etiket tasinsa da gecerlidir.
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@v4
+        with:
+          cosign-release: v3.1.3
+      - name: Yayinla, imzala, SBOM tasdiki
+        run: |
+          docker push -q "$IMAGE"
+          ref="$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$IMAGE" | grep -m1 "^${IMAGE%:*}@sha256:")"
+          test -n "$ref"
+          cosign sign --yes "$ref"
+          cosign attest --yes --type cyclonedx --predicate sbom/hr360-${{ matrix.name }}.cdx.json "$ref"
+          # Sunucunun yaptigi dogrulamanin aynisi (scripts/lib/images.sh).
+          cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/heads/main" "$ref" >/dev/null
+          echo "Yayinlandi: $ref" >> "$GITHUB_STEP_SUMMARY"

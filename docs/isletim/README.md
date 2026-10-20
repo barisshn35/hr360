@@ -15,7 +15,7 @@ ve testler. Kurulum, güncelleme ve yedekleme özeti ana [README](../../README.m
 | E-posta (SMTP) sunucusu | Arayüzden: **Platform › Sistem ayarları** (kaydet, deneme e-postası, test kutusuna dön). Arayüzde sunucu girildiyse o geçerlidir; sunucudan (kurulum ayarı, `.env`): `scripts/smtp.sh set --from ik@sirket.com --password '…'` (sunucu adresten bulunur), `scripts/smtp.sh set` (soru sorar), `scripts/smtp.sh test adres@sirket.com`, `scripts/smtp.sh status`, `scripts/smtp.sh mailpit` |
 | Sunucunun kendi posta servisi (gelişmiş, isteğe bağlı) | `scripts/smtp.sh self [--from noreply@hr.sirket.com]` (aç: 25/tcp + PTR denetimi, DNS kayıtları), `scripts/smtp.sh dns` (kayıtları yeniden yaz), kapatmak için `scripts/smtp.sh set …` ya da `scripts/smtp.sh mailpit`. Ayrıntı aşağıda |
 | Keycloak giriş ekranı teması (HR360 görünümü + Türkçe) | Kurulum ve güncelleme (`./install.sh`) sırasında otomatik uygulanır. Elle: `scripts/keycloak-theme.sh`; Keycloak'ın kendi temasına dönmek için `scripts/keycloak-theme.sh default` |
-| Yeni sürüme güncelleme (tek komut, otomatik geri dönüş) | `scripts/update.sh` (önce yedek, sonra sürüm, göçler, imajlar ve tüm servislerin sağlık denetimi; denetim geçmezse önceki sürüme döner). `scripts/update.sh --ref v1.0.0`, `scripts/update.sh rollback`, `scripts/update.sh status` |
+| Yeni sürüme güncelleme (tek komut, otomatik geri dönüş) | `scripts/update.sh` (önce yedek, sonra sürüm, göçler, imajlar ve tüm servislerin sağlık denetimi; denetim geçmezse önceki sürüme döner). `scripts/update.sh --ref v1.0.0`, `scripts/update.sh rollback`, `scripts/update.sh status`. İmajlar hazır indirilir (aşağıda "Hazır imajlar") |
 | İzleme (Prometheus + Grafana + Loki + Alertmanager) | Arayüzden: **Platform › Bakım › İzleme ve alarmlar** (aç/kapat, verileri sil). Sunucudan: `scripts/monitoring.sh enable / status / password / sso / disable / purge` |
 | Alarm kanalları (e-posta, Slack, Teams) | Arayüzden: **Platform › Bakım › İzleme ve alarmlar** (kanal ayarla/kapat, deneme alarmı). Sunucudan: `scripts/monitoring.sh alerts status / email … / slack … / teams … / test` |
 | Dağıtık izleme (OpenTelemetry → Tempo, KVKK maskeli) | Arayüzden: **Platform › Bakım › İzleme ve alarmlar**. Sunucudan: `scripts/monitoring.sh tracing on [oran] / off / status` |
@@ -94,6 +94,27 @@ davetleri birkaç güne yayın. Gmail ve Outlook itibar oluşana kadar e-postala
 atabilir. Teslim durumunu `docker compose logs mailer` ile izleyin; ertelenen e-postalar 2 gün
 yeniden denenir. Paylaşımlı ya da kara listedeki bir IP'de bu kip uygun değildir.
 
+## Hazır imajlar
+
+Kurulum, güncelleme ve modül açma servis imajlarını sunucuda derlemez; CI'nin aynı commit için yayınladığı
+imajları indirir. Derleme yükü (bellek, süre) sunucudan kalkar; küçük sunucuda paralel derlemenin bellek
+sorunu da ortadan kalkar.
+
+- **Nereden:** `ghcr.io/barisshn35/hr360/<servis>:sha-<commit>` (herkese açık; içinde sır yoktur — sırlar
+  kurulumda sunucuda üretilir ve `.env`/`secrets/` dışına çıkmaz. CI her imajı yayından önce sır ve kritik
+  açık taramasından geçirir).
+- **Ne zaman:** `main`'e giden her commit için, tüm testler geçtikten sonra (CI "Docker imajlari" işi).
+  Testi geçmeyen commit'in imajı yoktur.
+- **Doğrulama:** Her imaj cosign ile anahtarsız imzalıdır; imzayı bu deponun `main` dalındaki CI iş akışı atar.
+  Sunucu indirdiği imajın özetini (digest) doğrular; imza bu kimliğe ait değilse imaj silinir ve kullanılmaz.
+  Her imaja SBOM (yazılım bileşen listesi) tasdiki de eklenir.
+- **Olmazsa:** İmaj henüz yayınlanmadıysa (commit'ten hemen sonra), internet/GHCR erişimi yoksa, sunucu
+  amd64 değilse ya da imza doğrulanamazsa servisler eskisi gibi sunucuda derlenir. Güncelleme durmaz.
+- **Durum:** `scripts/update.sh status` son güncellemede hazır imaj mı kullanıldığını gösterir.
+- **Disk:** Güncellemeden sonra geçerli ve bir önceki sürümün (geri dönüş için) imajları kalır, eskileri silinir.
+- **Kapatmak:** `.env`'e `HR360_PREBUILT_IMAGES=0` (her zaman derlenir). Depoda kaydedilmemiş değişiklik varken
+  de derlenir (imaj kodla aynı olmaz).
+
 ## Modüller ve şirket kipi
 
 **Arayüzden (önerilen):** **Platform › Bakım › Modüller** kartında sekiz isteğe bağlı modül (işe alım, işe
@@ -102,7 +123,7 @@ durumları ve yaklaşık bellek sınırlarıyla listelenir. İstenen seçimi iş
 penceresi açılacak ve kapatılacak modülleri gösterir. İş, bakım çalıştırıcısı üzerinden `scripts/modules.sh`
 ile tek seferde uygulanır:
 
-- **Açılan modül:** imajı derlenir (modül başına birkaç dakika), Kafka tüketici konumu sona alınır (kapalıyken
+- **Açılan modül:** imajı hazır indirilir (yoksa derlenir, modül başına birkaç dakika), Kafka tüketici konumu sona alınır (kapalıyken
   biriken eski olaylar işlenmez), servisler yeniden başlatılır.
 - **Kapatılan modül:** ekranları menülerden kalkar, konteyneri durdurulur. **Veri silinmez**; modül istendiği zaman
   yeniden açılabilir ve kaldığı yerden devam eder. Kapatma yazılı onay ister (`MODÜLÜ KAPAT`).
@@ -145,7 +166,7 @@ Geçişte yalnızca `.env` değişir ve servisler `docker compose up -d` ile yen
 
 ```bash
 scripts/modules.sh list                       # modüller, durum, bellek, servisler
-scripts/modules.sh enable timeshift ml        # aç (imaj derlenir, servis başlar)
+scripts/modules.sh enable timeshift ml        # aç (imaj indirilir ya da derlenir, servis başlar)
 scripts/modules.sh disable recruitment        # kapat (veri korunur)
 scripts/modules.sh set timeshift,compensation,expense   # seçimi bir kerede uygula; "all" = hepsi
 scripts/modules.sh status | json              # makine için durum (bakım çalıştırıcısı json'u okur)

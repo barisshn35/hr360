@@ -215,6 +215,7 @@ services:
   # Disari port ACILMAZ. DKIM anahtari mailer-dkim biriminde (repo disi) bir kez uretilir.
   mailer:
     build: ./deploy/mailer
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/mailer:${HR360_IMAGE_TAG:-local}
     profiles: ["mailer"]
     restart: unless-stopped
     hostname: mailer
@@ -285,6 +286,7 @@ services:
   organization-service:
     <<: *dotnet-service
     build: ./apps/services/organization-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/organization-service:${HR360_IMAGE_TAG:-local}
     environment:
       ORG_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ORGANIZATION:-hr360admin};Password=${HR360_DB_PASSWORD_ORGANIZATION:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
       KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
@@ -302,6 +304,7 @@ services:
   employee-service:
     <<: *dotnet-service
     build: ./apps/services/employee-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/employee-service:${HR360_IMAGE_TAG:-local}
     environment:
       EMPLOYEE_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_EMPLOYEE:-hr360admin};Password=${HR360_DB_PASSWORD_EMPLOYEE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
       KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
@@ -321,6 +324,7 @@ services:
   workflow-service:
     <<: *dotnet-service
     build: ./apps/services/workflow-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/workflow-service:${HR360_IMAGE_TAG:-local}
     environment:
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
       INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
@@ -339,6 +343,7 @@ services:
   leave-service:
     <<: *dotnet-service
     build: ./apps/services/leave-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/leave-service:${HR360_IMAGE_TAG:-local}
     environment:
       LEAVE_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_LEAVE:-hr360admin};Password=${HR360_DB_PASSWORD_LEAVE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
       KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
@@ -363,6 +368,7 @@ services:
     scale: ${HR360_MOD_RECRUITMENT:-1}
     <<: *dotnet-service
     build: ./apps/services/recruitment-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/recruitment-service:${HR360_IMAGE_TAG:-local}
     environment:
       # Teklif onay akisi (workflow-service) ve karar olaylari (Kafka).
       KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
@@ -389,6 +395,7 @@ services:
     scale: ${HR360_MOD_ONBOARDING:-1}
     <<: *dotnet-service
     build: ./apps/services/onboarding-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/onboarding-service:${HR360_IMAGE_TAG:-local}
     environment:
       # Sohbet botunun "görev tamamlandı" çağrısı (servisler arası iç uç)
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
@@ -410,6 +417,7 @@ services:
     scale: ${HR360_MOD_TIMESHIFT:-1}
     <<: *dotnet-service
     build: ./apps/services/timeshift-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/timeshift-service:${HR360_IMAGE_TAG:-local}
     environment:
       TIMESHIFT_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_TIMESHIFT:-hr360admin};Password=${HR360_DB_PASSWORD_TIMESHIFT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
       KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
@@ -434,6 +442,7 @@ services:
     scale: ${HR360_MOD_PERFORMANCE:-1}
     <<: *dotnet-service
     build: ./apps/services/performance-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/performance-service:${HR360_IMAGE_TAG:-local}
     environment:
       PERFORMANCE_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_PERFORMANCE:-hr360admin};Password=${HR360_DB_PASSWORD_PERFORMANCE:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
       KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
@@ -454,6 +463,7 @@ services:
     scale: ${HR360_MOD_LEARNING:-1}
     <<: *dotnet-service
     build: ./apps/services/learning-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/learning-service:${HR360_IMAGE_TAG:-local}
     environment:
       EMPLOYEE_SERVICE_URL: "http://employee-service:8080"
       # SCORM iframe başlatma jetonu (imzalı çerez) bu anahtardan türetilir.
@@ -473,6 +483,7 @@ services:
   engagement-service:
     <<: *dotnet-service
     build: ./apps/services/engagement-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/engagement-service:${HR360_IMAGE_TAG:-local}
     environment:
       ENGAGEMENT_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_ENGAGEMENT:-hr360admin};Password=${HR360_DB_PASSWORD_ENGAGEMENT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
       KEYCLOAK_AUTHORITY: "http://keycloak:8080/auth/realms/hr360"
@@ -507,6 +518,7 @@ services:
   governance-service:
     <<: *dotnet-service
     build: ./apps/services/governance-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/governance-service:${HR360_IMAGE_TAG:-local}
     environment:
       # Sohbet botunda fis okuma: ml-inference OCR icin istemci kimligi (yerel, veri disari cikmaz).
       OCR_CLIENT_SECRET: "${ML_KEYCLOAK_CLIENT_SECRET:-}"
@@ -568,6 +580,7 @@ services:
     scale: ${HR360_MOD_COMPENSATION:-1}
     <<: *dotnet-service
     build: ./apps/services/compensation-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/compensation-service:${HR360_IMAGE_TAG:-local}
     environment:
       # Bordro/masraf dosyaları ve pasaport no bu anahtarla şifrelenir; TCKN/IBAN açılır.
       TENANT_SECRET_KEY: "${TENANT_SECRET_KEY:-}"
@@ -588,6 +601,7 @@ services:
   expense-service:
     <<: *dotnet-service
     build: ./apps/services/expense-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/expense-service:${HR360_IMAGE_TAG:-local}
     environment:
       # Bordro/masraf dosyaları ve pasaport no bu anahtarla şifrelenir; TCKN/IBAN açılır.
       TENANT_SECRET_KEY: "${TENANT_SECRET_KEY:-}"
@@ -615,6 +629,7 @@ services:
   notification-service:
     <<: *dotnet-service
     build: ./apps/services/notification-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/notification-service:${HR360_IMAGE_TAG:-local}
     environment:
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
       INTERNAL_SERVICE_TOKEN_PREVIOUS: "${INTERNAL_SERVICE_TOKEN_PREVIOUS:-}"
@@ -654,6 +669,7 @@ services:
   tenant-service:
     <<: *dotnet-service
     build: ./apps/services/tenant-service
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/tenant-service:${HR360_IMAGE_TAG:-local}
     environment:
       KEYCLOAK_PASSKEYS: "${KEYCLOAK_PASSKEYS:-true}"
       TENANT_DB_CONNECTION: "Host=postgres;Port=5432;Database=hr360_operational;Username=${HR360_DB_USER_TENANT:-hr360admin};Password=${HR360_DB_PASSWORD_TENANT:-${HR360_DB_PASSWORD:-}};Maximum Pool Size=12"
@@ -724,6 +740,7 @@ services:
     # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
     scale: ${HR360_MOD_ML:-1}
     build: ./apps/ml-platform
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/mlflow:${HR360_IMAGE_TAG:-local}
     restart: unless-stopped
     environment:
       MLFLOW_S3_ENDPOINT_URL: "http://minio:9000"
@@ -758,6 +775,7 @@ services:
     # sayı kullanılır: profil, COMPOSE_PROFILES tanımlı kurulumlarda modülü kapatırdı.
     scale: ${HR360_MOD_ML:-1}
     build: ./apps/ml-inference
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/ml-inference:${HR360_IMAGE_TAG:-local}
     restart: unless-stopped
     # Model dosyalari calisma aninda indirildiginden kok dosya sistemi yazilabilir kalir.
     cap_drop: [ALL]
@@ -784,6 +802,7 @@ services:
   # Web + Gateway
   # --------------------------------------------------------------------- #
   web:
+    image: ${HR360_REGISTRY:-ghcr.io/barisshn35/hr360}/web:${HR360_IMAGE_TAG:-local}
     build:
       context: ./apps/web
       # Arayuzdeki surum (hesap menusu): install.sh ve scripts/update.sh depo kokundeki VERSION

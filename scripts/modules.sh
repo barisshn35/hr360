@@ -155,8 +155,11 @@ cmd_enable() {
     if [ -n "${svcs// /}" ]; then
       HR360_VERSION="$(tr -d '[:space:]' < VERSION 2>/dev/null || true)"; export HR360_VERSION
       echo "==> İmajlar: $svcs"
+      # Hazir imaj (scripts/lib/images.sh; .env'deki etiket): yoksa sunucuda derlenir.
+      # shellcheck source=scripts/lib/images.sh
+      . scripts/lib/images.sh; HR360_IMAGE_TAG="$(images_env HR360_IMAGE_TAG)"; export HR360_IMAGE_TAG
       # shellcheck disable=SC2086
-      docker compose build $svcs >/dev/null
+      images_pull $svcs || docker compose build $svcs >/dev/null
       for id in "${was_off[@]}"; do reset_kafka "$id"; done
     fi
     refresh_core
