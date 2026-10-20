@@ -14,7 +14,10 @@ ENV VITE_KEYCLOAK_URL=/auth \
     VITE_KEYCLOAK_REALM=hr360 \
     VITE_KEYCLOAK_CLIENT_ID=hr360-web \
     VITE_API_BASE=
-RUN npm run build
+RUN npm run build \
+ # Önceden sıkıştırılmış kopyalar (nginx gzip_static): en yüksek oran, istek başına işlemci harcanmaz.
+ && find dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.json' -o -name '*.svg' -o -name '*.html' -o -name '*.webmanifest' \) \
+      -size +1k -exec gzip -9 -k -n {} +
 
 # --- Aşama 2: serve ---
 # Root olmayan nginx (UID 101, 8080'i dinler).

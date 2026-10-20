@@ -58,10 +58,9 @@ jobs:
           VITE_KEYCLOAK_CLIENT_ID: hr360-web
           VITE_API_BASE: ""
         run: npx vite build
-      - name: Paket boyutu
-        run: |
-          echo "### Arayuz paketleri" >> "$GITHUB_STEP_SUMMARY"
-          find dist/assets -name '*.js' -printf '%s %p\n' | sort -rn | head -8 | awk '{printf "- %s — %.0f KB\n", $2, $1/1024}' >> "$GITHUB_STEP_SUMMARY"
+      # Ilk acilista yuklenen kod ve tek parca icin gzip butcesi (scripts/bundle-budget.mjs).
+      - name: Paket boyutu (butce)
+        run: node scripts/bundle-budget.mjs --summary "$GITHUB_STEP_SUMMARY"
 
   dotnet:
     name: .NET — ${{ matrix.service }}
