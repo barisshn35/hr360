@@ -103,7 +103,7 @@ export function SavedViews({
               onSelect={() => {
                 // Kayıtlı görünüm: arama boşsa temizlenir; sekme gibi sayfa parametreleri adrese yazılır.
                 const p = new URLSearchParams(v.params)
-                apply({ q: '', ...(paramsToView(p) ?? {}) })
+                apply({ q: '', ...paramsToView(p) })
                 setParams(stripViewParams(p))
               }}
               className="group"

@@ -101,14 +101,15 @@ function CvTool() {
   }
   return (
     <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- sürükle-bırak bölgesi; dosya seçimi içteki input ile yapılır */}
       <label onDragOver={(e) => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) void run(f) }}
-        className={cn('flex min-h-64 cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed p-6 text-center transition', drag ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40')}>
+        className={cn('flex min-h-64 cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed p-6 text-center transition has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50', drag ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40')}>
         <motion.span animate={busy ? { rotate: 360 } : { y: [0, -6, 0] }} transition={busy ? { repeat: Infinity, duration: 1, ease: 'linear' } : { repeat: Infinity, duration: 2.4 }} className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
           {busy ? <ScanSearch className="size-6" /> : <FileUp className="size-6" />}
         </motion.span>
         <p className="text-[14px] font-medium">{busy ? tx('Okunuyor…') : tx('CV dosyasını bırakın veya seçin')}</p>
         <p className="text-[12px] text-muted-foreground">{tx('PDF, DOCX veya TXT · en fazla 5 MB')}</p>
-        <input type="file" accept=".pdf,.docx,.txt" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void run(f) }} />
+        <input type="file" accept=".pdf,.docx,.txt" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void run(f) }} />
       </label>
       <Panel>
         <PanelHead title={tx('Ayrıştırılan bilgiler')} action={res?.email && <Button size="sm" onClick={() => save.mutate(undefined)} disabled={save.isPending}>{tx('Aday olarak kaydet')}</Button>} />
@@ -249,9 +250,9 @@ function MatchTool() {
         <PanelBody className="space-y-3">
           <SelectField label={tx('İlan')} value={posting} onChange={setPosting} options={(postings.data ?? []).map((x) => ({ value: x.id, label: x.title }))} />
           <ChipInput label={tx('Aranan yetkinlikler')} value={skills} onChange={setSkills} suggestions={['docker', 'kafka', 'postgresql', 'react', 'ingilizce']} />
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border p-4 text-[13px] text-muted-foreground hover:border-primary/40">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border p-4 text-[13px] text-muted-foreground hover:border-primary/40 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
             <FileUp className="size-4" /> {busy ? tx('Okunuyor…') : tx('CV dosyaları ekle (çoklu)')}
-            <input type="file" multiple accept=".pdf,.docx,.txt" className="hidden" onChange={(e) => e.target.files && void addFiles(e.target.files)} />
+            <input type="file" multiple accept=".pdf,.docx,.txt" className="sr-only" onChange={(e) => e.target.files && void addFiles(e.target.files)} />
           </label>
           <ul className="space-y-1 text-[12.5px]">{cvs.map((c) => <li key={c.id} className="truncate">• {c.name}</li>)}</ul>
           <Button onClick={run} disabled={!posting || cvs.length === 0}><Users className="size-4" />{' '}{tx('Eşleştir')}</Button>

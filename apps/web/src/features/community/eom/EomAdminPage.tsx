@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Ban, Check, FastForward, Play, Save } from 'lucide-react'
@@ -128,6 +128,7 @@ function Periods() {
 export function EomAdminPage() {
   const q = useQuery({ queryKey: eomKeys.settings, queryFn: ({ signal }) => eomApi.settings(signal) })
   const [s, setS] = useState<EomSettings | null>(null)
+  const enabledId = useId()
   useEffect(() => { if (q.data) setS(q.data.settings) }, [q.data])
   const save = useAction((v: EomSettings) => eomApi.saveSettings(v), { success: tx('Ayarlar kaydedildi.'), invalidate: [eomKeys.all] })
   const set = <K extends keyof EomSettings>(k: K, v: EomSettings[K]) => setS((o) => (o ? { ...o, [k]: v } : o))
@@ -146,8 +147,8 @@ export function EomAdminPage() {
               note={tx('Değişiklikler sıradaki oylamadan geçerlidir; sürmekte olan oylama açıldığı andaki kurallarla tamamlanır.')}
               action={<Button size="sm" disabled={save.isPending} onClick={() => save.mutate(s)}><Save className="size-4" />{tx('Kaydet')}</Button>} />
             <PanelBody className="space-y-5">
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3">
-                <Checkbox checked={s.enabled} onCheckedChange={(v) => set('enabled', v === true)} className="mt-0.5" />
+              <label htmlFor={enabledId} className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3">
+                <Checkbox id={enabledId} checked={s.enabled} onCheckedChange={(v) => set('enabled', v === true)} className="mt-0.5" />
                 <span>
                   <span className="block text-[13.5px] font-semibold">{tx('Ayın çalışanı açık')}</span>
                   <span className="block text-[12.5px] text-muted-foreground">{tx('Kapalıyken menüde, ana sayfada ve e-postalarda hiçbir şey görünmez.')}</span>

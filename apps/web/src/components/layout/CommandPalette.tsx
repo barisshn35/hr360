@@ -39,7 +39,7 @@ export function CommandPalette({
 }) {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { can: canRole, roles, tenantSlug } = useAuth()
+  const { can: canRole, tenantSlug } = useAuth()
   const navTree = useNavGroups()
   const { isEnabled } = useModules()
   // Kişisel eylemler (izin/masraf/talep oluşturma) şirket bağlamı ve çalışan kaydı ister: kiracı seçmemiş
@@ -271,7 +271,7 @@ export function CommandPalette({
     })
 
     return list
-  }, [can, roles, navigate, qc, navTree, hasEmployee, hasTenant, isEnabled])
+  }, [can, navigate, qc, navTree, hasEmployee, hasTenant, isEnabled])
 
   return (
     <OmniCommandPalette

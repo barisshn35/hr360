@@ -181,7 +181,7 @@ function IdentitiesModal({ app, onClose }: { app: ChatApp; onClose: () => void }
         <p className="text-[13px] text-muted-foreground">{app.platform === 'Teams' ? tx('Henüz botu ekleyen olmadı.') : tx('Henüz bir kullanıcıyla etkileşim olmadı.')}</p>
       ) : (
         <table className="w-full text-[12.5px]">
-          <thead><tr className="border-b border-border text-left text-[11.5px] text-muted-foreground"><th className="py-2">{tx('Sohbet hesabı')}</th><th>{tx('Çalışan')}</th><th>{tx('Doğrulandı')}</th><th>{tx('Mesaj alabilir')}</th><th>{tx('Son görülme')}</th><th /></tr></thead>
+          <thead><tr className="border-b border-border text-left text-[11.5px] text-muted-foreground"><th className="py-2">{tx('Sohbet hesabı')}</th><th>{tx('Çalışan')}</th><th>{tx('Doğrulandı')}</th><th>{tx('Mesaj alabilir')}</th><th>{tx('Son görülme')}</th><th><span className="sr-only">{tx('İşlemler')}</span></th></tr></thead>
           <tbody>
             {q.data!.map((i) => (
               <tr key={i.id} className="border-b border-border/50 last:border-0">

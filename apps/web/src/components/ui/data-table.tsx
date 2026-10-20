@@ -309,7 +309,8 @@ export function DataTable<T>({
   }
 
   // Arama/filtre değişince ilk sayfaya dön — yoksa boş sayfada kalınıyor.
-  useEffect(() => setPage(1), [query, filters?.map((f) => f.value).join('|')])
+  const filterKey = filters?.map((f) => f.value).join('|')
+  useEffect(() => setPage(1), [query, filterKey])
 
   useEffect(() => onSelectionChange?.(selected), [selected, onSelectionChange])
 

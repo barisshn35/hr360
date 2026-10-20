@@ -68,6 +68,26 @@ function Row({
   children?: ReactNode
 }) {
   const expandable = Boolean(onToggle)
+  const rowClass = cn('group flex items-center gap-2 rounded-lg px-2 py-2 transition-colors', dim && 'opacity-55')
+  const row = (
+    <>
+      <span className="flex size-4 shrink-0 items-center justify-center">
+        {expandable && <ChevronRight className={cn('size-4 text-muted-foreground transition-transform', open && 'rotate-90')} aria-hidden />}
+      </span>
+      {icon}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-medium">{label}</span>
+        {meta && <span className="block truncate text-[11px] text-muted-foreground">{meta}</span>}
+      </span>
+      <Bar value={score} color={color} />
+      <span className="tabular w-14 shrink-0 text-right text-[14px] font-semibold" style={{ color: score === null ? undefined : color }}>
+        {scoreText ?? formatScore(score)}
+      </span>
+      <span className="tabular hidden w-20 shrink-0 text-right text-[12px] md:block">
+        {contribution !== null ? <span className="rounded-md bg-primary/8 px-1.5 py-0.5 font-medium text-primary">{signed(contribution)}</span> : <span className="text-muted-foreground">—</span>}
+      </span>
+    </>
+  )
   return (
     <li className={cn('relative', depth > 0 && 'pl-5 sm:pl-7')}>
       {depth > 0 && (
@@ -76,39 +96,18 @@ function Row({
           <span aria-hidden className="absolute top-0 bottom-0 left-2 border-l border-border sm:left-3 [li:last-child>&]:hidden" />
         </>
       )}
-      <div
-        role={expandable ? 'button' : undefined}
-        tabIndex={expandable ? 0 : undefined}
-        aria-expanded={expandable ? open : undefined}
-        onClick={onToggle}
-        onKeyDown={(e) => {
-          if (expandable && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault()
-            onToggle?.()
-          }
-        }}
-        className={cn(
-          'group flex items-center gap-2 rounded-lg px-2 py-2 transition-colors',
-          expandable && 'cursor-pointer hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
-          dim && 'opacity-55',
-        )}
-      >
-        <span className="flex size-4 shrink-0 items-center justify-center">
-          {expandable && <ChevronRight className={cn('size-4 text-muted-foreground transition-transform', open && 'rotate-90')} aria-hidden />}
-        </span>
-        {icon}
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-medium">{label}</span>
-          {meta && <span className="block truncate text-[11px] text-muted-foreground">{meta}</span>}
-        </span>
-        <Bar value={score} color={color} />
-        <span className="tabular w-14 shrink-0 text-right text-[14px] font-semibold" style={{ color: score === null ? undefined : color }}>
-          {scoreText ?? formatScore(score)}
-        </span>
-        <span className="tabular hidden w-20 shrink-0 text-right text-[12px] md:block">
-          {contribution !== null ? <span className="rounded-md bg-primary/8 px-1.5 py-0.5 font-medium text-primary">{signed(contribution)}</span> : <span className="text-muted-foreground">—</span>}
-        </span>
-      </div>
+      {expandable ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={onToggle}
+          className={cn(rowClass, 'w-full cursor-pointer text-left hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none')}
+        >
+          {row}
+        </button>
+      ) : (
+        <div className={rowClass}>{row}</div>
+      )}
       <AnimatePresence initial={false}>
         {open && children && (
           <motion.ul initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3, ease: EASE }} className="overflow-hidden">

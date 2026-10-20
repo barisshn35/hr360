@@ -145,7 +145,7 @@ export function SheetEditor({ columns, rows, onChange }: {
               {columns.map((c) => (
                 <th key={c.header} className="border-b border-r border-border px-2 py-2 text-left font-semibold" style={{ minWidth: c.width ?? 140 }}>{c.header}</th>
               ))}
-              <th className="w-8 border-b border-border" />
+              <th className="w-8 border-b border-border"><span className="sr-only">{tx('İşlemler')}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -180,7 +180,7 @@ export function SheetEditor({ columns, rows, onChange }: {
           </tbody>
         </table>
         {columns.map((c, ci) => c.options?.length ? (
-          <datalist key={c.header} id={`${id}-${ci}`}>{c.options.map((o) => <option key={o} value={o} />)}</datalist>
+          <datalist key={c.header} id={`${id}-${ci}`}>{c.options.map((o) => <option key={o} value={o}>{o}</option>)}</datalist>
         ) : null)}
       </div>
       <div className="flex flex-wrap items-center gap-2">

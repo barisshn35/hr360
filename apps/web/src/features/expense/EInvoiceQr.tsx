@@ -64,10 +64,10 @@ export function EInvoiceQr({ id, onParsed, onClose }: {
         </Button>
       </div>
       {canScan ? (
-        <label className="inline-flex cursor-pointer items-center gap-1 text-[12px] text-muted-foreground underline hover:text-foreground">
+        <label className="inline-flex cursor-pointer items-center gap-1 text-[12px] text-muted-foreground underline hover:text-foreground has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
           <QrCode className="size-3" />
           {tx('Fotoğraftan oku (karekod tarayıcınızda çözülür, görüntü gönderilmez)')}
-          <input type="file" accept="image/*" capture="environment" className="hidden"
+          <input type="file" accept="image/*" capture="environment" className="sr-only"
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void scan(f) }} />
         </label>
       ) : (

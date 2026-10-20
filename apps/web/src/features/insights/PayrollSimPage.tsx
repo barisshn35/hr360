@@ -111,7 +111,7 @@ export function PayrollSimPage() {
                   <tr className="tabular border-t-2 border-border text-right font-semibold">
                     <td className="px-3 py-2 text-left">{tx('Toplam')}</td>
                     {(['gross', 'sgk', 'unemployment', 'taxBase'] as const).map((k) => <td key={k} className="px-3">{tl(sum(k))}</td>)}
-                    <td />
+                    <td aria-hidden />
                     {(['incomeTax', 'incomeTaxExemption', 'incomeTaxPayable', 'stampPayable', 'net', 'employerCost'] as const).map((k) => <td key={k} className="px-3">{tl(sum(k))}</td>)}
                   </tr>
                 </tbody>

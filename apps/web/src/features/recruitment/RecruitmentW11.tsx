@@ -117,14 +117,15 @@ export function MyReferralsPage() {
                     <button type="button" className="text-[12px] text-muted-foreground underline hover:text-foreground" onClick={() => setF({ ...f, cvName: '', resumeText: '' })}>{tx('Kaldır')}</button>
                   </div>
                 ) : cvReader && (
-                  <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-border px-3 py-2.5 text-[13px] transition-colors hover:border-primary/50 hover:bg-primary/5"
+                  // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- sürükle-bırak bölgesi; dosya seçimi içteki input ile yapılır
+                  <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-border px-3 py-2.5 text-[13px] transition-colors hover:border-primary/50 hover:bg-primary/5 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50"
                     onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files?.[0]; if (file) void readCv(file) }}>
                     {readingCv ? <LoaderCircle className="size-4 animate-spin text-primary" /> : <Upload className="size-4 text-muted-foreground group-hover:text-primary" />}
                     <span className="flex-1">
                       <span className="font-medium">{readingCv ? tx('CV okunuyor…') : tx('CV ekle (isteğe bağlı)')}</span>
                       <span className="block text-[12px] text-muted-foreground">{tx('PDF, DOCX ya da TXT, en fazla 5 MB. Ad, e-posta ve telefon boşsa CV\'den doldurulur; dosya saklanmaz, yalnızca metni İK ile paylaşılır.')}</span>
                     </span>
-                    <input type="file" accept=".pdf,.docx,.txt" className="hidden" disabled={readingCv}
+                    <input type="file" accept=".pdf,.docx,.txt" className="sr-only" disabled={readingCv}
                       onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void readCv(file) }} />
                   </label>
                 )}
@@ -337,13 +338,13 @@ export function RecruitmentAnalyticsPage() {
               <PanelHead title={tx('Huni ve aşamada geçen süre')} note={tx('Aşamaya ulaşan başvuru sayısı, bir önceki aşamadan geçiş oranı ve aşamada geçen medyan süre.')} />
               <PanelBody>
                 <table className="w-full text-[13px]">
-                  <thead><tr className="text-left text-[12px] text-muted-foreground"><th className="py-1">{tx('Aşama')}</th><th>{tx('Ulaşan')}</th><th className="w-1/3" /><th>{tx('Geçiş')}</th><th>{tx('Aşamada (medyan)')}</th></tr></thead>
+                  <thead><tr className="text-left text-[12px] text-muted-foreground"><th className="py-1">{tx('Aşama')}</th><th>{tx('Ulaşan')}</th><th className="w-1/3"><span className="sr-only">{tx('Oran')}</span></th><th>{tx('Geçiş')}</th><th>{tx('Aşamada (medyan)')}</th></tr></thead>
                   <tbody>
                     {d.stages.map((s) => (
                       <tr key={s.stage} className="border-t border-border">
                         <td className="py-2">{STAGE_LABELS[s.stage] ?? s.stage}</td>
                         <td className="tabular">{formatNumber(s.reached)}</td>
-                        <td><div className="h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary" style={{ width: `${Math.round((s.reached / top) * 100)}%` }} /></div></td>
+                        <td><div className="h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary" style={{ width: `${Math.round((s.reached / top) * 100)}%` }} /></div><span className="sr-only">%{Math.round((s.reached / top) * 100)}</span></td>
                         <td className="tabular">{s.conversionFromPrevious != null ? `%${s.conversionFromPrevious}` : '—'}</td>
                         <td>{s.stage === 'Hired' ? '—' : <Days d={s.timeInStage} k={d.minGroup} />}</td>
                       </tr>

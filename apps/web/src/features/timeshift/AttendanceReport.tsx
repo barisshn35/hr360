@@ -157,7 +157,7 @@ export function AttendanceReportPanel() {
                 <table className="w-full text-[13px]">
                   <thead><tr className="text-left text-muted-foreground">
                     {r.scope !== 'self' && <th className="py-1.5">{tx('Çalışan')}</th>}<th className="py-1.5">{tx('Gün')}</th><th>{tx('Plan')}</th><th>{tx('Giriş')}</th><th>{tx('Çıkış')}</th>
-                    <th>{tx('Geç')}</th><th>{tx('Erken')}</th><th>{tx('Çalışılan')}</th><th>{tx('Olası FM')}</th><th>{tx('Durum')}</th><th />
+                    <th>{tx('Geç')}</th><th>{tx('Erken')}</th><th>{tx('Çalışılan')}</th><th>{tx('Olası FM')}</th><th>{tx('Durum')}</th><th><span className="sr-only">{tx('İşlemler')}</span></th>
                   </tr></thead>
                   <tbody>{rows.map((x) => (
                     <tr key={`${x.employeeId}-${x.date}`} className="border-t border-border">

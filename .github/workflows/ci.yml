@@ -35,6 +35,9 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Tip denetimi
         run: npm run lint
+      # React hook kurallari, erisilebilirlik (jsx-a11y), olasi hatalar; kurallar .oxlintrc.json'da.
+      - name: Kod denetimi (Oxlint)
+        run: npm run lint:js -- --format github
       - name: Birim testleri (Vitest)
         run: npm test
       - name: Çeviri sözlüğü (eksik ya da yer tutucusu uyumsuz anahtar)

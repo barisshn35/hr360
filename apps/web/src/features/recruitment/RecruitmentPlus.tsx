@@ -130,6 +130,7 @@ export function PipelineBoard({
       {stages.map((s) => {
         const list = cards.filter((c) => c.status === s.key)
         return (
+          // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- bırakma hedefi; klavyede karttaki "Taşı…" seçimi kullanılır
           <section
             key={s.key}
             aria-label={applicationStatusLabels[s.key]}
@@ -151,6 +152,7 @@ export function PipelineBoard({
               {list.map((c) => {
                 const locked = s.terminal
                 return (
+                  // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- sürükle-bırak; klavyede karttaki "Taşı…" seçimi kullanılır
                   <li
                     key={c.id}
                     draggable={canManage && !locked}
@@ -367,7 +369,7 @@ export function ScorecardModal({ interviewId, title, onClose }: { interviewId: s
     setRec(m?.recommendation ?? '')
     setNotes(m?.notes ?? '')
   }, [form.data])
-  const criteria = form.data?.criteria ?? []
+  const criteria = useMemo(() => form.data?.criteria ?? [], [form.data])
   const preview = useMemo(() => {
     const scored = criteria.filter((c) => scores[c.key])
     const w = scored.reduce((a, c) => a + c.weight, 0)

@@ -78,6 +78,13 @@ function Settlement({ id }: { id: string }) {
   )
 }
 
+function Score({ k, label, value, onPick }: { k: keyof ExitInterview; label: string; value: ExitInterview[keyof ExitInterview]; onPick: (k: keyof ExitInterview, n: number) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-2 text-[13px]"><span>{label}</span><div className="flex gap-1">{[1, 2, 3, 4, 5].map((n) => (
+      <button key={n} type="button" onClick={() => onPick(k, n)} className={cn('size-7 cursor-pointer rounded-md border text-[12px]', value === n ? 'border-primary bg-primary/15' : 'border-border')}>{n}</button>))}</div></div>
+  )
+}
+
 function CaseModal({ id, onClose }: { id: string; onClose: () => void }) {
   const { roles } = useAuth()
   const q = useQuery({ queryKey: ['offboarding', id], queryFn: ({ signal }) => engagementApi.offboarding(id, signal) })
@@ -97,11 +104,8 @@ function CaseModal({ id, onClose }: { id: string; onClose: () => void }) {
   // Süreci yönetmek (tamamlama, çıkış görüşmesi, İK adımları) yalnızca İK; yönetici ekibinin
   // sürecini görür ve yalnızca sorumlusu "Yönetici" olan adımları işaretler.
   const hr = isHr(roles, 'ext-engagement-manage')
+  const pickScore = (k: keyof ExitInterview, n: number) => setIv((v) => ({ ...v, [k]: n }))
   const canTick = (owner: string, key: string) => key !== 'exit-interview' && (hr || owner === 'Yönetici')
-  const Score = ({ k, label }: { k: keyof ExitInterview; label: string }) => (
-    <div className="flex items-center justify-between gap-2 text-[13px]"><span>{label}</span><div className="flex gap-1">{[1, 2, 3, 4, 5].map((n) => (
-      <button key={n} type="button" onClick={() => setIv({ ...iv, [k]: n })} className={cn('size-7 cursor-pointer rounded-md border text-[12px]', iv[k] === n ? 'border-primary bg-primary/15' : 'border-border')}>{n}</button>))}</div></div>
-  )
   return (
     <Modal open onClose={onClose} size="xl" title={c ? tx('{0} — ayrılış', [c.employeeName]) : tx('Ayrılış')} note={c ? tx('{0} · son iş günü {1}', [offboardingReasonLabels[c.reason], formatDate(c.lastWorkingDay)]) : undefined}
       footer={c?.status === 'Open' && hr && <><Button variant="outline" onClick={onClose}>{tx('Kapat')}</Button><Button disabled={c.checklist.some((i) => !i.done) || (c.assetChecks ?? []).some((a) => a.resolution === 'Open') || complete.isPending} onClick={() => complete.mutate(undefined)}><LogOut className="size-4" />{' '}{tx('Süreci tamamla')}</Button></>}>
@@ -137,7 +141,7 @@ function CaseModal({ id, onClose }: { id: string; onClose: () => void }) {
               ) : c.status === 'Open' && hr ? (
                 <div className="space-y-3">
                   <SelectField label={tx('Ana ayrılış nedeni')} value={iv.primaryReason ?? ''} onChange={(v) => setIv({ ...iv, primaryReason: v })} options={[tx('Kariyer fırsatı'), tx('Ücret'), tx('Yönetici ilişkisi'), tx('İş yükü'), tx('Taşınma'), tx('Kişisel'), tx('Diğer')].map((x) => ({ value: x, label: x }))} />
-                  <Score k="managerScore" label={tx('Yöneticiyle ilişki')} /><Score k="cultureScore" label={tx('Şirket kültürü')} /><Score k="growthScore" label={tx('Gelişim fırsatı')} /><Score k="compensationScore" label={tx('Ücret ve yan haklar')} />
+                  <Score k="managerScore" label={tx('Yöneticiyle ilişki')} value={iv.managerScore} onPick={pickScore} /><Score k="cultureScore" label={tx('Şirket kültürü')} value={iv.cultureScore} onPick={pickScore} /><Score k="growthScore" label={tx('Gelişim fırsatı')} value={iv.growthScore} onPick={pickScore} /><Score k="compensationScore" label={tx('Ücret ve yan haklar')} value={iv.compensationScore} onPick={pickScore} />
                   <div className="flex gap-4 text-[13px]">
                     <label className="flex items-center gap-2"><Checkbox checked={iv.wouldRecommend === true} onCheckedChange={(v) => setIv({ ...iv, wouldRecommend: v === true })} />{' '}{tx('Şirketi tavsiye eder')}</label>
                     <label className="flex items-center gap-2"><Checkbox checked={rehire === true} onCheckedChange={(v) => setRehire(v === true)} />{' '}{tx('Yeniden işe alınabilir')}</label>

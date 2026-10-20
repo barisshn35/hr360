@@ -134,13 +134,14 @@ export function PhotoUploader({ employeeId, name, size = 64, children }: {
             </button>
           </div>
         ) : (
-          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-border px-6 py-8 text-center transition-colors hover:border-primary/50 hover:bg-primary/5"
+          // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- sürükle-bırak bölgesi; dosya seçimi içteki input ile yapılır
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-border px-6 py-8 text-center transition-colors hover:border-primary/50 hover:bg-primary/5 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); pick(e.dataTransfer.files?.[0]) }}>
             <EmployeeAvatar id={employeeId} name={name} size={88} />
             <span className="flex items-center gap-1.5 text-sm font-medium"><ImageUp className="size-4" />{tx('Fotoğraf seçin ya da sürükleyin')}</span>
             <span className="text-xs text-muted-foreground">{tx('PNG, JPEG ya da WebP · en fazla {0} MB', [MAX_INPUT_MB])}</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = '' }} />
+            <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = '' }} />
           </label>
         )}
       </Modal>

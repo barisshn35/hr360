@@ -126,7 +126,7 @@ export function OrgSearch({
             <X className="size-3.5" />
           </button>
         )}
-        <ul
+        <div
           id={listId}
           role="listbox"
           aria-label={tx('Arama sonuçları')}
@@ -136,15 +136,16 @@ export function OrgSearch({
           )}
         >
           {hits.length === 0 ? (
-            <li role="presentation" className="px-2 py-2 text-[12.5px] text-muted-foreground">
+            <div role="presentation" className="px-2 py-2 text-[12.5px] text-muted-foreground">
               {tx('Eşleşme yok')}
-            </li>
+            </div>
           ) : (
             hits.map((h, i) => (
-              <li
+              <div
                 key={`${h.kind}${h.id}`}
                 id={`${id}-opt-${i}`}
                 role="option"
+                tabIndex={-1}
                 aria-selected={i === active}
                 onMouseDown={(e) => {
                   e.preventDefault()
@@ -162,10 +163,10 @@ export function OrgSearch({
                   <span className="block truncate font-medium">{h.label}</span>
                   <span className="block truncate text-[11.5px] text-muted-foreground">{h.detail}</span>
                 </span>
-              </li>
+              </div>
             ))
           )}
-        </ul>
+        </div>
       </div>
       {query.trim().length >= 2 && (
         <span className="shrink-0 text-[12px] text-muted-foreground" aria-live="polite">

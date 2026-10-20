@@ -377,6 +377,7 @@ export function RosterView({ teamId, onTeamChange }: { teamId: string | null; on
                         <tr key={`${g.team}-${row.employeeId}`} className="group">
                           <th
                             scope="row"
+                            aria-label={row.tag ? `${name} · ${row.tag}` : name}
                             className="sticky left-0 z-10 border-b border-border bg-card px-4 py-1.5 text-left font-normal group-hover:bg-muted"
                           >
                             <span className="flex items-center gap-2">
@@ -434,7 +435,7 @@ export function RosterView({ teamId, onTeamChange }: { teamId: string | null; on
                         </td>
                       )
                     })}
-                    <td />
+                    <td aria-hidden />
                   </tr>
                 ))}
                 <tr>
@@ -449,7 +450,7 @@ export function RosterView({ teamId, onTeamChange }: { teamId: string | null; on
                       {c.away || ''}
                     </td>
                   ))}
-                  <td />
+                  <td aria-hidden />
                 </tr>
               </tfoot>
             </table>

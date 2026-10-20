@@ -214,6 +214,7 @@ function SectionTabs() {
   ]
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- fareyle çıkınca kapatma kolaylığı; klavyede Escape/düğme kapatır
     <nav aria-label={tx('Ana menü')} className="relative hidden lg:block" onMouseLeave={leave}>
       <ul className="flex items-center gap-0.5">
         {tabs.map((tab) => {
@@ -236,6 +237,7 @@ function SectionTabs() {
             </motion.span>
           )
           return (
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- üzerine gelince açma kolaylığı; klavyede menü düğmeyle açılır
             <li key={tab.id} className="relative" onMouseEnter={() => (tab.group ? enter(tab.id) : leave())}>
               {tab.group ? (
                 <button

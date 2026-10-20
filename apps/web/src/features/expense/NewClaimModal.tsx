@@ -538,10 +538,10 @@ export function NewClaimModal({ open, onClose, claim }: {
                       />
                       <PiiHint text={item.description} className="mt-2" />
                       {item.category !== 'Mileage' && (
-                        <label className="mt-2 inline-flex cursor-pointer items-center gap-1 text-[12px] text-muted-foreground underline hover:text-foreground">
+                        <label className="mt-2 inline-flex cursor-pointer items-center gap-1 text-[12px] text-muted-foreground underline hover:text-foreground has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
                           {ocrBusy === item.key ? <LoaderCircle className="size-3 animate-spin" /> : <ScanText className="size-3" />}
                           {tx('Fişten oku (görüntü sunucuda okunur, saklanmaz)')}
-                          <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                          <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
                             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void readReceipt(item.key, f) }} />
                         </label>
                       )}

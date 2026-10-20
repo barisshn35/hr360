@@ -125,14 +125,14 @@ export function PersonPicker({
           autoFocus
         />
       </label>
-      <ul role="listbox" aria-label={tx('Kişiler')} className="overflow-y-auto p-1" style={{ maxHeight: height }}>
-        {list.length === 0 && <li className="px-3 py-6 text-center text-[13px] text-muted-foreground">{tx('Eşleşen kişi yok.')}</li>}
+      <div role="listbox" aria-label={tx('Kişiler')} className="overflow-y-auto p-1" style={{ maxHeight: height }}>
+        {list.length === 0 && <div className="px-3 py-6 text-center text-[13px] text-muted-foreground">{tx('Eşleşen kişi yok.')}</div>}
         {list.map((p) => {
           const on = value === p.id
           const n = note?.(p.id)
           const detail = detailOf?.(p.id)
           return (
-            <li key={p.id} role="option" aria-selected={on}>
+            <div key={p.id} role="option" aria-selected={on}>
               <button
                 type="button"
                 onClick={() => onChange(p.id)}
@@ -152,10 +152,10 @@ export function PersonPicker({
                 {n && <span className="relative shrink-0 text-[11px] text-muted-foreground">{n}</span>}
                 {on && <Check className="relative size-4 shrink-0 text-primary" aria-hidden />}
               </button>
-            </li>
+            </div>
           )
         })}
-      </ul>
+      </div>
     </div>
   )
 }

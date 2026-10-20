@@ -443,7 +443,7 @@ const tri = (v: string) => (v === 'yes' ? true : v === 'no' ? false : null)
 function openDocument(html: string, title: string) {
   const w = window.open('', '_blank')
   if (!w) throw new Error(tx('Açılır pencere engellendi; tarayıcıda izin verin.'))
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/[<>&"]/g, '')}</title><style>@page{size:A4;margin:18mm}body{font-family:Inter,'Segoe UI',Arial,sans-serif;font-size:11pt;color:#111}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`)
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/[<>&"]/g, '')}</title><style>@page{size:A4;margin:18mm}body{font-family:Inter,'Segoe UI',Arial,sans-serif;font-size:11pt;color:#111}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>`)
   w.document.close()
 }
 

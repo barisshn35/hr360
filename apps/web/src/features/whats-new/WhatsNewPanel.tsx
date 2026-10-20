@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Megaphone } from 'lucide-react'
 import { Drawer } from '@/components/ui/drawer'
 import { useUiPref } from '@/lib/uiPrefs'
@@ -31,13 +31,20 @@ export function WhatsNewButton({ className }: { className?: string }) {
 
   // Açılınca okundu: bir sonraki açılışta "yeni" işaretleri kalksın (bu açılışta görünür kalır).
   const [markedFrom, setMarkedFrom] = useState<number | null>(null)
+  // Açılış başına bir kez işaretlenir; kayıt sonrası değişen tercih işaretleri yeniden hesaplatmasın.
+  const marked = useRef(false)
   useEffect(() => {
-    if (!open || !pref.ready) return
+    if (!open) {
+      marked.current = false
+      return
+    }
+    if (!pref.ready || marked.current) return
+    marked.current = true
     const latest = latestId(ids)
     // Hiç açmamış kullanıcıda yalnızca en son dalga "Yeni" sayılır (unreadCount ile aynı).
     setMarkedFrom(lastSeen ?? Number(latest) - 1)
     if (pref.value?.seen !== latest) void pref.set({ seen: latest })
-  }, [open, pref.ready])
+  }, [open, pref, ids, lastSeen])
 
   const isNew = (id: string) => markedFrom !== null && Number(id) > markedFrom
 

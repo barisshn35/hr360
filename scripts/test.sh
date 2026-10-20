@@ -56,6 +56,8 @@ unit() {
   fi
   step "Arayuz birim testleri (Vitest)"
   (cd apps/web && { [ -d node_modules ] || npm ci --no-audit --no-fund; } && run npx vitest run)
+  step "Arayuz kod denetimi (Oxlint)"
+  (cd apps/web && run npm run --silent lint:js)
   step "ML servisi (pytest)"
   run docker run --rm -v "$ROOT/apps/ml-inference:/src:ro" python:3.14-slim sh -c \
     "cp -r /src /w && cd /w && grep -E '^(fastapi|starlette|pydantic|httpx|numpy|scikit-learn|prometheus-fastapi-instrumentator|ortools)==' requirements.txt > r.txt && cat requirements-ai.txt requirements-dev.txt >> r.txt && pip install -q -r r.txt >/dev/null 2>&1 && python -m pytest -q -p no:warnings tests"

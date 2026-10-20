@@ -67,7 +67,7 @@ export function useUiPref<T>(key: string, fallback: T): { value: T; set: (next: 
       return
     }
     qc.setQueryData<PrefMap | null>(uiPrefsKey, (prev) => {
-      const copy = { ...(prev ?? {}) }
+      const copy: PrefMap = { ...prev }
       if (next == null) delete copy[key]
       else copy[key] = next
       return copy

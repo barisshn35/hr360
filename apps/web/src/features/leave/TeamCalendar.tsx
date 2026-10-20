@@ -84,7 +84,7 @@ export function TeamCalendar() {
             <table className="w-full border-separate border-spacing-0 text-[11px]">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 min-w-36 bg-card" />
+                  <th className="sticky left-0 z-10 min-w-36 bg-card"><span className="sr-only">{tx('Çalışan')}</span></th>
                   {cols.map((c) => (
                     <th key={c.key} title={c.holiday?.name} className={cn('min-w-6 px-0 pb-1 text-center font-normal text-muted-foreground', (c.weekend || c.holiday) && 'text-muted-foreground/50', c.today && 'text-primary font-semibold')}>
                       <span className="block">{c.dow}</span>{c.day}

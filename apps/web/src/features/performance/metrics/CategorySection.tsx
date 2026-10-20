@@ -163,6 +163,7 @@ export function CategorySection({
           )}
         </div>
 
+        {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- yalnız görsel vurgu (üzerine gelme); bilgi metinde de var */}
         <ul className="divide-y divide-border" onMouseLeave={() => setHover(null)}>
           <AnimatePresence initial={false}>
             {metrics.map((m) => {

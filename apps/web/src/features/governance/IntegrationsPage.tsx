@@ -256,8 +256,8 @@ function ApiKeys() {
               {scopes.data?.map((s) => {
                 const covered = s !== 'read-only' && s.endsWith(':read') && form.scopes.includes('read-only')
                 return (
-                  <label key={s} className={`flex items-start gap-2 text-[12.5px] ${covered ? 'opacity-50' : ''}`}>
-                    <Checkbox checked={covered || form.scopes.includes(s)} disabled={covered} onCheckedChange={(v) => setForm({ ...form, scopes: v === true ? [...form.scopes, s] : form.scopes.filter((x) => x !== s) })} />
+                  <label key={s} htmlFor={`api-scope-${s}`} className={`flex items-start gap-2 text-[12.5px] ${covered ? 'opacity-50' : ''}`}>
+                    <Checkbox id={`api-scope-${s}`} checked={covered || form.scopes.includes(s)} disabled={covered} onCheckedChange={(v) => setForm({ ...form, scopes: v === true ? [...form.scopes, s] : form.scopes.filter((x) => x !== s) })} />
                     <span><span className="font-mono">{s}</span><span className="block text-[11.5px] text-muted-foreground">{scopeLabel(s)}</span></span>
                   </label>
                 )

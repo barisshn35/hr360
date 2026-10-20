@@ -57,8 +57,9 @@ export function ImportSource({ mode, onModeChange, onFile, template, columns, sh
 
       {mode === 'file' ? (
         <>
+          {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- sürükle-bırak bölgesi; dosya seçimi bağlı input ile yapılır */}
           <label htmlFor={inputId}
-            className="group flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-primary/5"
+            className="group flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-primary/5 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) onFile(f) }}>
             <motion.span animate={{ y: [0, -4, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}>
@@ -66,7 +67,7 @@ export function ImportSource({ mode, onModeChange, onFile, template, columns, sh
             </motion.span>
             <span className="text-sm font-medium">{tx('Excel (.xlsx) ya da CSV (.csv) dosyası seçin')}</span>
             <span className="text-xs text-muted-foreground">{tx('veya sürükleyip bırakın — ilk satır başlık olmalı')}</span>
-            <input id={inputId} type="file" accept=".xlsx,.csv" className="hidden"
+            <input id={inputId} type="file" accept=".xlsx,.csv" className="sr-only"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = '' }} />
           </label>
           <Button variant="outline" size="sm" onClick={() => downloadTemplate(template)}><Download className="size-4" />{' '}{tx('Örnek şablonu indir')}</Button>

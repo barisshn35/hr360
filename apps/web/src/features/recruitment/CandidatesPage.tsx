@@ -136,7 +136,7 @@ function NewCandidateModal({ open, onClose }: { open: boolean; onClose: () => vo
       }
     >
       <form id="new-candidate" onSubmit={submit} noValidate className="space-y-4">
-        {cvReader && <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2.5 text-[13px] hover:border-primary/50">
+        {cvReader && <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2.5 text-[13px] hover:border-primary/50 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50">
           {parsing ? <LoaderCircle className="size-4 animate-spin" /> : <FileUp className="size-4 text-primary" />}
           <span>{tx('CV\'den doldur (PDF, DOCX, TXT · en fazla 5 MB)')}</span>
           <span className="ml-auto text-[11.5px] text-muted-foreground">{tx('Dosya saklanmaz')}</span>

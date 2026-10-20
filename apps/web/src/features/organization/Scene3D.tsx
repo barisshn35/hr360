@@ -821,10 +821,12 @@ export default function Scene3D(props: Scene3DProps) {
   }
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- 3B sahne kapsayıcısı; klavyeyle kamera denetimi için odaklanır
     <div
       ref={host}
       className={cn('relative touch-none overflow-hidden outline-none select-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset', props.className)}
       style={{ cursor: hover ? 'pointer' : 'grab' }}
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- 3B sahne kapsayıcısı; klavyeyle kamera denetimi için odaklanır
       tabIndex={0}
       role="application"
       aria-roledescription={'3B'}

@@ -49,6 +49,7 @@ export function ShareBar({
 
   return (
     <div className={cn('w-full', className)}>
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- yalnız görsel vurgu (üzerine gelme); paylar aria-label içinde */}
       <div
         className="flex w-full gap-[2px] overflow-hidden rounded-full bg-muted"
         style={{ height }}

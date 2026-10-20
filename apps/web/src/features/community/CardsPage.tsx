@@ -136,6 +136,7 @@ function CardView({ id, onClose }: { id: string; onClose: () => void }) {
 function CardTile({ c, onOpen }: { c: GroupCard; onOpen: () => void }) {
   const labels = cardOccasionLabels()
   return (
+    // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- erişilebilir ad düğmenin içindeki kart başlığı ve ayrıntılarından gelir (kural iç içe metni görmüyor)
     <button type="button" onClick={onOpen} className="w-full min-w-0 cursor-pointer text-left">
       <Panel className="transition-colors hover:border-primary/40">
         <PanelBody className="flex items-center gap-3">

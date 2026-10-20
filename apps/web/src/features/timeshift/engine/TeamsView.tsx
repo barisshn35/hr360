@@ -235,7 +235,7 @@ function CreateTeamDialog({
                 <table className="border-separate border-spacing-1 text-[11px]">
                   <thead>
                     <tr>
-                      <th />
+                      <th><span className="sr-only">{tx('Ekip')}</span></th>
                       {preview.map((d) => (
                         <th key={d} className="w-7 text-center font-normal text-muted-foreground">
                           <span className="block">{weekdayShort(d)}</span>
@@ -435,7 +435,7 @@ function AddMemberDialog({ team, teams, onClose }: { team: ShiftTeam; teams: Shi
             />
             <datalist id="shift-tag-options">
               {tagOptions.map((t) => (
-                <option key={t} value={t} />
+                <option key={t} value={t}>{t}</option>
               ))}
             </datalist>
           </div>

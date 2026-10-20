@@ -31,7 +31,7 @@ export function EnpsTrendPanel() {
                 <YAxis domain={[-100, 100]} width={36} fontSize={11} tickLine={false} axisLine={false} />
                 <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" />
                 <Tooltip contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 12 }}
-                  formatter={(v, _n, item) => [`${v} (${tx('{0} yanıt', [(item?.payload as { responses: number }).responses])})`, 'eNPS']}
+                  formatter={(v, _n, item) => [`${v} (${tx('{0} yanıt', [(item?.payload as { responses: number } | undefined)?.responses ?? 0])})`, 'eNPS']}
                   labelFormatter={(_l, items) => (items?.[0]?.payload as { title?: string })?.title ?? ''} />
                 <Line type="monotone" dataKey="enps" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4 }} />
               </LineChart>

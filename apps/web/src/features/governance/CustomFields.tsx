@@ -173,7 +173,7 @@ export function ExtraInfoPanel({ employeeId }: { employeeId?: string }) {
   if (q.isError || !q.data || q.data.fields.length === 0) return null
   const fields = q.data.fields
   const value = (f: CustomFieldValue) => (draft && f.key in draft ? draft[f.key] : f.value)
-  const put = (k: string, v: string | number | boolean | null) => setDraft((d) => ({ ...(d ?? {}), [k]: v }))
+  const put = (k: string, v: string | number | boolean | null) => setDraft((d) => ({ ...d, [k]: v }))
   return (
     <Panel>
       <PanelHead title={tx('Ek bilgiler')} note={tx('Şirketinizin tanımladığı ek alanlar. Kilitli alanlar özel nitelikli veridir ve şifreli saklanır.')}

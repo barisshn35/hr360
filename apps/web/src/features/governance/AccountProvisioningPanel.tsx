@@ -239,7 +239,7 @@ export function AccountProvisioningPanel() {
         <div className="overflow-x-auto rounded-2xl border border-border">
           <table className="w-full text-[13px]">
             <thead className="bg-muted/40 text-left text-[12px] text-muted-foreground">
-              <tr><th className="px-3 py-2">{tx('Çalışan')}</th><th className="px-3 py-2">{tx('İşlem')}</th><th className="px-3 py-2">{tx('Hesap')}</th><th className="px-3 py-2">{tx('Durum')}</th><th className="px-3 py-2" /></tr>
+              <tr><th className="px-3 py-2">{tx('Çalışan')}</th><th className="px-3 py-2">{tx('İşlem')}</th><th className="px-3 py-2">{tx('Hesap')}</th><th className="px-3 py-2">{tx('Durum')}</th><th className="px-3 py-2"><span className="sr-only">{tx('İşlemler')}</span></th></tr>
             </thead>
             <tbody>
               {rows.map((r) => {

@@ -42,7 +42,7 @@ export function RecommendationsPage() {
   const [hidden, setHidden] = useState<Set<string>>(new Set())
 
   const data = recs.data
-  const items = data?.items ?? []
+  const items = useMemo(() => data?.items ?? [], [data])
   const thresholds = data?.thresholds ?? single.data?.thresholds ?? null
 
   // Türler, backend listesindeki ilk görünme sırasıyla (yeniden sıralama yok).

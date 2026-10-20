@@ -56,7 +56,7 @@ export function ProductInsightsPage() {
                   {d!.screens.map((s) => (
                     <tr key={s.path} className="border-t border-border">
                       <td className="px-5 py-2"><span className="block font-medium">{title(s.path)}</span><span className="block text-[11.5px] text-muted-foreground">{s.path}</span></td>
-                      <td className="w-48 px-3 py-2"><span className="flex items-center gap-2"><span className="h-1.5 rounded-full bg-primary/70" style={{ width: `${Math.max(4, (s.views / max) * 100)}%` }} /><span className="tabular-nums">{formatNumber(s.views)}</span></span></td>
+                      <td className="w-48 px-3 py-2"><span className="flex items-center gap-2 tabular-nums"><span className="h-1.5 rounded-full bg-primary/70" style={{ width: `${Math.max(4, (s.views / max) * 100)}%` }} />{formatNumber(s.views)}</span></td>
                       <td className="px-3 py-2 text-right tabular-nums">{s.up || '—'}</td>
                       <td className={cn('px-5 py-2 text-right tabular-nums', s.down > s.up && 'text-destructive')}>{s.down || '—'}</td>
                     </tr>

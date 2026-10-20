@@ -429,6 +429,7 @@ export function OrgSvgView(props: OrgSvgViewProps) {
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
     >
+      {/* oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- odak gezici tabIndex ile ağaç öğelerinde (treeitem) */}
       <svg
         width={size.w}
         height={size.h}

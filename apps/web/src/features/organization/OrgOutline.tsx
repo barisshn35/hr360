@@ -100,6 +100,7 @@ export function OrgOutline({
         }}
         className="outline-none [&:focus-visible>div]:ring-2 [&:focus-visible>div]:ring-ring"
       >
+        {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- klavye ağaç kapsayıcısında (Enter/Space, oklar) işlenir */}
         <div
           onClick={(e) => {
             e.stopPropagation()

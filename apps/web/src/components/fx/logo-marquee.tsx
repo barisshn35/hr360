@@ -258,6 +258,7 @@ export function LogoMarquee<T extends LogoMarqueeItem>({
     <section aria-label={label} className={cn('relative isolate w-full max-w-full min-w-0 overflow-hidden', className)} {...bind}>
       <div
         ref={viewportRef}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- kaydırılabilir bölge; odaklanınca kayan şerit durur ve klavyeyle kaydırılır
         tabIndex={0}
         style={{ overflowX: reduced ? 'auto' : 'hidden' }}
         className="overflow-y-hidden py-1.5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"

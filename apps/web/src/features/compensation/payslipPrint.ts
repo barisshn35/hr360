@@ -56,6 +56,6 @@ td.r{text-align:right;font-variant-numeric:tabular-nums}tr.b td{font-weight:600}
 <table><tr><th colspan="2">${esc(tx('Matrah bilgileri'))}</th></tr>${info}</table>
 <div class="net">${esc(tx('Net ödenecek'))}: ${m(s.net)}</div>
 <footer>${esc(tx('Bu belge kişisel veri içerir; yalnızca çalışan ve bordro yetkilisi içindir (KVKK).'))}</footer>
-<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`)
+<script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>`)
   w.document.close()
 }

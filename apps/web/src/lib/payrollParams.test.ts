@@ -59,7 +59,7 @@ describe('form doğrulama', () => {
     expect(input).toBeNull()
     for (const k of ['minimumWageGross', 'sgkEmployeeRate', 'unemploymentEmployeeRate', 'sgkEmployerRate', 'unemploymentEmployerRate',
       'stampTaxRate', 'employerIncentivePoints', 'sgkCeilingMultiplier', 'brackets.0.upTo', 'brackets.0.rate', 'brackets.1.rate']) {
-      expect(errors[k], k).toBeTruthy()
+      expect({ [k]: Boolean(errors[k]) }).toEqual({ [k]: true })
     }
     // Son dilimin üst sınırı yoktur; isteğe bağlı alanlar zorunlu değildir.
     expect(errors['brackets.1.upTo']).toBeUndefined()

@@ -25,7 +25,7 @@ type Draft = RuleDraft
 function RuleEditor({ rule, initial, catalog, onClose }: { rule?: Rule; initial?: Draft; catalog: RuleCatalog; onClose: () => void }) {
   const [d, setD] = useState<Draft>(rule ? { name: rule.name, description: rule.description, trigger: rule.trigger, conditions: rule.conditions, actions: rule.actions, isEnabled: rule.isEnabled }
     : initial ?? { name: '', description: '', trigger: 'leave.approved', conditions: [], actions: [{ type: 'notify', target: 'employee', message: '{{ozet}}' }], isEnabled: true })
-  const fields = catalog.events.find((e) => e.type === d.trigger)?.fields ?? []
+  const fields = useMemo(() => catalog.events.find((e) => e.type === d.trigger)?.fields ?? [], [catalog, d.trigger])
   const [sample, setSample] = useState('')
   const samplePayload = useMemo(() => {
     try { return sample ? JSON.parse(sample) : Object.fromEntries(fields.map((f) => [f, f === 'Days' ? 7 : f.endsWith('Id') ? '00000000-0000-0000-0000-000000000000' : tx('örnek {0}', [f])])) } catch { return null }

@@ -96,7 +96,7 @@ export function ImportSalariesModal({ open, onClose }: { open: boolean; onClose:
           r.name ?? email,
           cur ? formatMoney(cur.baseSalary, cur.currency) : '—',
           salary ? formatMoney(salary, r.currency) : '—',
-          pct == null ? '—' : <span className={cn('tabular-nums', pct < 0 && 'text-destructive')}>{pct >= 0 ? '+' : ''}{pct.toFixed(1)}%</span>,
+          pct == null ? '—' : <span key="pct" className={cn('tabular-nums', pct < 0 && 'text-destructive')}>{pct >= 0 ? '+' : ''}{pct.toFixed(1)}%</span>,
           date ?? '—',
         ],
       }

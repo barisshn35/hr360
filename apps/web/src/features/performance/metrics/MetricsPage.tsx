@@ -71,7 +71,7 @@ export function MetricsPage() {
   const [recentIds, setRecentIds] = useState<Set<string>>(new Set())
   const recentTimer = useRef<number | undefined>(undefined)
 
-  const all = metrics.data ?? []
+  const all = useMemo(() => metrics.data ?? [], [metrics.data])
   const active = useMemo(() => all.filter((m) => m.isActive), [all])
   const archived = useMemo(() => all.filter((m) => !m.isActive), [all])
 

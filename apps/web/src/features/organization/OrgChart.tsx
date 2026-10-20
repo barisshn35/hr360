@@ -234,6 +234,7 @@ function PersonCard({ person, deptId, isHead }: { person: ChartPerson; deptId: s
   }
 
   return (
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- boş alana tıklama kolaylığı; klavyede kişi aramadan seçilir, kart içi bağlantı/düğme odaklanır
     <div
       id={`org-emp-${person.id}`}
       draggable={draggable}

@@ -19,7 +19,7 @@ const ACTION: Record<string, string> = { Created: tx('oluşturuldu'), Updated: t
 
 export function TimeMachinePage() {
   const tl = useQuery({ queryKey: ['time-machine', 'timeline'], queryFn: ({ signal }) => governanceApi.timeline(36, signal) })
-  const months = tl.data?.series ?? []
+  const months = useMemo(() => tl.data?.series ?? [], [tl.data])
   const [idx, setIdx] = useState<number | null>(null)
   const [playing, setPlaying] = useState(false)
   const cur = idx ?? months.length - 1

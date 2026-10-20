@@ -35,7 +35,7 @@ function writeDocuments(w: Window, title: string, docs: RenderedDoc[], watermark
   w.document.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${title}</title>
     <style>@page{size:A4;margin:22mm 20mm}body{font-family:Inter,'Segoe UI',Arial,sans-serif;color:#111;font-size:12pt;line-height:1.6}
     .page{max-width:170mm;margin:0 auto}h1,h2{letter-spacing:-.01em}@media screen{body{background:#f4f4f5}.page{background:#fff;padding:24mm 20mm;margin:16px auto;box-shadow:0 2px 12px #0002}}${WATERMARK_CSS}</style>
-    </head><body>${watermarkHtml(watermark)}${pages}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`)
+    </head><body>${watermarkHtml(watermark)}${pages}<script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>`)
   w.document.close()
 }
 
