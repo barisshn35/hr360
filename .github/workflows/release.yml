@@ -1,0 +1,150 @@
+# HR360 surumu: v1.2.3 bicimindeki etiket gonderilince calisir.
+#
+#   1. Etiket depo kokundeki VERSION ile ayni olmali (git tag v$(cat VERSION)).
+#   2. Imajlar: CI'nin bu commit icin yayinladigi imzali imajlara (ghcr.io/<depo>/<servis>:sha-<commit>)
+#      surum etiketi eklenir (:1.2.3). Yeniden derlenmez; imza ve SBOM ozete bagli oldugu icin gecerli kalir.
+#      CI henuz bitmediyse en fazla 60 dk beklenir.
+#   3. Android: GitHub sirlari tanimliysa (HR360_ANDROID_KEYSTORE_B64 = release.jks'in base64'u,
+#      HR360_ANDROID_SIGNING = signing.properties icerigi) HR360 ve HR360 Lite APK'lari imzalanip eklenir.
+#      Tanimli degilse atlanir; APK'lar yerelde scripts/android-build.sh ile uretilip taslaga eklenir.
+#      Anahtar CI'da ASLA yeniden uretilmez (farkli anahtar kurulu uygulamalari guncellenemez yapar).
+#   4. Taslak surum: notlar docs/CHANGELOG-tr.md'nin en ustteki bolumunden. Taslak elle gozden gecirilip
+#      yayimlanir (Releases > Edit > Publish); kurulumlarin "Guncellemeleri denetle"si yayimlananı gorur.
+name: Surum
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Etiket ve VERSION
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: v
+        run: |
+          v="$(tr -d '[:space:]' < VERSION)"
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "Etiket ($GITHUB_REF_NAME) VERSION ($v) ile ayni degil"; exit 1; }
+          git fetch -q origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "Etiketli commit main dalinda degil"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+  images:
+    name: Imajlara surum etiketi
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REG: ghcr.io/${{ github.repository }}
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Etiketle
+        run: |
+          names="$(grep -oE '^          - \{ name: [a-z0-9-]+' .github/workflows/ci.yml | awk '{print $NF}')"
+          deadline=$(( $(date +%s) + 3600 ))
+          for n in $names; do
+            src="$REG/$n:sha-$GITHUB_SHA"
+            until docker buildx imagetools inspect "$src" >/dev/null 2>&1; do
+              [ "$(date +%s)" -lt "$deadline" ] || { echo "Imaj yok (CI bu commit icin bitmedi ya da basarisiz): $src"; exit 1; }
+              sleep 30
+            done
+            docker buildx imagetools create -t "$REG/$n:$VERSION" "$src"
+            echo "- \`$REG/$n:$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  apk:
+    name: Android APK
+    needs: check
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_B64: ${{ secrets.HR360_ANDROID_KEYSTORE_B64 }}
+      SIGNING: ${{ secrets.HR360_ANDROID_SIGNING }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Imza anahtari
+        id: key
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$SIGNING" ]; then
+            echo "Imza sirlari tanimli degil; APK atlandi (yerelde: scripts/android-build.sh && scripts/android-build.sh --lite)." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "ok=0" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          d="$RUNNER_TEMP/android"; mkdir -p "$d"; chmod 700 "$d"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$d/release.jks"
+          printf '%s\n' "$SIGNING" > "$d/signing.properties"
+          chmod 600 "$d"/*
+          echo "dir=$d" >> "$GITHUB_OUTPUT"; echo "ok=1" >> "$GITHUB_OUTPUT"
+      - name: Derle (HR360 ve HR360 Lite)
+        if: steps.key.outputs.ok == '1'
+        env:
+          HR360_ANDROID_DIR: ${{ steps.key.outputs.dir }}
+        run: |
+          # Betik anahtar yoksa yenisini uretir; CI'da bu asla olmamali.
+          test -s "$HR360_ANDROID_DIR/release.jks" && test -s "$HR360_ANDROID_DIR/signing.properties"
+          scripts/android-build.sh
+          scripts/android-build.sh --lite
+          ls -la dist/*.apk
+      - name: Anahtari sil
+        if: always() && steps.key.outputs.ok == '1'
+        run: rm -rf "${{ steps.key.outputs.dir }}"
+      - uses: actions/upload-artifact@v7
+        if: steps.key.outputs.ok == '1'
+        with:
+          name: apk
+          path: dist/*.apk
+          retention-days: 7
+
+  release:
+    name: Taslak surum
+    needs: [check, images, apk]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        continue-on-error: true
+        with:
+          name: apk
+          path: apk
+      - name: Notlar
+        run: |
+          {
+            echo "HR360 $VERSION"
+            echo
+            echo "**Guncelleme:** Platform › Bakim › \"Guncellemeleri denetle\" → \"Guncelle\". Komut satirindan: \`scripts/update.sh --ref v$VERSION\`."
+            echo "Imajlar hazir indirilir (imzali, \`ghcr.io/${{ github.repository }}/<servis>:$VERSION\`)."
+            echo
+            echo "**Yenilikler**"
+            # En ustteki "## ..." bolumunun maddeleri.
+            awk '/^## /{n++; next} n==1 && /^- /{print}' docs/CHANGELOG-tr.md
+          } > notes.md
+          cat notes.md
+      - name: Taslak
+        run: |
+          files=(); [ -d apk ] && files=(apk/*.apk)
+          gh release create "v$VERSION" --draft --verify-tag --title "HR360 $VERSION" --notes-file notes.md "${files[@]}"
+          echo "Taslak olusturuldu: Releases > HR360 $VERSION (gozden gecirip yayimlayin)." >> "$GITHUB_STEP_SUMMARY"

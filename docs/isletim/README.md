@@ -112,6 +112,10 @@ sorunu da ortadan kalkar.
   amd64 değilse ya da imza doğrulanamazsa servisler eskisi gibi sunucuda derlenir. Güncelleme durmaz.
 - **Durum:** `scripts/update.sh status` son güncellemede hazır imaj mı kullanıldığını gösterir.
 - **Disk:** Güncellemeden sonra geçerli ve bir önceki sürümün (geri dönüş için) imajları kalır, eskileri silinir.
+- **Sürüm:** `v1.2.3` etiketi gönderilince (`.github/workflows/release.yml`) imajlara sürüm etiketi eklenir
+  (`:1.2.3`, yeniden derlenmez) ve notları `docs/CHANGELOG-tr.md`'den alınan **taslak** sürüm oluşur;
+  gözden geçirip yayımlayın. APK'lar, GitHub sırları `HR360_ANDROID_KEYSTORE_B64` ve `HR360_ANDROID_SIGNING`
+  tanımlıysa CI'da imzalanıp eklenir; yoksa yerelde `scripts/android-build.sh` ile üretilip taslağa eklenir.
 - **Kapatmak:** `.env`'e `HR360_PREBUILT_IMAGES=0` (her zaman derlenir). Depoda kaydedilmemiş değişiklik varken
   de derlenir (imaj kodla aynı olmaz).
 
