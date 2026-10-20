@@ -24,6 +24,9 @@ x-dotnet-service: &dotnet-service
   # G25: dagitik izleme ayarlari (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_TRACES_SAMPLER_ARG).
   # Dosya yoksa izleme kapali; scripts/monitoring.sh tracing on|off yazar/siler.
   env_file:
+    # Ortak .NET calisma zamani ayarlari (GC bellek ayari ve olcumu: dosyanin icinde).
+    - path: ./deploy/dotnet.env
+      required: false
     - path: ./deploy/monitoring/tracing.env
       required: false
   depends_on:
