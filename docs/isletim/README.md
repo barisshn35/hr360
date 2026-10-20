@@ -319,8 +319,13 @@ eklenerek `tenant` etiketi açılabilir.
 - **Tarayıcı testleri (Playwright):** Beş rolle tüm ekranları, İngilizce arayüzü, erişilebilirliği ve izin
   onay akışını baştan sona dener (paralel, ~6 dk).
 - Hepsi `scripts/test.sh` ile çalışır; ayrıntılar [tests/README.md](../../tests/README.md)'de.
-- **Yük testi (k6):** `scripts/loadtest.sh [smoke|load|stress]`. 2 vCPU / 8 GB'lık test
-  sunucusunda 100 eşzamanlı kullanıcıda p95 ≈ 46 ms ve sıfır hata.
+- **Yük testi (k6):** `scripts/loadtest.sh [smoke|load|stress]`. Test sunucusunda 100 eşzamanlı
+  kullanıcıda p95 ≈ 20 ms ve sıfır hata (2026-10-20). Her gece çalışması için (test sunucusunda; test
+  kullanıcıları gerekir): `scripts/schedule.sh install loadtest --cron` (04:30). Eşik aşılırsa
+  `backups/loadtest.log`'da görünür; sonuçlar `tests/load/results/` (son 60).
+- **Kod denetimi ve kapsam:** `npm run lint:js` (Oxlint: React hook kuralları, erişilebilirlik; kurallar
+  `apps/web/.oxlintrc.json`), `npm run test:coverage` (arayüz kapsamı alt sınırıyla). CI her push'ta
+  arayüz, .NET ve ML servisi kapsamını iş özetine yazar; arayüz kapsamı alt sınırın altına düşerse kırılır.
 
 Entegrasyon ve tarayıcı testleri (`scripts/test.sh integration | e2e`) demo şirketine test verisi
 yazar ve servisleri sahte sağlayıcı katmanıyla yeniden yapılandırır; bu yüzden yalnızca test

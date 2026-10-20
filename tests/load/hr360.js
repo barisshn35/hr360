@@ -9,6 +9,8 @@ import { check, group, sleep } from 'k6'
 import { Rate, Trend } from 'k6/metrics'
 
 const BASE = __ENV.BASE_URL || 'http://localhost'
+// Ana sayfanın "bugün izinli olanlar" kartı.
+const TODAY = new Date().toISOString().slice(0, 10)
 const TOKENS = JSON.parse(__ENV.TOKENS || '{}')
 const PROFILE = __ENV.PROFILE || 'load'
 
@@ -36,7 +38,7 @@ export const options = {
 // Uç bazında p95 raporu için her ucun alt metriği eşik olarak tanımlanır (k6 yalnızca
 // eşiği olan etiket kombinasyonlarını özette gösterir).
 const ENDPOINTS = [
-  '/api/employee/employees/me', '/api/notification/notifications', '/api/governance/plan', '/api/engagement/celebrations',
+  '/api/employee/employees/me', '/api/notification/notifications', '/api/leave/leave-requests/team-calendar', '/api/engagement/celebrations',
   '/api/leave/leave-balances', '/api/leave/leave-requests', '/api/engagement/kudos', '/api/engagement/workplace/presence',
   '/api/governance/meetings', '/api/workflow/workflows', '/api/engagement/team-health', '/api/engagement/one-on-ones',
   '/api/organization/departments', '/api/employee/employees', '/api/governance/analytics/overview', '/api/governance/audit',
@@ -73,7 +75,7 @@ function screen(who, paths, kind = 'read') {
 }
 
 export function employee() {
-  group('ana sayfa', () => screen('ayse', ['/api/employee/employees/me?optional=true', '/api/notification/notifications', '/api/governance/plan', '/api/engagement/celebrations']))
+  group('ana sayfa', () => screen('ayse', ['/api/employee/employees/me?optional=true', '/api/notification/notifications', `/api/leave/leave-requests/team-calendar?from=${TODAY}&to=${TODAY}`, '/api/engagement/celebrations']))
   sleep(1 + Math.random() * 2)
   group('izin', () => screen('ayse', ['/api/leave/leave-balances', '/api/leave/leave-requests']))
   sleep(1 + Math.random() * 2)

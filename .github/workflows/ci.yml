@@ -38,8 +38,15 @@ jobs:
       # React hook kurallari, erisilebilirlik (jsx-a11y), olasi hatalar; kurallar .oxlintrc.json'da.
       - name: Kod denetimi (Oxlint)
         run: npm run lint:js -- --format github
-      - name: Birim testleri (Vitest)
-        run: npm test
+      # Kapsam alt siniri (package.json test:coverage): olculen degerin altina dusmesin; testler arttikca yukseltilir.
+      - name: Birim testleri ve kapsam (Vitest)
+        run: npm run test:coverage
+      - name: Kapsam ozeti
+        if: always()
+        run: |
+          [ -f coverage/coverage-summary.json ] || exit 0
+          node -e 'const t=require("./coverage/coverage-summary.json").total;
+            console.log("### Arayuz test kapsami\n\n| Olcu | Oran |\n|---|---|\n"+["lines","statements","branches","functions"].map(k=>"| "+k+" | %"+t[k].pct+" ("+t[k].covered+"/"+t[k].total+") |").join("\n"))' >> "$GITHUB_STEP_SUMMARY"
       - name: Çeviri sözlüğü (eksik ya da yer tutucusu uyumsuz anahtar)
         run: npm run i18n:check
       - name: Tema kontrastı (WCAG 2.1 AA, açık ve koyu tema)
@@ -110,9 +117,21 @@ jobs:
           restore-keys: nuget-
       - name: Biçim (test projeleri)
         run: for p in tests/dotnet/*/*.csproj; do dotnet format whitespace "$p" --verify-no-changes -v q; done
-      - name: xUnit
+      # Kapsam: dotnet-coverage (test projelerine paket eklemeden); servis basina ozet CI sayfasinda.
+      - name: xUnit ve kapsam
+        env:
+          DOTNET_COVERAGE_NOLOGO: "1"
+          DOTNET_COVERAGE_TELEMETRY_OPTOUT: "1"
         run: |
-          for p in tests/dotnet/*/; do dotnet test "$p" --nologo --logger "trx;LogFileName=results.trx"; done
+          dotnet tool install -g dotnet-coverage --version 18.12.0 >/dev/null
+          mkdir -p coverage
+          for p in tests/dotnet/*/; do
+            n="$(basename "$p")"
+            dotnet-coverage collect -f cobertura -o "coverage/$n.xml" "dotnet test $p --nologo --logger trx;LogFileName=results.trx"
+          done
+      - name: Kapsam ozeti
+        if: always()
+        run: python3 tests/support/coverage_summary.py ".NET test kapsami" coverage/*.xml >> "$GITHUB_STEP_SUMMARY"
 
   ml:
     name: ML servisi (pytest)
@@ -136,8 +155,10 @@ jobs:
           pip install -r ci-req.txt
       - name: Sozdizimi
         run: python -m compileall -q .
-      - name: Testler
-        run: python -m pytest -q tests
+      - name: Testler ve kapsam
+        run: |
+          python -m pytest -q --cov=. --cov-report= tests
+          { echo "### ML servisi test kapsami"; echo; python -m coverage report --format=markdown --omit='tests/*' | tail -1; } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-config:
     name: Dagitim dosyalari

@@ -14,6 +14,9 @@
 #   restore-drill  scripts/restore-drill.sh (varsayilan Pazar 05:00): son yedegi gecici
 #                  konteynerde dener; basarisizsa birim "failed" olur (systemctl --failed).
 #   zap            scripts/security-scan.sh zap (varsayilan Cumartesi 02:00): OWASP ZAP temel taramasi.
+#   loadtest       scripts/loadtest.sh load (varsayilan her gece 04:30): k6 yuk testi; esik asilirsa birim
+#                  "failed" olur, sonuclar tests/load/results/. Test kullanicilari gerekir (tests/credentials.json):
+#                  musteri sunucusunda degil, test/gelistirme sunucusunda kurun.
 #
 # Secenekler:
 #   --at SS:DD       Saat (ise ozgu varsayilanin yerine)
@@ -44,10 +47,10 @@ while [ $# -gt 0 ]; do
     --cron) CRON=1; shift ;;
     --user) RUN_USER="$2"; shift 2 ;;
     --unit-dir) UNIT_DIR="$2"; shift 2 ;;
-    -h|--help) sed -n '2,29p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,32p' "$0"; exit 0 ;;
     -*) die "bilinmeyen secenek: $1" ;;
-    backup|restore-drill|zap) JOBS+=("$1"); shift ;;
-    *) die "bilinmeyen is: $1 (backup, restore-drill, zap)" ;;
+    backup|restore-drill|zap|loadtest) JOBS+=("$1"); shift ;;
+    *) die "bilinmeyen is: $1 (backup, restore-drill, zap, loadtest)" ;;
   esac
 done
 [ "${#JOBS[@]}" -gt 0 ] || { [ "$CMD" = print ] || [ "$CMD" = status ] || die "en az bir is verin (backup, restore-drill, zap)"; JOBS=(backup restore-drill zap); }
@@ -73,6 +76,7 @@ job_spec() {
       if [ "$TO_MINIO" = 1 ] || [ -n "$(envval BACKUP_MINIO_URL)" ] || [ -n "$(envval BACKUP_MINIO_BUCKET)" ]; then cmd="$cmd --to-minio"; fi ;;
     restore-drill) at="${AT:-05:00}"; day="${DAY:-Sun}"; cmd="scripts/restore-drill.sh" ;;
     zap) at="${AT:-02:00}"; day="${DAY:-Sat}"; cmd="scripts/security-scan.sh zap" ;;
+    loadtest) at="${AT:-04:30}"; day="$DAY"; cmd="scripts/loadtest.sh load" ;;
   esac
   printf '%s|%s|%s\n' "$day" "$at" "$cmd"
 }
