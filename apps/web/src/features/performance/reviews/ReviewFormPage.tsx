@@ -53,12 +53,13 @@ import {
   type Metric,
 } from '@/api/performance'
 import { Button } from '@/components/ui/button'
-import { TextAreaField } from '@/components/ui/Field'
-import { Modal } from '@/components/ui/Modal'
-import { Panel } from '@/components/ui/Panel'
+import { TextAreaField } from '@/components/ui/field'
+import { Modal } from '@/components/ui/modal'
+import { Panel } from '@/components/ui/panel'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ErrorState, InfoNote } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
+import { ErrorState, InfoNote } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { EASE } from '@/motion/primitives'
@@ -384,13 +385,11 @@ export function ReviewFormPage() {
         <AnimatePresence>
           {restored && !readOnly && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-              <div className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-[13px] sm:flex-row sm:items-center sm:justify-between">
-                <span className="flex items-start gap-2">
-                  <History className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-                  <span>{tx('Sunucuya ulaşmamış değişiklikleriniz bu tarayıcıdan geri yüklendi ({0}).', [formatDateTime(restored)])}<span className="block text-[12px] text-muted-foreground">{tx('Kaydederseniz sunucudaki taslağın yerini alır.')}</span>
-                  </span>
-                </span>
-                <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
+              <Callout
+                tone="info"
+                icon={History}
+                title={tx('Sunucuya ulaşmamış değişiklikleriniz bu tarayıcıdan geri yüklendi ({0}).', [formatDateTime(restored)])}
+                action={<>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -417,26 +416,29 @@ export function ReviewFormPage() {
                     <CloudUpload aria-hidden />
                     {tx('Sunucuya kaydet')}
                   </Button>
-                </div>
-              </div>
+                </>}
+              >
+                {tx('Kaydederseniz sunucudaki taslağın yerini alır.')}
+              </Callout>
             </motion.div>
           )}
         </AnimatePresence>
         <AnimatePresence>
           {sync === 'error' && !readOnly && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-              <div role="alert" className="flex flex-col gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-[13px] sm:flex-row sm:items-center sm:justify-between">
-                <span className="flex items-start gap-2">
-                  <CloudOff className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-                  <span>{tx('Taslak sunucuya kaydedilemedi{0}', [syncError ? `: ${syncError}` : '.'])}
-                    <span className="block text-[12px] text-muted-foreground">{tx('Değişiklikleriniz kaybolmadı; bu tarayıcıda saklanıyor.')}</span>
-                  </span>
-                </span>
-                <Button size="sm" variant="outline" className="shrink-0 self-end sm:self-auto" onClick={pushDraft}>
-                  <RefreshCw aria-hidden />
-                  {tx('Tekrar dene')}
-                </Button>
-              </div>
+            <motion.div role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+              <Callout
+                tone="danger"
+                icon={CloudOff}
+                title={tx('Taslak sunucuya kaydedilemedi{0}', [syncError ? `: ${syncError}` : '.'])}
+                action={
+                  <Button size="sm" variant="outline" onClick={pushDraft}>
+                    <RefreshCw aria-hidden />
+                    {tx('Tekrar dene')}
+                  </Button>
+                }
+              >
+                {tx('Değişiklikleriniz kaybolmadı; bu tarayıcıda saklanıyor.')}
+              </Callout>
             </motion.div>
           )}
         </AnimatePresence>
@@ -584,10 +586,9 @@ export function ReviewFormPage() {
             {form.strengths.trim() || form.improvements.trim() ? tx('Yazılı değerlendirme eklendi') : tx('Yazılı değerlendirme boş (opsiyonel)')}
           </li>
         </ul>
-        <p className="mt-4 flex items-start gap-2 rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/8 px-3 py-2.5 text-[13px]">
-          <Lock className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))]" aria-hidden />
+        <Callout tone="warning" icon={Lock} className="mt-4">
           {tx('Gönderdikten sonra değerlendirme kilitlenir ve değiştirilemez.')}
-        </p>
+        </Callout>
         {submitError && (
           <p role="alert" className="mt-3 text-[13px] text-destructive">
             {submitError}

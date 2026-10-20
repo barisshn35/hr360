@@ -29,6 +29,17 @@
    ========================================================================== */
 
 @custom-variant dark (&:where(.dark, .dark *));
+/* motion-safe / motion-reduce: sistem tercihine ek olarak Profil › Erişilebilirlik › "Animasyonları azalt"
+   (<html data-motion="reduce">, lib/motion.ts) da sayılır. */
+@custom-variant motion-reduce {
+  @media (prefers-reduced-motion: reduce) { @slot; }
+  &:where([data-motion="reduce"] *) { @slot; }
+}
+@custom-variant motion-safe {
+  @media (prefers-reduced-motion: no-preference) {
+    &:not(:where([data-motion="reduce"] *)) { @slot; }
+  }
+}
 
 :root {
   --background: 0 0% 99%;
@@ -407,6 +418,16 @@
     scroll-behavior: auto !important;
   }
 }
+/* Profil › Erişilebilirlik › "Animasyonları azalt" (lib/motion.ts): aynı kural, sistem ayarından bağımsız. */
+:root[data-motion="reduce"],
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .animate-border-beam,
@@ -420,6 +441,18 @@
   .animate-spin-around {
     animation: none !important;
   }
+}
+/* Profil › Erişilebilirlik › "Animasyonları azalt" (lib/motion.ts): aynı kural, sistem ayarından bağımsız. */
+:root[data-motion="reduce"] .animate-border-beam,
+:root[data-motion="reduce"] .animate-meteor,
+:root[data-motion="reduce"] .animate-orbit,
+:root[data-motion="reduce"] .animate-blob,
+:root[data-motion="reduce"] .animate-shine,
+:root[data-motion="reduce"] .animate-float,
+:root[data-motion="reduce"] .animate-gradient-x,
+:root[data-motion="reduce"] .animate-shimmer-slide,
+:root[data-motion="reduce"] .animate-spin-around {
+  animation: none !important;
 }
 
 /* ---------------------------------------------------------------------------

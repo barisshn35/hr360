@@ -1,21 +1,14 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { ChevronRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { EmptyState } from '@/components/ui/States'
+import { EmptyState } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/ui/confirm'
 import { cn } from '@/lib/utils'
 import type { Department } from '@/api/types'
 import { tx } from '@/lib/i18n'
@@ -282,48 +275,25 @@ export function DepartmentTree({
         ))}
       </ul>
 
-      <AlertDialog
+      <ConfirmDialog
         open={pendingDelete !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingDelete(null)
-            setDeleteError(null)
-          }
+        onClose={() => {
+          setPendingDelete(null)
+          setDeleteError(null)
         }}
+        title={tx('Departmanı sil')}
+        note={<><strong>{pendingDelete?.name}</strong>{' '}{tx('departmanını silmek üzeresiniz. Departmana bağlı pasif ekipler ve ekip üyelik geçmişleri de silinir; geçmiş görev atamaları kayıtlarda kalır. Bu işlem geri alınamaz.')}</>}
+        action={deleting ? tx('Siliniyor…') : tx('Evet, sil')}
+        pending={deleting}
+        onConfirm={confirmDelete}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{tx('Departmanı sil')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{pendingDelete?.name}</strong>{' '}{tx('departmanını silmek üzeresiniz. Departmana bağlı pasif ekipler ve ekip üyelik geçmişleri de silinir; geçmiş görev atamaları kayıtlarda kalır. Bu işlem geri alınamaz.')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          {deleteError && (
-            <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[13px] text-destructive">
-              {deleteError}
-            </p>
-          )}
-
-          <AlertDialogFooter>
-            {/* role="alertdialog": odak "Vazgeç"te başlar. "Sil" kendisi kapatmaz (AlertDialogAction
-                değil): 409 iletisi pencerede kalsın diye kapanmayı confirmDelete yönetir. */}
-            <AlertDialogCancel
-              className="cursor-pointer rounded-md border border-border px-3.5 py-2 text-[13px] font-medium transition-colors hover:bg-muted"
-            >
-              {tx('Vazgeç')}
-            </AlertDialogCancel>
-            <button
-              type="button"
-              onClick={confirmDelete}
-              disabled={deleting}
-              className="cursor-pointer rounded-md bg-destructive px-3.5 py-2 text-[13px] font-medium text-destructive-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-            >
-              {deleting ? tx('Siliniyor…') : tx('Evet, sil')}
-            </button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* "Sil" pencereyi kendisi kapatmaz: 409 iletisi pencerede kalsın diye kapanmayı confirmDelete yönetir. */}
+        {deleteError && (
+          <div role="alert">
+            <Callout tone="danger">{deleteError}</Callout>
+          </div>
+        )}
+      </ConfirmDialog>
     </div>
   )
 }

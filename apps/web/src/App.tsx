@@ -7,9 +7,9 @@ import { RequireAuth } from '@/auth/RequireAuth'
 import { RequirePermission } from '@/auth/RequirePermission'
 import type { Permission, Role } from '@/auth/roles'
 import { AppShell } from '@/components/layout/AppShell'
-import { ToastProvider } from '@/components/ui/Toast'
-import { ConfirmProvider } from '@/components/ui/Confirm'
-import { CenteredSpinner, FullPageSpinner } from '@/components/ui/States'
+import { ToastProvider } from '@/components/ui/toast'
+import { ConfirmProvider } from '@/components/ui/confirm'
+import { CenteredSpinner, FullPageSpinner } from '@/components/ui/states'
 import { useAuth } from '@/auth/useAuth'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
@@ -19,6 +19,7 @@ import { NoTenantNotice, TenantGate } from '@/features/shared/FeatureGate'
 import { CookieNotice, RobotsMeta } from '@/features/site/CookieNotice'
 import { MultiTenantOnly, RequireModule } from '@/features/shared/ModuleGate'
 import type { ModuleId } from '@/lib/modules'
+import { MotionPreference } from '@/motion/MotionPreference'
 
 /**
  * Adlandırılmış dışa aktarımı olan sayfaları tembel yükler.
@@ -117,6 +118,7 @@ const RolesPage = page(() => import('@/features/settings/RolesPage'), 'RolesPage
 const TenantsPage = page(() => import('@/features/platform/TenantsPage'), 'TenantsPage')
 const SystemSettingsPage = page(() => import('@/features/platform/SystemSettingsPage'), 'SystemSettingsPage')
 const MaintenancePage = page(() => import('@/features/platform/MaintenancePage'), 'MaintenancePage')
+const ComponentCatalogPage = page(() => import('@/features/platform/ComponentCatalogPage'), 'ComponentCatalogPage')
 const SetPasswordPage = page(() => import('@/features/access/PasswordPages'), 'SetPasswordPage')
 const ForgotPasswordPage = page(() => import('@/features/access/PasswordPages'), 'ForgotPasswordPage')
 const SessionExpiredPage = page(() => import('@/features/auth/SessionExpiredPage'), 'SessionExpiredPage')
@@ -240,6 +242,7 @@ export function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          <MotionPreference>
           <ToastProvider>
           <ConfirmProvider>
           <PasswordLinkDialogProvider>
@@ -467,6 +470,7 @@ export function App() {
                       element={guarded('platform:manage', <SystemSettingsPage />)}
                     />
                     <Route path="platform/bakim" element={guarded('platform:manage', <MaintenancePage />)} />
+                    <Route path="platform/bilesenler" element={guarded('platform:manage', <ComponentCatalogPage />)} />
 
                     {/* ---------------- Hesabım ---------------- */}
                     <Route path="profil" element={<ProfilePage />} />
@@ -557,6 +561,7 @@ export function App() {
           </PasswordLinkDialogProvider>
           </ConfirmProvider>
           </ToastProvider>
+          </MotionPreference>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

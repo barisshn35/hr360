@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Megaphone } from 'lucide-react'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Drawer } from '@/components/ui/drawer'
 import { useUiPref } from '@/lib/uiPrefs'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -57,32 +57,28 @@ export function WhatsNewButton({ className }: { className?: string }) {
           </span>
         )}
       </button>
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
-          <SheetHeader className="border-b border-border">
-            <SheetTitle className="flex items-center gap-2"><Megaphone className="size-4 text-primary" />{tx('Yenilikler')}</SheetTitle>
-            <SheetDescription>{tx('HR360\'a son dalgalarda gelenler, sade bir dille.')}</SheetDescription>
-          </SheetHeader>
-          <ol className="space-y-6 px-4 pb-8">
-            {entries.map((e) => (
-              <li key={e.id}>
-                <div className="flex flex-wrap items-baseline gap-2">
-                  <h3 className="text-[14px] font-semibold tracking-tight">{e.title}</h3>
-                  {isNew(e.id) && (
-                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10.5px] font-semibold text-primary">{tx('Yeni')}</span>
-                  )}
-                </div>
-                <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                  {tx('Dalga {0}', [e.id])} · {formatDate(e.date)}
-                </p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-[13px] leading-relaxed text-foreground/90">
-                  {e.items.map((it) => <li key={it}>{it}</li>)}
-                </ul>
-              </li>
-            ))}
-          </ol>
-        </SheetContent>
-      </Sheet>
+      <Drawer open={open} onClose={() => setOpen(false)}
+        title={<><Megaphone className="size-4 text-primary" />{tx('Yenilikler')}</>}
+        note={tx('HR360\'a son dalgalarda gelenler, sade bir dille.')}>
+        <ol className="space-y-6">
+          {entries.map((e) => (
+            <li key={e.id}>
+              <div className="flex flex-wrap items-baseline gap-2">
+                <h3 className="text-[14px] font-semibold tracking-tight">{e.title}</h3>
+                {isNew(e.id) && (
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10.5px] font-semibold text-primary">{tx('Yeni')}</span>
+                )}
+              </div>
+              <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                {tx('Dalga {0}', [e.id])} · {formatDate(e.date)}
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-[13px] leading-relaxed text-foreground/90">
+                {e.items.map((it) => <li key={it}>{it}</li>)}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      </Drawer>
     </>
   )
 }

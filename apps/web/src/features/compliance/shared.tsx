@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Callout } from '@/components/ui/callout'
 import { useDirectory } from '@/api/directory'
 import { complianceApi, type AckStats } from '@/api/compliance'
 import { tx } from '@/lib/i18n'
@@ -102,9 +103,8 @@ export function AckStatsView({ stats, listMissing }: { stats: AckStats; listMiss
 export function Warnings({ items }: { items?: string[] }) {
   if (!items?.length) return null
   return (
-    <div role="alert" className="flex gap-2 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-3 text-[13px]">
-      <AlertTriangle className="size-4 shrink-0 text-[hsl(var(--warning))]" />
-      <div>{items.map((w, i) => <p key={i}>{w}</p>)}</div>
+    <div role="alert">
+      <Callout tone="warning">{items.map((w, i) => <p key={i}>{w}</p>)}</Callout>
     </div>
   )
 }

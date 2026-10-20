@@ -167,3 +167,7 @@
     animation: none;
   }
 }
+/* Profil › Erişilebilirlik › "Animasyonları azalt" (lib/motion.ts): aynı kural, sistem ayarından bağımsız. */
+:root[data-motion="reduce"] .org li {
+  animation: none;
+}

@@ -6,22 +6,24 @@
  */
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import {
   ArrowDown, ArrowUp, CheckCircle2, CircleAlert, ExternalLink, Eye, FileText, FlaskConical, Globe, LoaderCircle, Mail, PencilLine, Plus,
   Scale, Send, ServerCog, ShieldCheck, Trash2, Undo2, UserPlus, WandSparkles,
 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs } from '@/components/ui/Tabs'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { RowsSkeleton, ErrorState } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
-import { useConfirm } from '@/components/ui/Confirm'
+import { Tabs } from '@/components/ui/tabs'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { RowsSkeleton, ErrorState } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
+import { useConfirm } from '@/components/ui/confirm'
+import { Callout } from '@/components/ui/callout'
 import { Stagger, StaggerItem, EASE } from '@/motion/primitives'
 import {
   passwordLinkApi, passwordLinkKeys, useSystemSettings, type FaqItem, type PasswordMethod, type SiteInput, type SiteSettings, type SystemSettings,
@@ -551,9 +553,8 @@ function SitePanel({ s }: { s: SystemSettings }) {
 
           <div className="space-y-3">
             <p className="flex items-center gap-2 text-[13px] font-medium"><Scale className="size-4 text-primary" />{tx('Metinler')}</p>
-            <div role="note" className="flex items-start gap-2.5 rounded-xl border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/[0.07] px-3.5 py-2.5 text-[12px] leading-relaxed">
-              <CircleAlert className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))]" aria-hidden="true" />
-              <span>{tx('Varsayılan şablonlar KVKK\'ya göre hazırlanmış genel örneklerdir; işletmeci olarak kendi durumunuza göre gözden geçirmeniz ve gerekiyorsa hukuk danışmanınıza onaylatmanız gerekir. Bu not ziyaretçilere gösterilmez.')}</span>
+            <div role="note">
+              <Callout tone="warning">{tx('Varsayılan şablonlar KVKK\'ya göre hazırlanmış genel örneklerdir; işletmeci olarak kendi durumunuza göre gözden geçirmeniz ve gerekiyorsa hukuk danışmanınıza onaylatmanız gerekir. Bu not ziyaretçilere gösterilmez.')}</Callout>
             </div>
             <Tabs<DocTab>
               label={tx('Metinler')}

@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, CalendarCheck, Copy, Pencil, Trash2, Video } from 'lucide-react'
+import { CalendarCheck, Copy, Pencil, Trash2, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Modal } from '@/components/ui/Modal'
-import { TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/modal'
+import { TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { governanceApi, type CalendarProviderInfo, type CalendarProviderName } from '@/api/governance'
 import { useAction } from '@/features/shared/kit'
 import { tx } from '@/lib/i18n'
@@ -89,10 +90,9 @@ export function CalendarProvidersPanel() {
     <div className="space-y-5">
       <InfoNote>{tx('Çalışanlar bağladıktan sonra')}{' '}<b>{tx('onaylanan izinler')}</b>{' '}{tx('takvimlerine yazılır; 1:1 ve mülakatlarda tek tıkla')}{' '}<b>{tx('Zoom, Teams ya da Google Meet')}</b>{' '}{tx('bağlantısı ve takvim daveti oluşur; yöneticiler herkesin boş olduğu saati görür (başlıklar değil, yalnızca dolu aralıklar).')}</InfoNote>
       {q.data?.some((p) => !p.publicOriginIsHttps) && (
-        <div className="flex items-start gap-2 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-3 text-[12.5px]">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))]" />
-          <span>{tx('Google ve Microsoft, yönlendirme adresi olarak yalnızca HTTPS kabul eder (localhost hariç). Sunucuda')}{' '}<code className="font-mono">scripts/tls.sh enable</code>{' '}{tx('ile HTTPS açın.')}</span>
-        </div>
+        <Callout tone="warning">
+          {tx('Google ve Microsoft, yönlendirme adresi olarak yalnızca HTTPS kabul eder (localhost hariç). Sunucuda')}{' '}<code className="font-mono">scripts/tls.sh enable</code>{' '}{tx('ile HTTPS açın.')}
+        </Callout>
       )}
       {q.isPending ? <RowsSkeleton /> : (
         <div className="grid gap-4 lg:grid-cols-3">

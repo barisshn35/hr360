@@ -3,17 +3,17 @@ import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, LoaderCircle } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { CenteredSpinner, EmptyState, ErrorState } from '@/components/ui/States'
+import { CenteredSpinner, EmptyState, ErrorState } from '@/components/ui/states'
 import {
   ApplicationStatusBadge,
   InterviewResultBadge,
   JobPostingStatusBadge,
-} from '@/components/ui/ModuleBadges'
-import { Modal } from '@/components/ui/Modal'
-import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
-import { useToast } from '@/components/ui/Toast'
+} from '@/components/ui/module-badges'
+import { Modal } from '@/components/ui/modal'
+import { SelectField, TextAreaField, TextField } from '@/components/ui/field'
+import { useToast } from '@/components/ui/toast'
 import { useAuth } from '@/auth/useAuth'
 import { recruitmentApi } from '@/api/recruitment'
 import { useCandidates, useJobPosting } from '@/api/queries'
@@ -32,7 +32,7 @@ import { MeetingPanel } from '@/features/shared/Meetings'
 import { CareerDetailsPanel, StatusLinksPanel } from './RecruitmentW11'
 import { tx } from '@/lib/i18n'
 import { FitBadge, FitSummary, useCandidateFit } from './CandidateFit'
-import { useConfirm } from '@/components/ui/Confirm'
+import { useConfirm } from '@/components/ui/confirm'
 
 /** Başvuru durumunu ilerletme — sıradaki mantıklı aşamayı önerir. */
 const NEXT_STAGE: Partial<Record<ApplicationStatus, ApplicationStatus>> = {

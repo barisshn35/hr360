@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { RotateCcw } from 'lucide-react'
-import { Panel } from '@/components/ui/Panel'
+import { Panel } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { EASE } from '@/motion/primitives'
 import { Chip } from '../components/controls'

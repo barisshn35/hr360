@@ -1,17 +1,18 @@
-import { useEffect, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BellRing, Keyboard, Lock, MoonStar, Newspaper, Save } from 'lucide-react'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
+import { SelectField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/states'
 import { ShortcutsHelp } from '@/components/layout/KeyboardShortcuts'
 import { notificationPrefsApi, type NotificationCategoryPref, type NotificationChannelPrefs } from '@/api/notification'
 import { errMsg, useAction } from '@/features/shared/kit'
 import { useShortcutsEnabled } from '@/lib/shortcuts'
 import { tx } from '@/lib/i18n'
+import { useReduceMotionSetting, useReducedMotion } from '@/lib/motion'
 
 type Channel = 'inApp' | 'email' | 'push' | 'chat'
 
@@ -212,15 +213,8 @@ function PrefsForm({ initial }: { initial: NotificationChannelPrefs }) {
 export function AccessibilityPanel() {
   const [enabled, setEnabled] = useShortcutsEnabled()
   const [help, setHelp] = useState(false)
-  const [reduced, setReduced] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-    if (!mq) return
-    setReduced(mq.matches)
-    const on = () => setReduced(mq.matches)
-    mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
-  }, [])
+  const [reduceMotion, setReduceMotion] = useReduceMotionSetting()
+  const system = useReducedMotion() && !reduceMotion
   return (
     <Panel className="max-w-3xl">
       <PanelHead
@@ -235,11 +229,17 @@ export function AccessibilityPanel() {
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => setHelp(true)}>{tx('Kısayol listesini göster')}</Button>
         </div>
-        <InfoNote>
-          {reduced
-            ? tx('İşletim sisteminizde “hareketi azalt” açık: arayüz animasyonları kapatıldı.')
-            : tx('İşletim sisteminizde “hareketi azalt” seçeneğini açarsanız arayüz animasyonları kapanır.')}
-        </InfoNote>
+        <div className="space-y-1.5 border-t border-border pt-4">
+          <label className="flex items-center gap-2 text-[13px]">
+            <Checkbox checked={reduceMotion || system} disabled={system} onCheckedChange={(v) => setReduceMotion(v === true)} />
+            {tx('Animasyonları azalt')}
+          </label>
+          <p className="text-[12px] text-muted-foreground">
+            {system
+              ? tx('İşletim sisteminizde “hareketi azalt” açık: arayüz animasyonları zaten kapalı.')
+              : tx('Sayfa geçişleri, kayan ve parlayan süslemeler durur; baş dönmesi ya da dikkat dağınıklığı yaşıyorsanız açın. Bu cihazda saklanır.')}
+          </p>
+        </div>
       </PanelBody>
       <ShortcutsHelp open={help} onClose={() => setHelp(false)} />
     </Panel>

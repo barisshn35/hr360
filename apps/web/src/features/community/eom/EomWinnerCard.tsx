@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { ArrowRight, Crown, Vote } from 'lucide-react'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BorderBeam } from '@/components/fx/border-beam'
 import { Spotlight } from '@/components/fx/spotlight'
@@ -9,6 +9,7 @@ import { EmployeeAvatar } from '@/components/people/EmployeeAvatar'
 import { periodLabel, unitLabel, useEomMe, useEomWinners, type EomWinnerUnit } from '@/api/eom'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
+import { Panel } from '@/components/ui/panel'
 
 /**
  * Kartta gösterilecek kazananlar: kişinin kendi sonuç birimi (ana) ve iki aşamalıda kendi alt biriminin
@@ -52,7 +53,7 @@ export function WinnerSpotlight({ className, compact = false }: { className?: st
   if (!main && !canAct) return null
 
   return (
-    <Card className={cn('relative h-full gap-0 overflow-hidden py-0', className)}>
+    <Panel className={cn('relative h-full gap-0 overflow-hidden py-0', className)}>
       <BorderBeam size={200} duration={16} />
       <Spotlight size={360} />
       <div aria-hidden="true" className="pointer-events-none absolute -top-16 -right-10 size-48 rounded-full bg-amber-400/10 blur-3xl" />
@@ -99,6 +100,6 @@ export function WinnerSpotlight({ className, compact = false }: { className?: st
           )}
         </div>
       </div>
-    </Card>
+    </Panel>
   )
 }

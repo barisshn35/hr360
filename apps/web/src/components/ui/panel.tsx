@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react'
-import { Card } from '@/components/ui/card'
+import { Card } from '@/components/ui/primitives/card'
 import { cn } from '@/lib/utils'
 
 /**

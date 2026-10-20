@@ -183,6 +183,10 @@
     transition: none;
   }
 }
+/* Profil › Erişilebilirlik › "Animasyonları azalt" (lib/motion.ts): aynı kural, sistem ayarından bağımsız. */
+:root[data-motion="reduce"] .org-svg-anim {
+  transition: none;
+}
 
 /* ==========================================================================
    PDF (yazdır): orgExport.printSvg şemayı ayrı bir katmana koyar; uygulama
@@ -243,4 +247,10 @@
     animation: none;
     opacity: 0.8;
   }
+}
+/* Profil › Erişilebilirlik › "Animasyonları azalt" (lib/motion.ts): aynı kural, sistem ayarından bağımsız. */
+:root[data-motion="reduce"] .org-pulse-ring,
+:root[data-motion="reduce"] .org-pulse-box {
+  animation: none;
+  opacity: 0.8;
 }

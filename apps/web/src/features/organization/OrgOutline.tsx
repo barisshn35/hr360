@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
 import type { ChartDept } from './orgChartModel'
 import { descendantCount, navigate } from './orgViewState'
+import { prefersReducedMotion } from '@/lib/motion'
 
 /**
  * Liste (anahat) görünümü: girintili ağaç. WAI-ARIA ağaç deseni — ↑/↓ önceki/sonraki,
@@ -52,7 +53,7 @@ export function OrgOutline({
   useEffect(() => {
     if (!selectedDept) return
     setActive(selectedDept)
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const reduce = prefersReducedMotion()
     document.getElementById(`org-outline-${selectedDept}`)?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
   }, [selectedDept])
 

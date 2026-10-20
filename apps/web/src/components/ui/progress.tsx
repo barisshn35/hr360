@@ -1,5 +1,6 @@
-import { motion, useReducedMotion } from 'motion/react'
-import type { StatusTone } from '@/components/ui/StatusBadge'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
+import type { StatusTone } from '@/components/ui/status-badge'
 import { cn } from '@/lib/utils'
 
 /** Rozetlerle aynı ton sözlüğü — ilerleme ve durum aynı dili konuşsun. */

@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Calculator, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { useConfirm } from '@/components/ui/Confirm'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
+import { useConfirm } from '@/components/ui/confirm'
+import { SelectField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/states'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Callout } from '@/components/ui/callout'
 import { useAuth } from '@/auth/useAuth'
 import { ApiError } from '@/api/client'
 import { payrollApi, type PayrollParameterRow, type PayrollParametersPreview } from '@/api/payroll'
@@ -147,8 +148,10 @@ function Editor({ year, validFromMonth, row, rows, previous, onClose }: {
         {isNew && <div className="w-full sm:w-60"><SelectField label={tx('Yürürlük ayı')} value={String(from)} onChange={(v) => setFrom(Number(v))} options={monthOptions} /></div>}
       </div>
 
-      <div role="note" className="rounded-xl border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/[0.07] px-3.5 py-2.5 text-[13px] leading-relaxed">
-        {tx('HR360 yıllık bordro parametrelerini kendisi belirlemez. Kaydetmeden önce her değeri resmî kaynaklarla (Resmî Gazete, GİB, SGK genelgeleri) karşılaştırın; kaynağı not edin. Kayıt, adınız ve zamanla denetim kaydına yazılır.')}
+      <div role="note">
+        <Callout tone="warning">
+          {tx('HR360 yıllık bordro parametrelerini kendisi belirlemez. Kaydetmeden önce her değeri resmî kaynaklarla (Resmî Gazete, GİB, SGK genelgeleri) karşılaştırın; kaynağı not edin. Kayıt, adınız ve zamanla denetim kaydına yazılır.')}
+        </Callout>
       </div>
 
       {prefill && (
@@ -161,9 +164,10 @@ function Editor({ year, validFromMonth, row, rows, previous, onClose }: {
       )}
 
       {prefilledFrom && (
-        <div role="alert" className="rounded-xl border border-[hsl(var(--warning))]/45 bg-[hsl(var(--warning))]/[0.10] px-3.5 py-2.5 text-[13px] leading-relaxed">
-          <p className="font-semibold">{tx('Değerler {0} · {1} satırından kopyalandı', [prefilledFrom.year, monthName(prefilledFrom.validFromMonth)])}</p>
-          <p className="text-muted-foreground">{tx('Asgari ücret, vergi dilimleri, SGK tavanı ve kıdem tavanı genellikle her yıl (bazen yıl içinde) değişir. Kaydetmeden önce her alanı resmî kaynaklarla kontrol edin.')}</p>
+        <div role="alert">
+          <Callout tone="warning" title={tx('Değerler {0} · {1} satırından kopyalandı', [prefilledFrom.year, monthName(prefilledFrom.validFromMonth)])}>
+            {tx('Asgari ücret, vergi dilimleri, SGK tavanı ve kıdem tavanı genellikle her yıl (bazen yıl içinde) değişir. Kaydetmeden önce her alanı resmî kaynaklarla kontrol edin.')}
+          </Callout>
         </div>
       )}
 

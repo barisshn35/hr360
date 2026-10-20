@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { KeyRound, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Callout } from '@/components/ui/callout'
 import { platformAccessApi } from '@/api/platformAccess'
 import { useAuth } from '@/auth/useAuth'
 import { invalidatePlatformGrants, writeGrantTenant } from '@/auth/platformAccess'
@@ -52,17 +53,21 @@ export function PlatformAccessBanner() {
   const name = tenant?.name ?? tenantSlug
   return (
     <div className="mx-auto mt-3 w-full max-w-[1480px] px-3 sm:px-5">
-      <div role="status" className="flex flex-wrap items-center gap-2.5 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 px-4 py-2.5 text-[13px] leading-relaxed">
-        <KeyRound aria-hidden="true" className="size-4 shrink-0 text-[hsl(var(--warning))]" />
-        <p className="min-w-0 flex-1">
+      <div role="status">
+        <Callout
+          tone="warning"
+          icon={KeyRound}
+          action={<>
+            {grant && left > 0 && (
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => void revokeAndLeave()}>{tx('İzni kapat')}</Button>
+            )}
+            <Button size="sm" variant="outline" onClick={leave}><LogOut className="size-4" />{' '}{tx('Çık')}</Button>
+          </>}
+        >
           {grant && left > 0
             ? tx('Platform yöneticisi olarak {0} şirketini görüntülüyorsunuz (salt okunur). Erişim izninin kalan süresi: {1}.', [name, remainingLabel(left)])
             : tx('{0} şirketi için etkin erişim izniniz yok ya da süresi doldu; şirket verisi açılmaz. Kiracılar ekranından gerekçeli izin açın.', [name])}
-        </p>
-        {grant && left > 0 && (
-          <Button size="sm" variant="ghost" disabled={busy} onClick={() => void revokeAndLeave()}>{tx('İzni kapat')}</Button>
-        )}
-        <Button size="sm" variant="outline" onClick={leave}><LogOut className="size-4" />{' '}{tx('Çık')}</Button>
+        </Callout>
       </div>
     </div>
   )

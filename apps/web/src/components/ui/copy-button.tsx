@@ -4,7 +4,8 @@
  * yönteme düşme ve `prefers-reduced-motion` desteği. Renkler proje tokenlarından.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
 

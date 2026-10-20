@@ -1,8 +1,9 @@
 import type { UseQueryResult } from '@tanstack/react-query'
 import { ShieldAlert } from 'lucide-react'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { RowsSkeleton } from '@/components/ui/States'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { RowsSkeleton } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import type { PayrollAnomalies } from '@/api/mlInsights'
 import { severityLabel, severityTone } from '@/lib/expenseAudit'
 import { payrollFlagText, sortBySeverity } from '@/lib/mlInsights'
@@ -39,11 +40,10 @@ export function PayrollAnomalyPanel({ query, nameOf, closed }: {
           <p className="text-[13px] text-muted-foreground">{tx('Olağan dışı bir pusula bulunmadı.')}</p>
         ) : (
           <>
-            <div role="status" className="flex items-start gap-2 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-3 text-[13px]">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-              <span>{closed
+            <div role="status">
+              <Callout tone="warning" icon={ShieldAlert}>{closed
                 ? tx('{0} çalışanın pusulasında işaret var. Dönem kapandı; işaretler kayıt amaçlı gösterilir.', [rows.length])
-                : tx('{0} çalışanın pusulasında işaret var. İşaretler yalnızca inceleme içindir; kapatmayı engellemez ve hiçbir tutarı değiştirmez.', [rows.length])}</span>
+                : tx('{0} çalışanın pusulasında işaret var. İşaretler yalnızca inceleme içindir; kapatmayı engellemez ve hiçbir tutarı değiştirmez.', [rows.length])}</Callout>
             </div>
             <ul className="divide-y divide-border text-[13px]">
               {rows.map((r) => (

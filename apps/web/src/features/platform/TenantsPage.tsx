@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react'
-import { CircleCheck, CircleX, KeyRound, LoaderCircle, Plus, TriangleAlert } from 'lucide-react'
+import { CircleCheck, CircleX, KeyRound, LoaderCircle, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
-import { DataTable, type Column, type TableFilter } from '@/components/ui/DataTable'
-import { StatCard, StatCardsSkeleton } from '@/components/ui/StatCard'
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Modal } from '@/components/ui/Modal'
-import { TextAreaField, TextField } from '@/components/ui/Field'
-import { CenteredSpinner, ErrorState } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
-import { useConfirm } from '@/components/ui/Confirm'
+import { DataTable, type Column, type TableFilter } from '@/components/ui/data-table'
+import { StatCard, StatCardsSkeleton } from '@/components/ui/stat-card'
+import { StatusBadge, type StatusTone } from '@/components/ui/status-badge'
+import { Drawer } from '@/components/ui/drawer'
+import { Modal } from '@/components/ui/modal'
+import { TextAreaField, TextField } from '@/components/ui/field'
+import { CenteredSpinner, ErrorState } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
+import { useConfirm } from '@/components/ui/confirm'
+import { Callout } from '@/components/ui/callout'
 import {
   useCreateTenant,
   useReactivateTenant,
@@ -183,12 +184,9 @@ function SuspendModal({ tenant, onClose }: { tenant: Tenant | null; onClose: () 
       }
     >
       <form id="suspend-tenant" onSubmit={submit} noValidate className="space-y-4">
-        <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3.5">
-          <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" />
-          <p className="text-[13px] leading-relaxed">
-            {tx('Askıya alınan kiracının kullanıcıları oturum açamaz ve verilerine erişemez. Veriler silinmez; yeniden etkinleştirildiğinde erişim geri gelir.')}
-          </p>
-        </div>
+        <Callout tone="danger">
+          {tx('Askıya alınan kiracının kullanıcıları oturum açamaz ve verilerine erişemez. Veriler silinmez; yeniden etkinleştirildiğinde erişim geri gelir.')}
+        </Callout>
         <TextAreaField
           id="suspend-reason"
           label={tx('Gerekçe')}
@@ -276,9 +274,9 @@ function CreateTenantModal({ open, onClose }: { open: boolean; onClose: () => vo
     >
       <form id="tenant-create" onSubmit={submit} noValidate className="space-y-4">
         {error && (
-          <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/[0.08] p-2.5 text-[13px]">
-            {error}
-          </p>
+          <div role="alert">
+            <Callout tone="danger">{error}</Callout>
+          </div>
         )}
         <TextField
           id="tenant-create-name"
@@ -328,85 +326,79 @@ function TenantDetail({ tenantId, onClose }: { tenantId: string | null; onClose:
   })
 
   return (
-    <Sheet open={Boolean(tenantId)} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader className="border-b border-border">
-          <SheetTitle>{detail.data?.name ?? tx('Kiracı detayı')}</SheetTitle>
-        </SheetHeader>
-
-        <div className="space-y-6 px-4 pb-8">
-          {detail.isPending ? (
-            <CenteredSpinner label={tx('Kiracı yükleniyor')} />
-          ) : detail.isError || !detail.data ? (
-            <ErrorState
-              title={tx('Kiracı bilgisi alınamadı')}
-              message={detail.error instanceof Error ? detail.error.message : undefined}
-              onRetry={() => void detail.refetch()}
-            />
-          ) : (
-            <>
-              <dl className="divide-y divide-border">
-                {[
-                  { label: tx('Kısa ad'), value: detail.data.slug, mono: true },
-                  { label: tx('Durum'), value: tenantStatusLabels[detail.data.status] },
-                  { label: tx('Çalışan sayısı'), value: formatNumber(detail.data.employeeCount ?? 0) },
-                  { label: tx('Yönetici e-postası'), value: detail.data.adminEmail ?? '—' },
-                  { label: tx('E-posta alan adı'), value: detail.data.emailDomain ?? '—' },
-                  { label: tx('Vergi numarası'), value: detail.data.taxNumber ?? '—' },
-                  { label: tx('Kayıt'), value: formatDateTime(detail.data.createdAt) },
-                  ...(detail.data.suspendedAt
-                    ? [
-                        {
-                          label: tx('Askıya alınma'),
-                          value: formatDateTime(detail.data.suspendedAt),
-                        },
-                        {
-                          label: tx('Askı gerekçesi'),
-                          value: detail.data.suspensionReason ?? '—',
-                        },
-                      ]
-                    : []),
-                ].map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5"
+    <Drawer open={Boolean(tenantId)} onClose={onClose} size="lg" title={detail.data?.name ?? tx('Kiracı detayı')}>
+      <div className="space-y-6">
+        {detail.isPending ? (
+          <CenteredSpinner label={tx('Kiracı yükleniyor')} />
+        ) : detail.isError || !detail.data ? (
+          <ErrorState
+            title={tx('Kiracı bilgisi alınamadı')}
+            message={detail.error instanceof Error ? detail.error.message : undefined}
+            onRetry={() => void detail.refetch()}
+          />
+        ) : (
+          <>
+            <dl className="divide-y divide-border">
+              {[
+                { label: tx('Kısa ad'), value: detail.data.slug, mono: true },
+                { label: tx('Durum'), value: tenantStatusLabels[detail.data.status] },
+                { label: tx('Çalışan sayısı'), value: formatNumber(detail.data.employeeCount ?? 0) },
+                { label: tx('Yönetici e-postası'), value: detail.data.adminEmail ?? '—' },
+                { label: tx('E-posta alan adı'), value: detail.data.emailDomain ?? '—' },
+                { label: tx('Vergi numarası'), value: detail.data.taxNumber ?? '—' },
+                { label: tx('Kayıt'), value: formatDateTime(detail.data.createdAt) },
+                ...(detail.data.suspendedAt
+                  ? [
+                      {
+                        label: tx('Askıya alınma'),
+                        value: formatDateTime(detail.data.suspendedAt),
+                      },
+                      {
+                        label: tx('Askı gerekçesi'),
+                        value: detail.data.suspensionReason ?? '—',
+                      },
+                    ]
+                  : []),
+              ].map((row) => (
+                <div
+                  key={row.label}
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5"
+                >
+                  <dt className="text-[12px] text-muted-foreground">{row.label}</dt>
+                  <dd
+                    className={cn(
+                      'text-right text-[13px] break-all',
+                      row.mono && 'font-mono',
+                    )}
                   >
-                    <dt className="text-[12px] text-muted-foreground">{row.label}</dt>
-                    <dd
-                      className={cn(
-                        'text-right text-[13px] break-all',
-                        row.mono && 'font-mono',
-                      )}
-                    >
-                      {row.value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+                    {row.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
-                <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-                  {tx('Yönetici parola linkini kaybettiyse yeni bir süreli link üretin (açık linkler iptal olur).')}
-                </p>
-                <Button size="sm" variant="outline" disabled={adminLink.isPending}
-                  onClick={async () => {
-                    if (await confirm({ title: tx('Yönetici parola linki üretilsin mi?'), note: tx('Link size bir kez gösterilir; yöneticiye siz iletirsiniz.'), action: tx('Link üret'), destructive: false }))
-                      adminLink.mutate(detail.data!.id)
-                  }}>
-                  {adminLink.isPending ? <LoaderCircle className="size-3.5 animate-spin" /> : <KeyRound className="size-3.5" />}
-                  {tx('Yönetici parola linki')}
-                </Button>
-              </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+                {tx('Yönetici parola linkini kaybettiyse yeni bir süreli link üretin (açık linkler iptal olur).')}
+              </p>
+              <Button size="sm" variant="outline" disabled={adminLink.isPending}
+                onClick={async () => {
+                  if (await confirm({ title: tx('Yönetici parola linki üretilsin mi?'), note: tx('Link size bir kez gösterilir; yöneticiye siz iletirsiniz.'), action: tx('Link üret'), destructive: false }))
+                    adminLink.mutate(detail.data!.id)
+                }}>
+                {adminLink.isPending ? <LoaderCircle className="size-3.5 animate-spin" /> : <KeyRound className="size-3.5" />}
+                {tx('Yönetici parola linki')}
+              </Button>
+            </div>
 
-              <div>
-                <h3 className="mb-3 text-[14px] font-semibold">{tx('Kurulum kayıtları')}</h3>
-                <ProvisioningTimeline entries={detail.data.provisioningLog ?? []} />
-              </div>
-            </>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+            <div>
+              <h3 className="mb-3 text-[14px] font-semibold">{tx('Kurulum kayıtları')}</h3>
+              <ProvisioningTimeline entries={detail.data.provisioningLog ?? []} />
+            </div>
+          </>
+        )}
+      </div>
+    </Drawer>
   )
 }
 

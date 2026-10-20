@@ -3,10 +3,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { LoaderCircle } from 'lucide-react'
 import { employeeApi } from '@/api/employees'
 import { qk, useCompanies } from '@/api/queries'
-import { Modal, ErrorSummary, type SummaryItem } from '@/components/ui/Modal'
+import { Modal, ErrorSummary, type SummaryItem } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { useToast } from '@/components/ui/Toast'
+import { SelectField, TextField } from '@/components/ui/field'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { tx } from '@/lib/i18n'
 import { localISODate } from '@/lib/dates'
 
@@ -146,12 +147,11 @@ export function NewAssignmentModal({
         {companies.isPending ? (
           <p className="text-[13px] text-muted-foreground">{tx('Departmanlar yükleniyor…')}</p>
         ) : options.length === 0 ? (
-          <p
-            role="alert"
-            className="rounded-md border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 p-3 text-[13px] leading-relaxed"
-          >
-            {tx('Atama yapabilmek için önce Organizasyon bölümünden departman tanımlamalısınız.')}
-          </p>
+          <div role="alert">
+            <Callout tone="warning">
+              {tx('Atama yapabilmek için önce Organizasyon bölümünden departman tanımlamalısınız.')}
+            </Callout>
+          </div>
         ) : (
           <SelectField
             id="assignment-department"

@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ExternalLink, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { WorkflowStatusBadge } from '@/components/ui/ModuleBadges'
-import { CenteredSpinner, ErrorState } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { WorkflowStatusBadge } from '@/components/ui/module-badges'
+import { CenteredSpinner, ErrorState } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { useAuth } from '@/auth/useAuth'
 import { isHr } from '@/auth/roles'
 import { workflowApi } from '@/api/workflows'
@@ -237,15 +238,10 @@ export function WorkflowDetailPage() {
       />
 
       {late && isOpen && (
-        <div
-          role="alert"
-          className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3"
-        >
-          <p className="flex items-center gap-2 text-[14px] font-semibold text-destructive">
-            <TriangleAlert aria-hidden="true" className="size-4" />
-            {tx('SLA süresi doldu')}
-          </p>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">{tx('Hedef {0} idi, {1}.', [formatDateTime(data.slaDueAt), formatRelativeToNow(data.slaDueAt)])}</p>
+        <div role="alert">
+          <Callout tone="danger" title={tx('SLA süresi doldu')}>
+            {tx('Hedef {0} idi, {1}.', [formatDateTime(data.slaDueAt), formatRelativeToNow(data.slaDueAt)])}
+          </Callout>
         </div>
       )}
 

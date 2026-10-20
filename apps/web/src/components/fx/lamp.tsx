@@ -3,7 +3,8 @@
  * Kaynak: 21st.dev "Lamp" (aceternity, id 900). Uyarlama: tam sayfa kapsayıcı
  * yerine arka plan katmanı; renk zümrüt, zemin token'ı.
  */
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export function Lamp({ className }: { className?: string }) {

@@ -5,10 +5,11 @@
  * çerçeve ve uyarı rengiyle ayırt edilir — "kesin" sanılmasın.
  */
 
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { AlertTriangle, Hourglass } from 'lucide-react'
 import { bandLabels, bandOf, bandTone, formatScore, type Thresholds } from '@/api/performance'
-import { StatusBadge } from '@/components/ui/StatusBadge'
+import { StatusBadge } from '@/components/ui/status-badge'
 import { cn } from '@/lib/utils'
 import { EASE } from '@/motion/primitives'
 import { AnimatedNumber } from './AnimatedNumber'

@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Tabs, useTabParam } from '@/components/ui/Tabs'
+import { Tabs, useTabParam } from '@/components/ui/tabs'
 import { useShiftPatterns, useShiftTeams } from '@/api/queries-shift-engine'
 import { PatternsView } from './PatternsView'
 import { RosterView } from './RosterView'

@@ -6,7 +6,7 @@
  * kendi parametreleri (ör. ?durum=) olduğu gibi korunur. Böylece kaydetme, paylaşma ve uygulama
  * tek biçimle çalışır. Görünüm listesi kişiye özeldir (ui-prefs `views:<tablo>`).
  */
-import type { SortState } from '@/components/ui/DataTable'
+import type { SortState } from '@/components/ui/data-table'
 
 export const VIEW_PARAM_PREFIX = 'v_'
 export const MAX_SAVED_VIEWS = 20

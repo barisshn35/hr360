@@ -4,7 +4,8 @@
  */
 import { useEffect, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { ArrowLeft, CodeXml } from 'lucide-react'
 import { AmbientBackground } from '@/components/fx/ambient-background'
 import { EASE } from '@/motion/primitives'

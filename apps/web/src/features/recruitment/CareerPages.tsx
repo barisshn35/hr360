@@ -12,9 +12,10 @@ import { useQuery } from '@tanstack/react-query'
 import { Briefcase, CalendarClock, CheckCircle2, Copy, ShieldCheck, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { TextAreaField, TextField } from '@/components/ui/Field'
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
-import { RowsSkeleton } from '@/components/ui/States'
+import { TextAreaField, TextField } from '@/components/ui/field'
+import { StatusBadge, type StatusTone } from '@/components/ui/status-badge'
+import { RowsSkeleton } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import { careerApi, employmentTypeLabels, interviewTypeLabels, type PublicApplyResult, type PublicJob, type SelfService } from '@/api/recruitment'
 import { formatDate, formatDateTime } from '@/lib/format'
 import { errMsg, useAction } from '@/features/shared/kit'
@@ -221,13 +222,13 @@ export function CandidateSelfServicePage() {
               {!confirm ? (
                 <Button variant="outline" onClick={() => setConfirm(true)}><Trash2 className="size-4" /> {tx('Verilerimi sil')}</Button>
               ) : (
-                <div className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-[13px]">
+                <Callout tone="danger">
                   <p>{tx('Başvurunuz ve ilgili tüm veriler kalıcı olarak silinecek; süreç sona erer. Emin misiniz?')}</p>
-                  <div className="flex gap-2">
+                  <div className="mt-2 flex gap-2">
                     <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate(undefined)}>{tx('Evet, sil')}</Button>
                     <Button variant="ghost" onClick={() => setConfirm(false)}>{tx('Vazgeç')}</Button>
                   </div>
-                </div>
+                </Callout>
               )}
             </div>
           </Card>

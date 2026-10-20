@@ -5,7 +5,8 @@
  * olduğu için dinleyici tek bir paylaşılan `pointermove` aboneliğinde.
  */
 import { memo, useCallback, useEffect, useRef } from 'react'
-import { animate, useReducedMotion } from 'motion/react'
+import { animate } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 type Listener = (p: { x: number; y: number }) => void

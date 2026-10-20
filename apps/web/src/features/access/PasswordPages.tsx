@@ -9,12 +9,13 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { ArrowLeft, CheckCircle2, Clock3, Eye, EyeOff, KeyRound, Link2Off, LoaderCircle, LockKeyhole, Mail, ShieldBan, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Callout } from '@/components/ui/callout'
 import { AmbientBackground } from '@/components/fx/ambient-background'
 import { BorderBeam } from '@/components/fx/border-beam'
 import { EASE } from '@/motion/primitives'
@@ -25,6 +26,7 @@ import { formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { lang, tx } from '@/lib/i18n'
 import { passwordScore, policyText } from './passwordHelpers'
+import { Panel } from '@/components/ui/panel'
 
 /* --------------------------------- Çerçeve -------------------------------- */
 
@@ -44,10 +46,10 @@ function PublicShell({ children }: { children: ReactNode }) {
             <img src="/icon-white.svg" alt="" aria-hidden="true" className="size-7" />
           </span>
         </div>
-        <Card className="relative gap-0 overflow-hidden p-6 sm:p-7">
+        <Panel className="relative gap-0 overflow-hidden p-6 sm:p-7">
           <BorderBeam size={180} duration={10} />
           {children}
-        </Card>
+        </Panel>
       </motion.div>
     </main>
   )
@@ -207,12 +209,11 @@ export function SetPasswordPage() {
 
         <AnimatePresence>
           {error && (
-            <motion.p key={error} role="alert"
+            <motion.div key={error} role="alert"
               initial={reduced ? false : { opacity: 0, x: -8 }} animate={{ opacity: 1, x: [0, -4, 4, 0] }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.35 }}
-              className="rounded-lg border border-destructive/30 bg-destructive/[0.08] px-3 py-2 text-[12.5px] text-destructive">
-              {error}
-            </motion.p>
+              transition={{ duration: 0.35 }}>
+              <Callout tone="danger">{error}</Callout>
+            </motion.div>
           )}
         </AnimatePresence>
 

@@ -52,7 +52,6 @@ import {
   Minus,
   Plus,
   Presentation,
-  TriangleAlert,
   UserRoundX,
   Waypoints,
   X,
@@ -67,8 +66,8 @@ import { governanceApi } from '@/api/governance'
 import { engagementApi } from '@/api/engagement'
 import { useTenantScope } from '@/lib/tenant-scope'
 import { useAuth } from '@/auth/useAuth'
-import { Panel } from '@/components/ui/Panel'
-import { ErrorState, InfoNote, RowsSkeleton, EmptyState } from '@/components/ui/States'
+import { Panel } from '@/components/ui/panel'
+import { ErrorState, InfoNote, RowsSkeleton, EmptyState } from '@/components/ui/states'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
@@ -77,7 +76,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useToast } from '@/components/ui/Toast'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { formatDate, formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { AvatarStack, PersonAvatar } from '@/features/performance/components/people'
@@ -137,6 +137,7 @@ import {
 import './orgchart.css'
 
 import type { SvgLayoutKind } from './OrgSvgView'
+import { prefersReducedMotion } from '@/lib/motion'
 
 const OrgSvgView = lazy(() => import('./OrgSvgView'))
 // 3B: three.js yalnızca bu yerleşim seçilince indirilir (ayrı parça).
@@ -155,7 +156,7 @@ const todayIso = () => {
 }
 
 const norm = (s: string) => s.toLocaleLowerCase(appLocale)
-const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+const reducedMotion = prefersReducedMotion
 
 const layoutLabel = (k: OrgLayoutKind) =>
   ({
@@ -1307,9 +1308,11 @@ export function OrgChart({ companyId, companyName }: { companyId: string; compan
         ) : null}
 
         {model.cycleCount > 0 && (
-          <p role="alert" className="flex items-start gap-2 rounded-lg border border-[hsl(var(--warning))]/35 bg-[hsl(var(--warning))]/8 px-3 py-2 text-[13px]">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))]" aria-hidden />
-            {tx('{0} departmanın üst departman zinciri kendi içinde döngüye giriyor; bu departmanlar kök seviyede gösterildi. Üst departman bilgisini düzeltmek gerekir.', [model.cycleCount])}</p>
+          <div role="alert">
+            <Callout tone="warning">
+              {tx('{0} departmanın üst departman zinciri kendi içinde döngüye giriyor; bu departmanlar kök seviyede gösterildi. Üst departman bilgisini düzeltmek gerekir.', [model.cycleCount])}
+            </Callout>
+          </div>
         )}
 
         <div className="overflow-hidden rounded-xl border border-border bg-card">

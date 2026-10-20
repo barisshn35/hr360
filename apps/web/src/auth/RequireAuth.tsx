@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { AppShellSkeleton } from '@/components/ui/AppShellSkeleton'
+import { AppShellSkeleton } from '@/components/ui/app-shell-skeleton'
 import { useAuth } from './useAuth'
 import { isSessionExpired } from './sessionExpiry'
 import { tx } from '@/lib/i18n'

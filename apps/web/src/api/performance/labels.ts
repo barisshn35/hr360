@@ -7,7 +7,7 @@
  * uyarı düşer — yeni bir enum eklendiğini fark etmek için.
  */
 
-import type { StatusTone } from '@/components/ui/StatusBadge'
+import type { StatusTone } from '@/components/ui/status-badge'
 import type {
   AnalyticsPeriod,
   CyclePeriod,

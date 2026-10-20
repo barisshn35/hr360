@@ -15,7 +15,6 @@ import {
   Plus,
   Repeat,
   Trash2,
-  TriangleAlert,
 } from 'lucide-react'
 import {
   useCreateShiftPattern,
@@ -28,22 +27,15 @@ import { useQuery } from '@tanstack/react-query'
 import { opsApi } from '@/api/opsPlus'
 import { limitsFrom, patternWarnings } from '@/lib/workRules'
 import { useAuth } from '@/auth/useAuth'
-import { Modal } from '@/components/ui/Modal'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
-import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { TextField } from '@/components/ui/Field'
+import { Modal } from '@/components/ui/modal'
+import { ConfirmDialog } from '@/components/ui/confirm'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
+import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { TextField } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/Toast'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { ApiError } from '@/api/client'
@@ -252,10 +244,9 @@ function PatternBuilderDialog({ onClose }: { onClose: () => void }) {
     >
       <div className="space-y-6">
         {create.isError && (
-          <p role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-[13px] text-destructive">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-            {errorText(create.error, tx('Desen kaydedilemedi.'))}
-          </p>
+          <div role="alert">
+            <Callout tone="danger">{errorText(create.error, tx('Desen kaydedilemedi.'))}</Callout>
+          </div>
         )}
 
         {/* Hazır başlangıçlar */}
@@ -404,9 +395,10 @@ function PatternBuilderDialog({ onClose }: { onClose: () => void }) {
 
         {/* Madde 66: çalışma süresi kuralları (canlı uyarı; kaydı engellemez). */}
         {ruleWarnings.length > 0 && (
-          <div role="status" className="rounded-lg border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/8 px-3 py-2.5 text-[12.5px]">
-            <p className="mb-1 font-medium">{tx('Çalışma süresi kuralı uyarıları')}</p>
-            <ul className="list-disc space-y-0.5 pl-5">{ruleWarnings.map((w, i) => <li key={`${w.code}-${i}`}>{w.message}</li>)}</ul>
+          <div role="status">
+            <Callout tone="warning" title={tx('Çalışma süresi kuralı uyarıları')}>
+              <ul className="list-disc space-y-0.5 pl-5">{ruleWarnings.map((w, i) => <li key={`${w.code}-${i}`}>{w.message}</li>)}</ul>
+            </Callout>
           </div>
         )}
 
@@ -492,65 +484,50 @@ function DeletePatternDialog({
   const del = useDeleteShiftPattern()
   const conflict = del.error instanceof ApiError && del.error.status === 409
 
-  // role="alertdialog": dışarı tıklamak kapatmaz, odak "Vazgeç"te başlar, Esc = Vazgeç.
-  // "Sil" AlertDialogAction değildir: hata (409) iletisi pencerede kalsın diye kapanmayı onSuccess yönetir.
+  // "Sil" pencereyi kendisi kapatmaz: hata (409) iletisi pencerede kalsın diye kapanmayı onSuccess yönetir.
   return (
-    <AlertDialog open onOpenChange={(o) => { if (!o) onClose() }}>
-      <AlertDialogContent className="sm:max-w-lg">
-        <AlertDialogHeader>
-          <AlertDialogTitle>{tx('Desen silinsin mi?')}</AlertDialogTitle>
-          <AlertDialogDescription>{tx('"{0}" kalıcı olarak silinir.', [pattern.name])}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="space-y-3 text-[13px]">
-          <PatternStrip days={sortedDays(pattern)} size="sm" />
-          {usedBy.length > 0 ? (
-            <div className="space-y-2 rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/8 px-3 py-2.5">
-              <p>{tx('Bu deseni kullanan ekip var. Silmek için önce her ekibi düzenleyip başka bir desene taşıyın (Ekipler › ekip › Düzenle › Desen) ya da üyesi kalmayan ekibi silin.')}</p>
-              <ul className="flex flex-wrap gap-2">
-                {usedBy.map((t) => (
-                  <li key={t.id}>
-                    {onOpenTeam ? (
-                      <Button size="sm" variant="outline" onClick={() => { onClose(); onOpenTeam(t.id) }}>
-                        {tx('{0} ekibini aç', [t.name])}
-                      </Button>
-                    ) : (
-                      <strong>{t.name}</strong>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <p className="text-muted-foreground">{tx('Deseni kullanan ekip yok; silmek mevcut takvimleri etkilemez.')}</p>
-          )}
-          {del.isError && (
-            <p role="alert" className="text-destructive">
-              {conflict
-                ? tx('Bu desen hâlâ bir ekip tarafından kullanılıyor, silinemedi.')
-                : errorText(del.error, tx('Desen silinemedi.'))}
-            </p>
-          )}
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{tx('Vazgeç')}</AlertDialogCancel>
-          <Button
-            variant="destructive"
-            disabled={del.isPending || usedBy.length > 0}
-            onClick={() =>
-              del.mutate(pattern.id, {
-                onSuccess: () => {
-                  toast.ok(tx('Desen silindi.'))
-                  onClose()
-                },
-              })
-            }
-          >
-            {del.isPending && <LoaderCircle className="size-4 animate-spin" />}
-            {tx('Sil')}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog open onClose={onClose} title={tx('Desen silinsin mi?')} note={tx('"{0}" kalıcı olarak silinir.', [pattern.name])}
+      action={tx('Sil')} pending={del.isPending} disabled={usedBy.length > 0}
+      onConfirm={() =>
+        del.mutate(pattern.id, {
+          onSuccess: () => {
+            toast.ok(tx('Desen silindi.'))
+            onClose()
+          },
+        })
+      }
+    >
+      <PatternStrip days={sortedDays(pattern)} size="sm" />
+      {usedBy.length > 0 ? (
+        <Callout tone="warning">
+          <div className="space-y-2">
+            <p>{tx('Bu deseni kullanan ekip var. Silmek için önce her ekibi düzenleyip başka bir desene taşıyın (Ekipler › ekip › Düzenle › Desen) ya da üyesi kalmayan ekibi silin.')}</p>
+            <ul className="flex flex-wrap gap-2">
+              {usedBy.map((t) => (
+                <li key={t.id}>
+                  {onOpenTeam ? (
+                    <Button size="sm" variant="outline" onClick={() => { onClose(); onOpenTeam(t.id) }}>
+                      {tx('{0} ekibini aç', [t.name])}
+                    </Button>
+                  ) : (
+                    <strong>{t.name}</strong>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Callout>
+      ) : (
+        <p className="text-muted-foreground">{tx('Deseni kullanan ekip yok; silmek mevcut takvimleri etkilemez.')}</p>
+      )}
+      {del.isError && (
+        <p role="alert" className="text-destructive">
+          {conflict
+            ? tx('Bu desen hâlâ bir ekip tarafından kullanılıyor, silinemedi.')
+            : errorText(del.error, tx('Desen silinemedi.'))}
+        </p>
+      )}
+    </ConfirmDialog>
   )
 }
 

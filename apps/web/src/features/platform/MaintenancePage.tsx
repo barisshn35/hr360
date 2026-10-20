@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArchiveRestore, Building2, CalendarClock, CheckCircle2, CircleAlert, DownloadCloud, HardDrive, History, Info, LoaderCircle, Puzzle, RefreshCw, Rewind, ShieldCheck, Trash2, Undo2, X } from 'lucide-react'
+import { Activity, ArchiveRestore, BellRing, Building2, CalendarClock, CheckCircle2, CircleAlert, DownloadCloud, HardDrive, History, Info, LoaderCircle, Puzzle, ExternalLink, RefreshCw, Rewind, ShieldCheck, Trash2, Undo2, X } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { Modal } from '@/components/ui/Modal'
+import { Callout } from '@/components/ui/callout'
+import { Modal } from '@/components/ui/modal'
 import { Checkbox } from '@/components/ui/checkbox'
-import { TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { useConfirm } from '@/components/ui/Confirm'
+import { TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { useConfirm } from '@/components/ui/confirm'
 import { useAction } from '@/features/shared/kit'
-import { newerThan, pitrWindow, platformOpsApi, validPitrTarget, type OpsBackup, type OpsJob, type OpsKind, type OpsModules, type OpsPitr, type OpsSecurity, type OpsStatus, type OpsTenancy } from '@/api/platformOps'
+import { newerThan, pitrWindow, platformOpsApi, validPitrTarget, type OpsBackup, type OpsJob, type OpsKind, type OpsModules, type OpsMonitoring, type OpsPitr, type OpsSecurity, type OpsStatus, type OpsTenancy } from '@/api/platformOps'
 import { publicSiteKey } from '@/features/site/usePublicSite'
 import { formatDateTime, formatRelativeToNow } from '@/lib/format'
 import { appLocale, tx } from '@/lib/i18n'
@@ -35,6 +36,8 @@ const kindLabels = (): Record<OpsKind, string> => ({
   'pitr-enable': tx('Anlık geri dönüşü aç'), 'pitr-disable': tx('Anlık geri dönüşü kapat'), 'pitr-restore': tx('Bir ana geri dön'),
   'pitr-cleanup': tx('Eski veriyi sil'),
   'modules-set': tx('Modül seçimini uygula'), 'tenancy-multi': tx('Çok şirketli kipe geç'), 'tenancy-single': tx('Tek şirket kipine geç'),
+  'monitoring-enable': tx('İzlemeyi aç'), 'monitoring-disable': tx('İzlemeyi kapat'), 'monitoring-alerts': tx('Alarm kanalını değiştir'),
+  'monitoring-test': tx('Deneme alarmı gönder'), 'monitoring-tracing': tx('Dağıtık izlemeyi değiştir'),
 })
 const STATUS: Record<OpsStatus, { tone: 'neutral' | 'info' | 'success' | 'danger'; label: () => string }> = {
   Pending: { tone: 'neutral', label: () => tx('Sırada') }, Running: { tone: 'info', label: () => tx('Çalışıyor') },
@@ -101,6 +104,7 @@ function JobsPanel({ jobs, onOpen }: { jobs: OpsJob[]; onOpen: (id: string) => v
                   {typeof j.args.archive === 'string' && <span className="ml-1.5 truncate text-muted-foreground">{j.args.archive}</span>}
                   {typeof j.args.target === 'string' && <span className="ml-1.5 text-muted-foreground">{j.args.target}</span>}
                   {Array.isArray(j.args.modules) && <span className="ml-1.5 text-muted-foreground">{j.args.modules.length ? j.args.modules.join(', ') : tx('yalnızca çekirdek')}</span>}
+                  {typeof j.args.channel === 'string' && <span className="ml-1.5 text-muted-foreground">{j.args.channel === 'email' ? tx('E-posta') : j.args.channel === 'slack' ? 'Slack' : 'Teams'}{j.args.value ? '' : ` · ${tx('kapatıldı')}`}</span>}
                   <span className="block text-[12px] text-muted-foreground">{formatRelativeToNow(j.requestedAt)}{j.requestedBy ? ` · ${j.requestedBy}` : ''}</span>
                 </button>
                 {j.status === 'Running' && <LoaderCircle className="size-4 animate-spin text-primary" />}
@@ -149,9 +153,9 @@ export function PitrPanel({ pitr, lastJob, disabled, busy, onOpenJob }: {
             <dd className="font-medium">{pitr.oldestRecoverable ? `${istanbul(pitr.oldestRecoverable)} – ${pitr.lastArchivedAt ? istanbul(pitr.lastArchivedAt) : tx('şimdi')}` : '—'}</dd></div>
         </dl>
         {pitr.failedCount > 0 && (
-          <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2.5 text-[13px] leading-relaxed">
+          <Callout tone="warning">
             {tx('Arşivleme hatası: {0} başarısız deneme (son: {1}). Disk doluluğunu ve veritabanı günlüğünü denetleyin; arşivlenemeyen değişikliklere geri dönülemez.', [String(pitr.failedCount), pitr.lastFailedWal ?? '—'])}
-          </p>
+          </Callout>
         )}
         {pitr.preRestore.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3 text-[13px]">
@@ -259,16 +263,14 @@ export function ModulesPanel({ modules, lastJob, disabled, busy, onOpenJob }: {
   const summary = (
     <div className="space-y-3 text-[13px] leading-relaxed">
       {toOn.length > 0 && (
-        <div className="rounded-xl border border-primary/40 bg-primary/5 p-3">
-          <p className="font-medium">{tx('Açılacak: {0}', [toOn.map(name).join(', ')])}</p>
-          <p className="text-[12px] text-muted-foreground">{tx('Modül imajları derlenir (modül başına birkaç dakika) ve servisler yeniden başlatılır; bu sırada uygulama kısa süre yavaşlayabilir. Ek bellek: yaklaşık {0} MB.', [String(memOf(toOn))])}</p>
-        </div>
+        <Callout tone="info" title={tx('Açılacak: {0}', [toOn.map(name).join(', ')])}>
+          {tx('Modül imajları derlenir (modül başına birkaç dakika) ve servisler yeniden başlatılır; bu sırada uygulama kısa süre yavaşlayabilir. Ek bellek: yaklaşık {0} MB.', [String(memOf(toOn))])}
+        </Callout>
       )}
       {toOff.length > 0 && (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
-          <p className="font-medium">{tx('Kapatılacak: {0}', [toOff.map(name).join(', ')])}</p>
-          <p className="text-[12px] text-muted-foreground">{tx('Ekranları menülerden kalkar ve servisleri durdurulur. Veriler silinmez; modül istendiği zaman yeniden açılabilir ve kaldığı yerden devam eder.')}</p>
-        </div>
+        <Callout tone="warning" title={tx('Kapatılacak: {0}', [toOff.map(name).join(', ')])}>
+          {tx('Ekranları menülerden kalkar ve servisleri durdurulur. Veriler silinmez; modül istendiği zaman yeniden açılabilir ve kaldığı yerden devam eder.')}
+        </Callout>
       )}
     </div>
   )
@@ -372,6 +374,153 @@ export function TenancyPanel({ tenancy, lastJob, disabled, busy, onOpenJob }: {
   )
 }
 
+/** İzleme yığınının yaklaşık bellek kullanımı (docker-compose.yml bellek sınırlarına göre gerçekte daha az). */
+const MONITORING_MB = 1500
+const EMAIL_RX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/
+/** Arayüzdeki ön denetim; sunucu ve çalıştırıcı ayrıca doğrular. */
+export function validAlertEmails(v: string): boolean {
+  const list = v.split(',').map((x) => x.trim()).filter(Boolean)
+  return list.length >= 1 && list.length <= 10 && list.every((x) => EMAIL_RX.test(x))
+}
+export const validWebhook = (v: string) => /^https:\/\/[^\s'"#$`\\]{8,500}$/.test(v.trim())
+
+/** Tek alarm kanalı satırı: mevcut değer (webhook için yalnızca kökeni), değiştir / kapat. */
+function AlertChannel({ label, hint, current, placeholder, kind, off, onSave }: {
+  label: string; hint: string; current: string | null; placeholder: string; kind: 'email' | 'webhook'; off: boolean
+  onSave: (value: string | null) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(kind === 'email' && current ? current : '')
+  const ok = kind === 'email' ? validAlertEmails(value) : validWebhook(value)
+  return (
+    <li className="space-y-2 px-4 py-3 text-[13px]">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="min-w-0 flex-1">
+          <span className="font-medium">{label}</span>
+          <span className="block truncate text-[12px] text-muted-foreground">{current ?? tx('Kapalı')}</span>
+        </span>
+        {!editing && <Button size="sm" variant="outline" disabled={off} aria-label={current ? tx('{0} kanalını değiştir', [label]) : tx('{0} kanalını ayarla', [label])}
+          onClick={() => setEditing(true)}>{current ? tx('Değiştir') : tx('Ayarla')}</Button>}
+        {!editing && current && <Button size="sm" variant="ghost" disabled={off} aria-label={tx('{0} kanalını kapat', [label])} onClick={() => onSave(null)}>{tx('Kapat')}</Button>}
+      </div>
+      {editing && (
+        <div className="space-y-2">
+          <TextField label={label} hint={hint} placeholder={placeholder} value={value} autoComplete="off" spellCheck={false}
+            type={kind === 'email' ? 'text' : 'url'} onChange={(e) => setValue(e.target.value)}
+            error={value && !ok ? (kind === 'email' ? tx('En fazla 10 geçerli e-posta adresi, virgülle ayrılmış') : tx('https:// ile başlayan geçerli bir adres girin')) : undefined} />
+          <div className="flex gap-2">
+            <Button size="sm" disabled={!ok || off} onClick={() => { onSave(value.trim()); setEditing(false) }}>{tx('Kaydet')}</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setValue(kind === 'email' && current ? current : '') }}>{tx('Vazgeç')}</Button>
+          </div>
+        </div>
+      )}
+    </li>
+  )
+}
+
+/** İzleme ve alarmlar (scripts/monitoring.sh): varsayılan kapalı; buradan açılır, kanallar ayarlanır, deneme alarmı gönderilir. */
+export function MonitoringPanel({ mon, memory, lastJob, disabled, busy, onOpenJob }: {
+  mon: OpsMonitoring; memory?: { total: number; available: number }; lastJob?: OpsJob; disabled: boolean; busy: boolean; onOpenJob: (id: string) => void
+}) {
+  const confirm = useConfirm()
+  const [closing, setClosing] = useState(false)
+  const [purge, setPurge] = useState(false)
+  const [ratio, setRatio] = useState(mon.tracing.ratio ?? '0.1')
+  const run = useEnqueue(tx('İş sıraya alındı; çalıştırıcı bir dakika içinde başlatır.'), () => setClosing(false))
+  const off = disabled || run.isPending
+  const lowMemory = memory ? memory.available < (MONITORING_MB + 512) * 1024 * 1024 : false
+  const ratioOk = /^(0(\.\d{1,3})?|1(\.0{1,3})?)$/.test(ratio) && Number(ratio) >= 0.001
+  const save = (channel: 'email' | 'slack' | 'teams') => (value: string | null) => run.mutate({ kind: 'monitoring-alerts', args: { channel, value } })
+  const noChannel = !mon.alerts.email.length && !mon.alerts.slack && !mon.alerts.teams
+
+  return (
+    <Panel>
+      <PanelHead title={<span className="flex items-center gap-2"><Activity className="size-4 text-primary" />{tx('İzleme ve alarmlar')}</span>}
+        note={tx('Servis sağlığını, disk ve bellek kullanımını, yedeklerin tazeliğini ve sertifika süresini izler; sorun olduğunda seçtiğiniz kanaldan haber verir.')}
+        action={<StatusBadge tone={mon.enabled ? 'success' : 'neutral'}>{mon.enabled ? tx('Açık') : tx('Kapalı')}</StatusBadge>} />
+      <PanelBody className="space-y-4 text-[13px] leading-relaxed">
+        {!mon.enabled ? (
+          <>
+            <p className="text-muted-foreground">{tx('İzleme kapalı: bir servis çöktüğünde ya da disk dolduğunda kimseye haber verilmez. Açıldığında yaklaşık {0} GB ek bellek kullanır.', [(MONITORING_MB / 1024).toFixed(1)])}</p>
+            {memory && (lowMemory ? (
+              <Callout tone="warning">{tx('Sunucuda kullanılabilir bellek: {0} / {1}.', [bytes(memory.available), bytes(memory.total)])} {tx('Bellek az; izlemeyi açmadan önce kullanmadığınız modülleri kapatmayı düşünün.')}</Callout>
+            ) : (
+              <p className="text-muted-foreground">{tx('Sunucuda kullanılabilir bellek: {0} / {1}.', [bytes(memory.available), bytes(memory.total)])}</p>
+            ))}
+            <Button disabled={off || busy} onClick={async () => {
+              if (await confirm({ title: tx('İzleme açılsın mı?'), note: tx('Prometheus, Grafana, Loki ve Alertmanager başlatılır (ilk açılışta imajlar indirilir). Uygulama çalışmaya devam eder.'), action: tx('Aç'), destructive: false }))
+                run.mutate({ kind: 'monitoring-enable' })
+            }}>{tx('İzlemeyi aç')}</Button>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="min-w-0 flex-1 text-muted-foreground">
+                {mon.running === null ? tx('Bileşen durumu okunamadı.') : tx('{0}/{1} bileşen çalışıyor.', [String(mon.running), String(mon.total)])}
+                {' '}{mon.sso ? tx('Grafana\'ya HR360 hesabınızla girersiniz (yalnızca platform yöneticisi).') : tx('Grafana\'ya yönetici parolasıyla girilir.')}
+              </span>
+              <Button asChild variant="outline" size="sm"><a href="/grafana/" target="_blank" rel="noopener noreferrer"><ExternalLink className="size-4" />{tx('Grafana\'yı aç')}</a></Button>
+            </div>
+            {mon.running !== null && mon.running < mon.total && (
+              <Callout tone="warning">{tx('Bazı izleme bileşenleri çalışmıyor. "İzlemeyi aç" ile yeniden başlatabilirsiniz.')}</Callout>
+            )}
+          </>
+        )}
+
+        <div className="space-y-2">
+          <h3 className="flex items-center gap-2 text-[13px] font-medium"><BellRing className="size-4 text-primary" />{tx('Alarm kanalları')}</h3>
+          {mon.enabled && noChannel && <InfoNote>{tx('Hiçbir alarm kanalı ayarlı değil; alarmlar yalnızca Grafana\'da görünür.')}</InfoNote>}
+          <ul className="divide-y divide-border rounded-xl border border-border">
+            <AlertChannel label={tx('E-posta')} kind="email" off={off} current={mon.alerts.email.length ? mon.alerts.email.join(', ') : null}
+              placeholder="ops@sirket.com, it@sirket.com" hint={tx('Virgülle ayrılmış en fazla 10 adres. Platformun e-posta sunucusuyla (Sistem ayarları) gönderilir.')} onSave={save('email')} />
+            <AlertChannel label="Slack" kind="webhook" off={off} current={mon.alerts.slack}
+              placeholder="https://hooks.slack.com/services/…" hint={tx('Slack\'te "Incoming Webhook" uygulamasının verdiği adres.')} onSave={save('slack')} />
+            <AlertChannel label="Microsoft Teams" kind="webhook" off={off} current={mon.alerts.teams}
+              placeholder="https://….logic.azure.com/workflows/…" hint={tx('Teams kanalında Workflows › "Post to a channel when a webhook request is received" şablonunun verdiği adres.')} onSave={save('teams')} />
+          </ul>
+          <p className="text-[12px] text-muted-foreground">{tx('Webhook adresleri gizli tutulur; burada yalnızca alan adı görünür.')}{!mon.enabled ? ` ${tx('Kanallar şimdi kaydedilebilir; izleme açıldığında geçerli olur.')}` : ''}</p>
+          {mon.enabled && (
+            <Button size="sm" variant="outline" disabled={off || noChannel} onClick={() => run.mutate({ kind: 'monitoring-test' })}>
+              <BellRing className="size-4" />{tx('Deneme alarmı gönder')}</Button>
+          )}
+        </div>
+
+        {mon.enabled && (
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-medium">{tx('Dağıtık izleme')}</h3>
+            <p className="text-[12px] text-muted-foreground">{tx('Bir isteğin servisler arasındaki yolunu ve süresini kaydeder; yavaşlık incelemesi için. Kişisel veriler maskelenir, izler 3 gün sonra silinir. Açıp kapatmak servisleri yeniden başlatır.')}</p>
+            {mon.tracing.on ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="flex-1">{tx('Açık (örnekleme oranı {0})', [mon.tracing.ratio ?? '1'])}</span>
+                <Button size="sm" variant="ghost" disabled={off || busy} onClick={() => run.mutate({ kind: 'monitoring-tracing', args: { on: false } })}>{tx('Kapat')}</Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="w-40"><TextField label={tx('Örnekleme oranı (0–1)')} inputMode="decimal" value={ratio} onChange={(e) => setRatio(e.target.value.replace(',', '.'))}
+                  error={ratioOk ? undefined : tx('0,001 ile 1 arası')} /></div>
+                <Button size="sm" variant="outline" disabled={off || busy || !ratioOk} onClick={() => run.mutate({ kind: 'monitoring-tracing', args: { on: true, ratio: Number(ratio) } })}>{tx('Aç')}</Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <LastJobLine job={lastJob} onOpen={onOpenJob} />
+        {mon.enabled && <Button variant="ghost" disabled={off || busy} onClick={() => { setPurge(false); setClosing(true) }}>{tx('İzlemeyi kapat')}</Button>}
+      </PanelBody>
+
+      {closing && (
+        <Modal open onClose={() => setClosing(false)} title={tx('İzleme kapatılsın mı?')} note={tx('Alarmlar gönderilmez; servis çökmesi ya da disk dolması bildirilmez. Uygulama etkilenmez.')}
+          footer={<><Button variant="outline" onClick={() => setClosing(false)}>{tx('Vazgeç')}</Button><Button variant="destructive" disabled={run.isPending} onClick={() => run.mutate({ kind: 'monitoring-disable', args: { purge } })}>{tx('İzlemeyi kapat')}</Button></>}>
+          <label className="flex cursor-pointer items-start gap-2 text-[13px]">
+            <Checkbox checked={purge} onCheckedChange={(v) => setPurge(v === true)} className="mt-0.5" />
+            <span>{tx('Toplanan ölçümleri ve günlükleri de sil')}<span className="block text-[12px] text-muted-foreground">{tx('Disk açılır; geçmiş grafikler kaybolur. Alarm kanalı ayarları korunur.')}</span></span>
+          </label>
+        </Modal>
+      )}
+    </Panel>
+  )
+}
+
 /** Sunucu güvenlik duruşu: önerilen ayarların açık/kapalı durumu (değerler değil). */
 function SecurityPanel({ sec, pitr, disabled, onIsolate }: { sec: OpsSecurity; pitr?: OpsPitr; disabled: boolean; onIsolate: () => void }) {
   const [rlsOn, rlsAll] = sec.rlsTables.split('/').map((x) => Number(x) || 0)
@@ -388,7 +537,7 @@ function SecurityPanel({ sec, pitr, disabled, onIsolate }: { sec: OpsSecurity; p
       note: pitr.enabled ? tx('Açık: veritabanı son 5 dakikaya kadar herhangi bir ana döndürülebilir.') : tx('Kapalı: yalnızca gece yedeğine dönülebilir; "Anlık geri dönüş" bölümünden açın.') }] : []),
     { ok: sec.backupOffsite, title: tx('Sunucu dışı yedek kopyası'), note: sec.backupOffsite ? tx('Yedekler ayrıca dış depoya gönderilir.') : tx('Yedekler yalnızca bu sunucuda; sunucu kaybında yedek de kaybolur.') },
     { ok: sec.redisPassword, title: tx('Önbellek parolası'), note: sec.redisPassword ? tx('Önbellek parolayla korunuyor.') : tx('Önbellek parolasız.') },
-    { ok: sec.monitoring, title: tx('İzleme ve alarmlar'), note: sec.monitoring ? tx('Ölçümler toplanıyor, alarmlar açık.') : tx('İzleme kapalı; servis çökmesi ya da disk dolması bildirilmez.') },
+    { ok: sec.monitoring, title: tx('İzleme ve alarmlar'), note: sec.monitoring ? tx('Ölçümler toplanıyor, alarmlar açık.') : tx('İzleme kapalı; servis çökmesi ya da disk dolması bildirilmez. "İzleme ve alarmlar" bölümünden açın.') },
   ]
   const okCount = items.filter((i) => i.ok).length
   return (
@@ -453,9 +602,9 @@ export function MaintenancePage() {
       <PageHeader title={tx('Bakım')} eyebrow={[tx('Platform')]}
         description={tx('Sürüm güncelleme, yedek alma, doğrulama ve geri yükleme. İşleri sunucudaki bakım çalıştırıcısı sırayla yürütür; her istek denetim kaydına yazılır.')} />
       {!runnerOk && (
-        <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2.5 text-[13px] leading-relaxed">
+        <Callout tone="warning">
           {tx('Bakım çalıştırıcısı çalışmıyor{0}. Kurulumdan sonra bir kez sunucuda "scripts/ops-runner.sh install" çalıştırılmalıdır; sonraki tüm işlemler bu ekrandan yapılır.', [updatedAt ? ` (${tx('son tur {0}', [formatRelativeToNow(updatedAt)])})` : ''])}
-        </p>
+        </Callout>
       )}
       {busy && <InfoNote>{tx('Sürmekte olan bir iş var. Güncelleme ve geri yükleme sırasında uygulama kısa süre erişilemez olabilir; sayfa kendini yeniler.')}</InfoNote>}
 
@@ -465,14 +614,13 @@ export function MaintenancePage() {
             note={s ? tx('Kurulu: {0} ({1}, {2})', [s.version ?? '—', s.commit, s.commitDate]) : undefined} />
           <PanelBody className="space-y-4">
             {latest ? (
-              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 p-3">
-                <CircleAlert className="size-5 text-primary" />
-                <div className="min-w-0 flex-1 text-[13px]"><p className="font-medium">{tx('Yeni sürüm var: {0}', [latest])}</p><p className="text-[12px] text-muted-foreground">{tx('Güncellemeden önce otomatik yedek alınır; sağlık denetimi geçmezse önceki sürüme dönülür.')}</p></div>
-                <Button disabled={disabled || busy} onClick={async () => {
+              <Callout tone="info" icon={CircleAlert} title={tx('Yeni sürüm var: {0}', [latest])}
+                action={<Button disabled={disabled || busy} onClick={async () => {
                   if (await confirm({ title: tx('{0} sürümüne güncellensin mi?', [latest]), note: tx('Önce yedek alınır. Güncelleme birkaç dakika sürer; bu sırada uygulama kısa süre erişilemez olabilir.'), action: tx('Güncelle'), destructive: false }))
                     run.mutate({ kind: 'update', args: { ref: latest } })
-                }}>{tx('Güncelle')}</Button>
-              </div>
+                }}>{tx('Güncelle')}</Button>}>
+                {tx('Güncellemeden önce otomatik yedek alınır; sağlık denetimi geçmezse önceki sürüme dönülür.')}
+              </Callout>
             ) : <p className="flex items-center gap-2 text-[13px] text-muted-foreground"><CheckCircle2 className="size-4 text-primary" />{tx('En güncel sürümdesiniz.')}</p>}
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={disabled} onClick={() => run.mutate({ kind: 'check-updates' })}><RefreshCw className="size-4" />{tx('Güncellemeleri denetle')}</Button>
@@ -530,6 +678,9 @@ export function MaintenancePage() {
         disabled={disabled} busy={busy} onOpenJob={setOutput} />}
 
       {s?.tenancy && <TenancyPanel tenancy={s.tenancy} lastJob={jobs.data?.find((j) => j.kind.startsWith('tenancy-'))} disabled={disabled} busy={busy} onOpenJob={setOutput} />}
+
+      {s?.monitoring && <MonitoringPanel key={JSON.stringify(s.monitoring)} mon={s.monitoring} memory={s.memory}
+        lastJob={jobs.data?.find((j) => j.kind.startsWith('monitoring-'))} disabled={disabled} busy={busy} onOpenJob={setOutput} />}
 
       {s?.security && <SecurityPanel sec={s.security} pitr={s.pitr} disabled={disabled || busy} onIsolate={async () => {
         if (await confirm({ title: tx('Veritabanı yalıtımı açılsın mı?'), note: tx('Her servis kendi rolüne geçer ve satır düzeyi güvenlik açılır. Servisler yeniden başlatılır; uygulama bir dakika kadar erişilemez olabilir.'), action: tx('Aç'), destructive: false }))

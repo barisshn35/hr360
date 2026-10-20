@@ -8,7 +8,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { CalendarRange, LoaderCircle, Pencil, Plus, Trash2, TriangleAlert, UserMinus, UserPlus, UsersRound } from 'lucide-react'
+import { CalendarRange, LoaderCircle, Pencil, Plus, Trash2, UserMinus, UserPlus, UsersRound } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   useAddShiftTeamMember,
@@ -19,14 +19,15 @@ import {
   qke,
 } from '@/api/queries-shift-engine'
 import { timeshiftApi, type ShiftTeam, type ShiftTeamMember } from '@/api/timeshift'
-import { useConfirm } from '@/components/ui/Confirm'
+import { useConfirm } from '@/components/ui/confirm'
 import { useAuth } from '@/auth/useAuth'
-import { Modal } from '@/components/ui/Modal'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
-import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/States'
-import { SelectField, TextField } from '@/components/ui/Field'
+import { Modal } from '@/components/ui/modal'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
+import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/states'
+import { SelectField, TextField } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/Toast'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { formatDate, formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { errorText } from '@/features/performance/components/controls'
@@ -66,10 +67,9 @@ const byRank = (a: ShiftTeamMember, b: ShiftTeamMember) => a.rank - b.rank || a.
 
 function ErrorLine({ children }: { children: React.ReactNode }) {
   return (
-    <p role="alert" className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-[13px] text-destructive">
-      <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-      {children}
-    </p>
+    <div role="alert" className="mb-4">
+      <Callout tone="danger">{children}</Callout>
+    </div>
   )
 }
 
@@ -401,9 +401,9 @@ function AddMemberDialog({ team, teams, onClose }: { team: ShiftTeam; teams: Shi
             )}
             {submitted && errors.employee && <p className="mt-1.5 text-[12px] text-destructive">{errors.employee}</p>}
             {movingFrom && (
-              <p className="mt-2 rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/8 px-3 py-2 text-[12px]">
+              <Callout tone="warning" className="mt-2">
                 {tx('{0} şu an', [people.nameOf(employeeId)])}{' '}<strong>{movingFrom}</strong>{' '}{tx('üyesi. Eklerseniz oradaki üyeliği kendiliğinden sonlanır.')}
-              </p>
+              </Callout>
             )}
           </div>
         )}
@@ -603,9 +603,9 @@ function EditTeamDialog({ team, teams, onClose }: { team: ShiftTeam; teams: Shif
         />
         {pattern && <LaborWarnings days={days} />}
         {changesCalendar && (
-          <p className="rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/8 px-3 py-2 text-[12px]">
+          <Callout tone="warning">
             {tx('Desen ya da döngü başlangıcı değişirse ekibin takvimi (geçmiş günler dahil) yeni değerle yeniden hesaplanır.')}
-          </p>
+          </Callout>
         )}
       </div>
     </Modal>

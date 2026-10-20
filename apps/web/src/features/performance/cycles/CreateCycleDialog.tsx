@@ -6,13 +6,14 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
-import { CalendarPlus, Info, TriangleAlert } from 'lucide-react'
+import { CalendarPlus, Info } from 'lucide-react'
 import { CYCLE_PERIODS, cyclePeriodLabels, useCreateCycle, type CyclePeriod, type ReviewCycle } from '@/api/performance'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { SelectField, TextField } from '@/components/ui/Field'
+import { SelectField, TextField } from '@/components/ui/field'
 import { performanceExtrasApi } from '@/api/performanceExtras'
-import { useToast } from '@/components/ui/Toast'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { formatDate } from '@/lib/format'
 import { Segmented, errorText } from '../components/controls'
 import { NumberStepper } from '../components/NumberStepper'
@@ -97,16 +98,15 @@ export function CreateCycleDialog({ cycles, onClose }: { cycles: ReviewCycle[]; 
     >
       <AnimatePresence>
         {error && (
-          <motion.p
+          <motion.div
             role="alert"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-4 flex items-start gap-2 overflow-hidden rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-[13px] text-destructive"
+            className="mb-4 overflow-hidden"
           >
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-            {error}
-          </motion.p>
+            <Callout tone="danger">{error}</Callout>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -202,28 +202,25 @@ export function CreateCycleDialog({ cycles, onClose }: { cycles: ReviewCycle[]; 
         <AnimatePresence>
           {(duplicate || clash.length > 0) && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-              <p className="flex items-start gap-2 rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/8 px-3 py-2.5 text-[12px] leading-relaxed">
-                <Info className="mt-0.5 size-3.5 shrink-0 text-[hsl(var(--warning))]" aria-hidden />
-                <span>
-                  {duplicate && (
-                    <>
-                      {tx('{0} yılı için bu türde bir dönem zaten var:', [year])}{' '}<strong className="font-medium">{duplicate.name}</strong>.{' '}
-                    </>
-                  )}
-                  {clash.length > 0 && (
-                    <>
-                      {tx('Bu tarihler şu dönemlerle çakışıyor:')}{' '}
-                      {clash.map((c, i) => (
-                        <span key={c.id}>
-                          {i > 0 && ', '}
-                          <strong className="font-medium">{c.name}</strong> ({formatDate(c.startDate)} – {formatDate(c.endDate)})
-                        </span>
-                      ))}
-                      .
-                    </>
-                  )}
-                </span>
-              </p>
+              <Callout tone="warning" icon={Info}>
+                {duplicate && (
+                  <>
+                    {tx('{0} yılı için bu türde bir dönem zaten var:', [year])}{' '}<strong className="font-medium">{duplicate.name}</strong>.{' '}
+                  </>
+                )}
+                {clash.length > 0 && (
+                  <>
+                    {tx('Bu tarihler şu dönemlerle çakışıyor:')}{' '}
+                    {clash.map((c, i) => (
+                      <span key={c.id}>
+                        {i > 0 && ', '}
+                        <strong className="font-medium">{c.name}</strong> ({formatDate(c.startDate)} – {formatDate(c.endDate)})
+                      </span>
+                    ))}
+                    .
+                  </>
+                )}
+              </Callout>
             </motion.div>
           )}
         </AnimatePresence>

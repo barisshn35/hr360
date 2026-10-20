@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, Bell, CheckCircle2, ClipboardCopy, FileText, Link2, Plus, ShieldAlert, ShieldCheck, Trash2, X } from 'lucide-react'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { Modal } from '@/components/ui/Modal'
-import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/modal'
+import { SelectField, TextAreaField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
 import { useDirectory } from '@/api/directory'
 import {
   kvkkOpsApi, type AssessmentInput, type BreachInput, type BreachSeverity, type DataBreach, type FieldLevel, type NoticeState,
@@ -16,7 +16,7 @@ import {
 import { formatDateTime } from '@/lib/format'
 import { PersonSelect, errMsg, useAction } from '@/features/shared/kit'
 import { tx, txServer } from '@/lib/i18n'
-import { useConfirm } from '@/components/ui/Confirm'
+import { useConfirm } from '@/components/ui/confirm'
 import { PiiHint } from '@/components/PiiHint'
 
 /* ================================================================== K2 aydınlatma metinleri */

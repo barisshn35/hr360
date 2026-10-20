@@ -2,19 +2,20 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, ChevronDown, GitBranch, Plus, ShieldAlert, Trash2, UserRoundCog } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/States'
+import { SelectField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/states'
 import { useDirectory } from '@/api/directory'
 import { workflowTypeLabels, type WorkflowType } from '@/api/types'
 import { workflowApi, type ApproverKind, type ConditionField, type DefinitionInput, type DefinitionStep, type WorkflowDefinition } from '@/api/workflows'
 import { PersonSelect, useAction } from '@/features/shared/kit'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
-import { useConfirm } from '@/components/ui/Confirm'
+import { useConfirm } from '@/components/ui/confirm'
+import { Callout } from '@/components/ui/callout'
 import { DelegationsModal } from './DelegationsModal'
 
 const TYPES: WorkflowType[] = ['LeaveRequest', 'ExpenseClaim', 'Overtime', 'DocumentRequest', 'PositionChange', 'AssetRequest', 'Other']
@@ -122,9 +123,9 @@ function Editor({ initial, onDone }: { initial: WorkflowDefinition | null; onDon
           </div>
           {error && <p role="alert" className="text-[13px] text-destructive">{error}</p>}
           {warnings.length > 0 && (
-            <div className="space-y-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-[12.5px]">
-              {warnings.map((w, i) => <p key={i} className="flex gap-2"><ShieldAlert className="mt-0.5 size-3.5 shrink-0" />{w}</p>)}
-            </div>
+            <Callout tone="warning" icon={ShieldAlert}>
+              <div className="space-y-1.5">{warnings.map((w, i) => <p key={i}>{w}</p>)}</div>
+            </Callout>
           )}
           <div className="flex gap-2">
             <Button disabled={!!error || !f.name.trim() || save.isPending} onClick={() => save.mutate(undefined)}>{tx('Kaydet')}</Button>

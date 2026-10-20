@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useLayoutEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { TriangleAlert } from 'lucide-react'
 import { OfflineQueueWatcher } from '@/features/profile/DevicePanel'
 import { useMyEmployeeId, useUnreadCount } from '@/api/queries'

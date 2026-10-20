@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ArrowUpCircle, History, Upload } from 'lucide-react'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
-import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { useConfirm } from '@/components/ui/Confirm'
+import { StatusBadge, type StatusTone } from '@/components/ui/status-badge'
+import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { useConfirm } from '@/components/ui/confirm'
 import {
   mlModelApi,
   type FairnessReport,

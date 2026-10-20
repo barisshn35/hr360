@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { AlertTriangle, Bot, Copy, Download, Pencil, Plus, Send, Settings2, Trash2, Users } from 'lucide-react'
+import { Bot, Copy, Download, Pencil, Plus, Send, Settings2, Trash2, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Modal } from '@/components/ui/Modal'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
-import { useConfirm } from '@/components/ui/Confirm'
+import { Modal } from '@/components/ui/modal'
+import { SelectField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
+import { useConfirm } from '@/components/ui/confirm'
+import { Callout } from '@/components/ui/callout'
 import { governanceApi, type ChatApp, type ChatAppInput, type ChatPlatform } from '@/api/governance'
 import { formatRelativeToNow } from '@/lib/format'
 import { useAction } from '@/features/shared/kit'
@@ -222,10 +223,9 @@ export function ChatAppsPanel() {
         {tx('Onaycılar izin, masraf ve diğer talepleri')}{' '}<b>{tx('Slack')}</b>{' '}{tx('ya da')}{' '}<b>{tx('Microsoft Teams')}</b>{tx('\'ten tek tıkla onaylar; talep sahibi sonucu aynı yerden öğrenir. Kişiler e-posta adresleriyle eşleşir. Komutlar:')}{' '}<code className="font-mono">{tx('onaylarım')}</code>, <code className="font-mono">{tx('bakiye')}</code>, <code className="font-mono">{tx('izindekiler')}</code>, <code className="font-mono">{tx('kimnerede')}</code>.
       </InfoNote>
       {httpsMissing && (
-        <div className="flex items-start gap-2 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-3 text-[12.5px]">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))]" />
-          <span>{tx('Sunucunun genel adresi HTTPS değil. Slack ve Teams yalnızca internetten erişilebilen HTTPS adreslere istek gönderir; sunucuda')}{' '}<code className="font-mono">scripts/tls.sh enable</code>{' '}{tx('ile HTTPS açın.')}</span>
-        </div>
+        <Callout tone="warning">
+          {tx('Sunucunun genel adresi HTTPS değil. Slack ve Teams yalnızca internetten erişilebilen HTTPS adreslere istek gönderir; sunucuda')}{' '}<code className="font-mono">scripts/tls.sh enable</code>{' '}{tx('ile HTTPS açın.')}
+        </Callout>
       )}
       <div className="flex flex-wrap gap-2">
         <Button onClick={() => setSetup({ input: empty('Slack') })}><Plus className="size-4" />{' '}{tx('Slack uygulaması')}</Button>

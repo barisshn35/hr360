@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { Mail, MailCheck, MailWarning, QrCode as QrIcon, ShieldCheck, TimerReset, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CopyButton } from '@/components/ui/copy-button'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { QrCode } from '@/components/ui/qr-code'
+import { Callout } from '@/components/ui/callout'
 import { EASE } from '@/motion/primitives'
 import type { PasswordLinkView } from '@/api/password-links'
 import { formatDateTime } from '@/lib/format'
@@ -104,11 +106,9 @@ export function PasswordLinkCard({ view, who }: { view: PasswordLinkView; who?: 
         <motion.div
           initial={reduced ? false : { opacity: 0, x: -6 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-start gap-2.5 rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/8 p-3 text-[12.5px] leading-relaxed"
           role="alert"
         >
-          <MailWarning className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))]" aria-hidden="true" />
-          <span>{tx('E-posta gönderilemedi, link aşağıda. Kişiye uygun bir yoldan iletin.')}</span>
+          <Callout tone="warning" icon={MailWarning}>{tx('E-posta gönderilemedi, link aşağıda. Kişiye uygun bir yoldan iletin.')}</Callout>
         </motion.div>
       )}
 

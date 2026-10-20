@@ -4,9 +4,10 @@
  */
 
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowDown, ArrowRight, ArrowUp, GitCommitVertical, ShieldCheck, TriangleAlert } from 'lucide-react'
-import { Modal } from '@/components/ui/Modal'
+import { ArrowDown, ArrowRight, ArrowUp, GitCommitVertical, ShieldCheck } from 'lucide-react'
+import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
+import { Callout } from '@/components/ui/callout'
 import { cn } from '@/lib/utils'
 import type { FieldChange } from './fields'
 import { tx } from '@/lib/i18n'
@@ -48,33 +49,26 @@ export function VersionConfirmDialog({
         </>
       }
     >
-      <div className="rounded-lg border border-primary/25 bg-primary/5 p-3.5">
-        <p className="flex items-start gap-2 text-[13px] font-medium">
-          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-          {tx('Bu değişiklik yeni bir sürüm oluşturur. Geçmiş dönemlerin puanları değişmez.')}
-        </p>
-        <p className="mt-1.5 pl-6 text-[12px] leading-relaxed text-muted-foreground">
-          {tx('Mevcut sürüm silinmez; geçmişte kalır ve kapanmış dönemler onunla puanlanmış olarak kalır.')}
-          {activeCycleName && (
-            <>
-              {' '}{tx('Açık dönemin (', [])}<span className="font-medium text-foreground">{activeCycleName}</span>{tx(') puanları ve aksiyon önerileri yeni sürümle hesaplanır.')}
-            </>
-          )}
-        </p>
-      </div>
+      <Callout tone="info" icon={ShieldCheck} title={tx('Bu değişiklik yeni bir sürüm oluşturur. Geçmiş dönemlerin puanları değişmez.')}>
+        {tx('Mevcut sürüm silinmez; geçmişte kalır ve kapanmış dönemler onunla puanlanmış olarak kalır.')}
+        {activeCycleName && (
+          <>
+            {' '}{tx('Açık dönemin (', [])}<span className="font-medium text-foreground">{activeCycleName}</span>{tx(') puanları ve aksiyon önerileri yeni sürümle hesaplanır.')}
+          </>
+        )}
+      </Callout>
 
       <AnimatePresence>
         {error && (
-          <motion.p
+          <motion.div
             role="alert"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 flex items-start gap-2 overflow-hidden rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-[13px] text-destructive"
+            className="mt-3 overflow-hidden"
           >
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-            {error}
-          </motion.p>
+            <Callout tone="danger">{error}</Callout>
+          </motion.div>
         )}
       </AnimatePresence>
 

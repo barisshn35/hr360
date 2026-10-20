@@ -3,7 +3,8 @@
  * Kaynak: 21st.dev "Text Generate Effect" (cnippet-dev, id 18600) ve
  * "Blur In Text" (animbits, id 19228) desenleri; motion/react ile yeniden yazıldı.
  */
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export function TextReveal({

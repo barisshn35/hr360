@@ -3,10 +3,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { LoaderCircle } from 'lucide-react'
 import { organizationApi } from '@/api/organization'
 import { qk } from '@/api/queries'
-import { Modal, ErrorSummary, type SummaryItem } from '@/components/ui/Modal'
+import { Modal, ErrorSummary, type SummaryItem } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { TextField } from '@/components/ui/Field'
-import { useToast } from '@/components/ui/Toast'
+import { TextField } from '@/components/ui/field'
+import { useToast } from '@/components/ui/toast'
 import { tx } from '@/lib/i18n'
 
 interface Errors {

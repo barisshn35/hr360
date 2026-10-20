@@ -3,11 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { BadgeCheck, CheckCircle2, FileCheck2, FileSignature, FileText, Printer, ShieldAlert, XCircle } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/States'
+import { SelectField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import { governanceApi, type DocRequestStatus } from '@/api/governance'
 import { SignDocumentModal } from '@/features/documents/SignDocument'
 import { methodLabel } from '@/features/documents/OtpSignPanel'
@@ -125,10 +126,7 @@ export function VerifyDocumentPage() {
             </div>
           </div>
         ) : (
-          <div className="flex gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-[13px]">
-            <XCircle className="size-6 shrink-0 text-destructive" />
-            <p>{tx('Bu kodla düzenlenmiş geçerli bir belge bulunamadı.')}</p>
-          </div>
+          <Callout tone="danger" icon={XCircle}>{tx('Bu kodla düzenlenmiş geçerli bir belge bulunamadı.')}</Callout>
         )
       )}
       <p className="mt-4 text-[11.5px] text-muted-foreground">{tx('KVKK: Bu sayfa belge sahibinin kişisel bilgilerini göstermez; yalnızca belgenin bu şirketçe düzenlendiğini doğrular.')}</p>

@@ -2,11 +2,11 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { useTenantScope } from '@/lib/tenant-scope'
 import { useAuth } from '@/auth/useAuth'
 import { tx } from '@/lib/i18n'
 import { useModules } from '@/lib/modules'
+import { Panel } from '@/components/ui/panel'
 
 /**
  * Kiracısız oturumda şirket düzeyindeki ekran yerine gösterilen kart (TenantGate ve TenantOnly ortak).
@@ -18,7 +18,7 @@ export function NoTenantNotice() {
   const platform = roles.includes('platform-admin')
   const single = useModules().tenancy === 'single'
   return (
-    <Card className="mx-auto mt-10 max-w-lg items-center gap-3 p-8 text-center">
+    <Panel className="mx-auto mt-10 max-w-lg items-center gap-3 p-8 text-center">
       <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><Building2 className="size-5" /></span>
       <h2 className="text-[17px] font-semibold">{tx('Bu ekran şirket düzeyindedir')}</h2>
       {platform && single ? (
@@ -33,7 +33,7 @@ export function NoTenantNotice() {
       ) : (
         <p className="text-[13.5px] text-muted-foreground">{tx('Hesabınız bir şirkete bağlı görünmüyor. Çıkış yapıp yeniden giriş yapın; sorun sürerse yöneticinize başvurun.')}</p>
       )}
-    </Card>
+    </Panel>
   )
 }
 

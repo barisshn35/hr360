@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { ArrowLeft, LoaderCircle, Pencil, ShieldAlert, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { DataField, Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { DataField, Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ClaimStatusBadge } from '@/components/ui/ModuleBadges'
-import { CenteredSpinner, EmptyState, ErrorState, InfoNote } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
-import { useConfirm } from '@/components/ui/Confirm'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { ClaimStatusBadge } from '@/components/ui/module-badges'
+import { CenteredSpinner, EmptyState, ErrorState, InfoNote } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
+import { useConfirm } from '@/components/ui/confirm'
+import { Callout } from '@/components/ui/callout'
 import { useAuth } from '@/auth/useAuth'
 import { isHr } from '@/auth/roles'
 import { expenseApi } from '@/api/expense'
@@ -179,11 +181,10 @@ export function ExpenseClaimPage() {
       </Panel>
 
       {flags.count > 0 && (
-        <div role="status" className="flex items-start gap-2 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-3 text-[13px]">
-          <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-          <span>
+        <div role="status">
+          <Callout tone="warning" icon={ShieldAlert}>
             {tx('Masraf denetimi {0} işaret üretti (aşağıda kalem bazında). İşaretler yalnızca insan incelemesi içindir; beyan otomatik reddedilmez, kararı onaycı verir.', [formatNumber(flags.count)])}
-          </span>
+          </Callout>
         </div>
       )}
 

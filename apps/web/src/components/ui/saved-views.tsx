@@ -10,9 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Modal } from '@/components/ui/Modal'
-import { TextField } from '@/components/ui/Field'
-import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/modal'
+import { TextField } from '@/components/ui/field'
+import { useToast } from '@/components/ui/toast'
 import { useUiPref } from '@/lib/uiPrefs'
 import {
   addView,

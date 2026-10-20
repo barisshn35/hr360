@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import { piiCategories, scanPii, type PiiCategory } from '@/lib/pii'
-import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
+import { Callout } from '@/components/ui/callout'
 
 /**
  * Serbest metin alanının altında, kişisel / özel nitelikli veri olabileceğine dair BİLGİLENDİRİCİ uyarı
@@ -14,22 +14,14 @@ export function PiiHint({ text, className }: { text: string; className?: string 
   if (found.length === 0) return null
   const special = found.some((c) => c !== 'tckn' && c !== 'iban' && c !== 'phone' && c !== 'email')
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={cn(
-        'flex items-start gap-2 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-2.5 text-[12px] leading-relaxed',
-        className,
-      )}
-    >
-      <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <span>
+    <div role="status" aria-live="polite" className={className}>
+      <Callout tone="warning" icon={ShieldAlert}>
         {tx('Bu metinde kişisel/özel nitelikli veri olabilir: {0}', [found.map(piiLabel).join(', ')])}
         {'. '}
         {special
           ? tx('Özel nitelikli veriyi (sağlık, sabıka vb.) gerekmedikçe yazmayın; gerekiyorsa yalnızca amaç için zorunlu olanı yazın.')
           : tx('Gerekmedikçe kimlik, hesap ve iletişim bilgisi yazmayın (KVKK veri en aza indirme).')}
-      </span>
+      </Callout>
     </div>
   )
 }

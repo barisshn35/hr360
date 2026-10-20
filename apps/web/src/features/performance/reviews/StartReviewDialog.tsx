@@ -7,11 +7,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowRight, TriangleAlert } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { ApiError } from '@/api/client'
 import { REVIEW_TYPES, reviewTypeHints, reviewTypeLabels, useCreateReview, type ReviewCycle, type ReviewType } from '@/api/performance'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
+import { Callout } from '@/components/ui/callout'
 import { cn } from '@/lib/utils'
 import { errorText } from '../components/controls'
 import { PersonPicker } from '../components/people'
@@ -86,12 +87,9 @@ export function StartReviewDialog({
       <AnimatePresence>
         {error && (
           <motion.div role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-4 overflow-hidden">
-            <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-[13px] text-destructive sm:flex-row sm:items-center sm:justify-between">
-              <span className="flex items-start gap-2">
-                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-                {error.message}
-              </span>
-              {error.existing && (
+            <Callout
+              tone="danger"
+              action={error.existing && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -103,7 +101,9 @@ export function StartReviewDialog({
                   {tx('Mevcut değerlendirmeye git')}
                 </Button>
               )}
-            </div>
+            >
+              {error.message}
+            </Callout>
           </motion.div>
         )}
       </AnimatePresence>

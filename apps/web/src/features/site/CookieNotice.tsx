@@ -8,7 +8,8 @@
  */
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { Cookie } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { tx } from '@/lib/i18n'

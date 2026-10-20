@@ -3,13 +3,12 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Briefcase, Pencil, Plus, Trash2, UserX } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
-import { Card } from '@/components/ui/card'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { Modal } from '@/components/ui/Modal'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { useConfirm } from '@/components/ui/Confirm'
+import { Modal } from '@/components/ui/modal'
+import { SelectField, TextField } from '@/components/ui/field'
+import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { useConfirm } from '@/components/ui/confirm'
 import { EmployeeAvatar } from '@/components/people/EmployeeAvatar'
 import { apiFetch } from '@/api/client'
 import { useAuth } from '@/auth/useAuth'
@@ -106,7 +105,7 @@ export function PositionsPage() {
       {s && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           {[[tx('Onaylı kadro'), s.approved], [tx('Dolu'), s.filled], [tx('Boş'), s.open], [tx('Kadro fazlası'), s.over], [tx('Kadro dışı çalışan'), s.outside]].map(([l, v]) => (
-            <Card key={String(l)} className="gap-1 p-4"><span className="text-[12px] text-muted-foreground">{l}</span><span className="text-[24px] font-semibold tabular-nums">{formatNumber(Number(v))}</span></Card>
+            <Panel key={String(l)} className="gap-1 p-4"><span className="text-[12px] text-muted-foreground">{l}</span><span className="text-[24px] font-semibold tabular-nums">{formatNumber(Number(v))}</span></Panel>
           ))}
         </div>
       )}

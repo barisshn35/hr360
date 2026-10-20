@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
-import type { OpsModules, OpsPitr, OpsSnapshot } from '@/api/platformOps'
+import type { OpsModules, OpsMonitoring, OpsPitr, OpsSnapshot } from '@/api/platformOps'
 import { publicSiteKey } from '@/features/site/usePublicSite'
 import { mockApi, renderWithProviders } from '@/test/render'
-import { MaintenancePage } from './MaintenancePage'
+import { MaintenancePage, validAlertEmails, validWebhook } from './MaintenancePage'
 
 vi.mock('@/api/client', async (orig) => ({ ...(await orig<typeof import('@/api/client')>()), apiFetch: vi.fn() }))
 
@@ -229,5 +229,83 @@ describe('MaintenancePage › Şirket kipi', () => {
     await user.type(within(dialog).getByLabelText(/Onay için/), 'T')
     await user.click(go)
     await waitFor(() => expect(api.callsTo('POST', `${B}/jobs`)[0]?.body).toEqual({ kind: 'tenancy-multi', args: {}, confirm: 'ÇOK ŞİRKET' }))
+  })
+})
+
+function mon(extra: Partial<OpsMonitoring> = {}): OpsMonitoring {
+  return { enabled: true, running: 10, total: 10, alerts: { email: [], slack: null, teams: null }, tracing: { on: false, ratio: null }, sso: true, ...extra }
+}
+const GB = 1024 ** 3
+
+describe('MaintenancePage › İzleme ve alarmlar', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('kapalıyken bellek bilgisiyle gösterilir ve onayla açılır', async () => {
+    const { user, api } = setupExtra({ monitoring: mon({ enabled: false, running: null }), memory: { total: 8 * GB, available: 1 * GB } })
+    expect(await screen.findByText(/İzleme kapalı: bir servis çöktüğünde/)).toBeTruthy()
+    expect(screen.getByText(/Bellek az/)).toBeTruthy()
+    expect(screen.queryByRole('link', { name: "Grafana'yı aç" })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Deneme alarmı gönder' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'İzlemeyi aç' }))
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Aç' }))
+    await waitFor(() => expect(api.callsTo('POST', `${B}/jobs`)[0]?.body).toEqual({ kind: 'monitoring-enable', args: {}, confirm: undefined }))
+  })
+
+  it('açıkken bileşen sayısı, Grafana bağlantısı ve maskeli webhook gösterilir', async () => {
+    setupExtra({ monitoring: mon({ running: 8, alerts: { email: ['ops@a.com'], slack: 'https://hooks.slack.com/…', teams: null } }) })
+    expect(await screen.findByText(/8\/10 bileşen çalışıyor/)).toBeTruthy()
+    expect(screen.getByText(/Bazı izleme bileşenleri çalışmıyor/)).toBeTruthy()
+    expect(screen.getByText(/HR360 hesabınızla girersiniz/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: "Grafana'yı aç" }).getAttribute('href')).toBe('/grafana/')
+    expect(screen.getByText('https://hooks.slack.com/…')).toBeTruthy()
+    expect(screen.getByText('ops@a.com')).toBeTruthy()
+  })
+
+  it('e-posta kanalı doğrulanır ve kaydedilir; Slack kapatılabilir', async () => {
+    const { user, api } = setupExtra({ monitoring: mon({ alerts: { email: [], slack: 'https://hooks.slack.com/…', teams: null } }) })
+    await user.click(await screen.findByRole('button', { name: 'E-posta kanalını ayarla' }))
+    const field = screen.getByLabelText('E-posta')
+    await user.type(field, 'ops@a.com; it')
+    expect(screen.getByText(/En fazla 10 geçerli e-posta adresi/)).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'Kaydet' }) as HTMLButtonElement).disabled).toBe(true)
+    await user.clear(field)
+    await user.type(field, 'ops@a.com, it@b.com.tr')
+    await user.click(screen.getByRole('button', { name: 'Kaydet' }))
+    await waitFor(() => expect(api.callsTo('POST', `${B}/jobs`)[0]?.body).toEqual({ kind: 'monitoring-alerts', args: { channel: 'email', value: 'ops@a.com, it@b.com.tr' }, confirm: undefined }))
+    await user.click(screen.getByRole('button', { name: 'Slack kanalını kapat' }))
+    await waitFor(() => expect(api.callsTo('POST', `${B}/jobs`)[1]?.body).toEqual({ kind: 'monitoring-alerts', args: { channel: 'slack', value: null }, confirm: undefined }))
+  })
+
+  it('kanal yokken deneme alarmı kapalı; varken gönderilir', async () => {
+    const { user, api } = setupExtra({ monitoring: mon({ alerts: { email: ['ops@a.com'], slack: null, teams: null } }) })
+    await user.click(await screen.findByRole('button', { name: 'Deneme alarmı gönder' }))
+    await waitFor(() => expect(api.callsTo('POST', `${B}/jobs`)[0]?.body).toEqual({ kind: 'monitoring-test', args: {}, confirm: undefined }))
+  })
+
+  it('dağıtık izleme oranla açılır; izleme kapatılırken veriler de silinebilir', async () => {
+    const { user, api } = setupExtra({ monitoring: mon() })
+    expect((await screen.findByRole('button', { name: 'Deneme alarmı gönder' }) as HTMLButtonElement).disabled).toBe(true)
+    const ratio = screen.getByLabelText('Örnekleme oranı (0–1)')
+    await user.clear(ratio)
+    await user.type(ratio, '0,25')
+    await user.click(screen.getByRole('button', { name: 'Aç' }))
+    await waitFor(() => expect(api.callsTo('POST', `${B}/jobs`)[0]?.body).toEqual({ kind: 'monitoring-tracing', args: { on: true, ratio: 0.25 }, confirm: undefined }))
+    await user.click(screen.getByRole('button', { name: 'İzlemeyi kapat' }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('checkbox'))
+    await user.click(within(dialog).getByRole('button', { name: 'İzlemeyi kapat' }))
+    await waitFor(() => expect(api.callsTo('POST', `${B}/jobs`)[1]?.body).toEqual({ kind: 'monitoring-disable', args: { purge: true }, confirm: undefined }))
+  })
+
+  it('doğrulayıcılar', () => {
+    expect(validAlertEmails('a@b.co')).toBe(true)
+    expect(validAlertEmails('a@b.co, c+x@d.com.tr')).toBe(true)
+    expect(validAlertEmails('')).toBe(false)
+    expect(validAlertEmails('a@b')).toBe(false)
+    expect(validAlertEmails(Array(11).fill('a@b.co').join(','))).toBe(false)
+    expect(validWebhook('https://hooks.slack.com/services/T/B/X')).toBe(true)
+    expect(validWebhook('http://hooks.slack.com/services/T/B/X')).toBe(false)
+    expect(validWebhook('https://a.com/x y')).toBe(false)
+    expect(validWebhook('https://a.com/#frag')).toBe(false)
   })
 })

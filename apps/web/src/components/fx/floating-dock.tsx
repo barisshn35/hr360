@@ -6,15 +6,8 @@
  */
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  AnimatePresence,
-  type MotionValue,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useSpring,
-  useTransform,
-} from 'motion/react'
+import { AnimatePresence, type MotionValue, motion, useMotionValue, useSpring, useTransform } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
 

@@ -8,7 +8,7 @@
  * (wait→warning, ok→success, stop→danger, live→info).
  */
 
-import { StatusBadge, type StatusTone } from './StatusBadge'
+import { StatusBadge, type StatusTone } from './status-badge'
 
 import {
   employeeStatusLabels,

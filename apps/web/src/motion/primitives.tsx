@@ -8,16 +8,8 @@
  *     içerik kaybolmaz, yalnızca anında yerine oturur.
  */
 
-import {
-  animate,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useScroll,
-  useSpring,
-  useTransform,
-  type MotionValue,
-} from 'motion/react'
+import { animate, motion, useMotionValue, useScroll, useSpring, useTransform, type MotionValue } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import {
   Children,
   cloneElement,

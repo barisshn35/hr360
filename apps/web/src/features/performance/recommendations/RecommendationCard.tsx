@@ -12,10 +12,11 @@
 
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { AlertTriangle, BrainCircuit, Gauge, MessageSquarePlus } from 'lucide-react'
+import { BrainCircuit, Gauge, MessageSquarePlus } from 'lucide-react'
 import { actionLabelsFallback, formatSigned, toneOfAction, type Recommendation, type Thresholds } from '@/api/performance'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/ui/StatusBadge'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { Callout } from '@/components/ui/callout'
 import { cn } from '@/lib/utils'
 import { EASE } from '@/motion/primitives'
 import { PersonAvatar } from '../components/people'
@@ -140,17 +141,13 @@ export function RecommendationCard({
         )}
 
         {rec.cautions.length > 0 && (
-          <div className="rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/8 px-3 py-2.5">
-            <p className="mb-1 flex items-center gap-1.5 text-[12px] font-semibold">
-              <AlertTriangle className="size-3.5 text-[hsl(var(--warning))]" aria-hidden />
-              {tx('Dikkat')}
-            </p>
-            <ul className="flex flex-col gap-0.5 text-[12px] leading-relaxed text-foreground/80">
+          <Callout tone="warning" title={tx('Dikkat')}>
+            <ul className="flex flex-col gap-0.5">
               {rec.cautions.map((c) => (
                 <li key={c}>• {c}</li>
               ))}
             </ul>
-          </div>
+          </Callout>
         )}
       </div>
 

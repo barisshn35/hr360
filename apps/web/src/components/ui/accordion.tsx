@@ -5,7 +5,8 @@
  * tokenlarından; yükseklik sınırı isteğe bağlı (SSS cevapları tam gösterilir).
  */
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 const EASE = [0.23, 1, 0.32, 1] as const

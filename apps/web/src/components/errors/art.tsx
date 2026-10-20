@@ -9,7 +9,8 @@
  *
  * Hareket azaltma tercihinde hepsi durağan bir kareye iner.
  */
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { Lock, Search, Shield, Hourglass, Zap } from 'lucide-react'
 
 const tile =

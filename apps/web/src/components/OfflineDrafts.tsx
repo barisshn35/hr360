@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { CloudOff, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/Toast'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { flushOfflineQueue, loadOfflineQueue, offlineQueue, queuedKind, queuedSummary, removeQueued, type QueuedKind } from '@/lib/push'
 import { formatDateTime } from '@/lib/format'
 import { tx } from '@/lib/i18n'
@@ -42,15 +43,14 @@ export function OfflineDrafts({ kind }: { kind: QueuedKind }) {
   if (!items.length && online) return null
 
   return (
-    <div role="status" className="rounded-xl border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/[0.06] px-4 py-3 text-[13px]">
-      <div className="flex flex-wrap items-center gap-2">
-        <CloudOff className="size-4 text-[hsl(var(--warning))]" />
-        <span className="flex-1 font-medium">
-          {!online
-            ? tx('Çevrimdışısınız. Yeni talepler bu cihazda taslak olarak saklanır ve bağlantı gelince gönderilir.')
-            : tx('Bu cihazda gönderilmeyi bekleyen {0} taslak var.', [items.length])}
-        </span>
-        {online && items.length > 0 && (
+    <div role="status">
+      <Callout
+        tone="warning"
+        icon={CloudOff}
+        title={!online
+          ? tx('Çevrimdışısınız. Yeni talepler bu cihazda taslak olarak saklanır ve bağlantı gelince gönderilir.')
+          : tx('Bu cihazda gönderilmeyi bekleyen {0} taslak var.', [items.length])}
+        action={online && items.length > 0 && (
           <Button size="sm" variant="outline" disabled={busy} onClick={async () => {
             setBusy(true)
             try {
@@ -65,19 +65,20 @@ export function OfflineDrafts({ kind }: { kind: QueuedKind }) {
             {tx('Şimdi gönder')}
           </Button>
         )}
-      </div>
-      {items.length > 0 && (
-        <ul className="mt-2 space-y-1 text-[12.5px] text-muted-foreground">
-          {items.map((r) => (
-            <li key={r.id} className="flex items-center gap-2">
-              <span className="flex-1 truncate">{queuedSummary(r)} · {tx('kaydedildi: {0}', [formatDateTime(r.at)])}</span>
-              <Button size="sm" variant="ghost" aria-label={tx('Taslağı sil')} onClick={() => void removeQueued(r.id)}>
-                <Trash2 className="size-3.5" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
+      >
+        {items.length > 0 && (
+          <ul className="mt-1 space-y-1">
+            {items.map((r) => (
+              <li key={r.id} className="flex items-center gap-2">
+                <span className="flex-1 truncate">{queuedSummary(r)} · {tx('kaydedildi: {0}', [formatDateTime(r.at)])}</span>
+                <Button size="sm" variant="ghost" aria-label={tx('Taslağı sil')} onClick={() => void removeQueued(r.id)}>
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Callout>
     </div>
   )
 }

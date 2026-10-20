@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarCheck2, CalendarClock, CheckCircle2, MapPin, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { RowsSkeleton } from '@/components/ui/States'
+import { RowsSkeleton } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import { careerApi, interviewTypeLabels } from '@/api/recruitment'
 import { errMsg, useAction } from '@/features/shared/kit'
 import { formatDateTime } from '@/lib/format'
@@ -42,14 +43,10 @@ export function InterviewBookingPage() {
             </p>
           </div>
           {d.status === 'Booked' && d.chosen ? (
-            <div className="flex items-start gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4">
-              <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
-              <div className="text-[14px]">
-                <p className="font-semibold">{tx('Mülakatınız planlandı: {0}', [formatDateTime(d.chosen.scheduledAt)])}</p>
-                {d.chosen.meetingUrl && <p className="mt-1 break-all text-muted-foreground">{tx('Bağlantı: {0}', [d.chosen.meetingUrl])}</p>}
-                <p className="mt-1 text-muted-foreground">{tx('Ayrıntılar e-postanıza da gönderildi. Değişiklik için İnsan Kaynakları ile iletişime geçin.')}</p>
-              </div>
-            </div>
+            <Callout tone="info" icon={CheckCircle2} title={tx('Mülakatınız planlandı: {0}', [formatDateTime(d.chosen.scheduledAt)])}>
+              {d.chosen.meetingUrl && <p className="break-all">{tx('Bağlantı: {0}', [d.chosen.meetingUrl])}</p>}
+              <p className="mt-1">{tx('Ayrıntılar e-postanıza da gönderildi. Değişiklik için İnsan Kaynakları ile iletişime geçin.')}</p>
+            </Callout>
           ) : d.status !== 'Open' ? (
             <p className="text-[14px] text-muted-foreground">{d.status === 'Expired' ? tx('Bu bağlantının süresi doldu. Yeni saat için İnsan Kaynakları ile iletişime geçin.') : tx('Bu bağlantı artık geçerli değil.')}</p>
           ) : !d.slots.length ? (

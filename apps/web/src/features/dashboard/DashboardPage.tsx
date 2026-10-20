@@ -24,13 +24,13 @@ import {
   Wallet,
   Zap,
 } from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { Card } from '@/components/ui/card'
-import { StatCard, StatCardsSkeleton, type StatCardProps } from '@/components/ui/StatCard'
+import { AnimatePresence, motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
+import { StatCard, StatCardsSkeleton, type StatCardProps } from '@/components/ui/stat-card'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { WorkflowStatusBadge } from '@/components/ui/ModuleBadges'
-import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/States'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { WorkflowStatusBadge } from '@/components/ui/module-badges'
+import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/states'
 import { Sparkline } from '@/components/ui/sparkline'
 import type { SeriesPoint } from '@/components/ui/metric-chart'
 import { BorderBeam } from '@/components/fx/border-beam'
@@ -67,6 +67,7 @@ import { cn } from '@/lib/utils'
 import { CountUp, EASE } from '@/motion/primitives'
 import { localISODate } from '@/lib/dates'
 import { tx, appLocale } from '@/lib/i18n'
+import { Panel } from '@/components/ui/panel'
 
 /**
  * Recharts tek başına ~390 kB. Genel bakış ilk açılan ekran olduğu için
@@ -306,7 +307,7 @@ function TenantDashboard() {
       <>
         {/* ------------------------------ Karşılama ------------------------------ */}
         <Tile i={0} className="md:col-span-6 xl:col-span-8 xl:row-span-2">
-          <Card className="h-full gap-0 overflow-hidden py-0">
+          <Panel className="h-full gap-0 overflow-hidden py-0">
             <BorderBeam size={260} duration={14} />
             <Spotlight size={420} />
             <div className="relative grid h-full gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto]">
@@ -384,7 +385,7 @@ function TenantDashboard() {
                 ))}
               </div>
             </div>
-          </Card>
+          </Panel>
         </Tile>
 
       </>
@@ -395,7 +396,7 @@ function TenantDashboard() {
         {canWorkflow && (
           <Tile i={1} className="md:col-span-3 xl:col-span-4">
             <Link to="/panel/onaylar" className="group block h-full rounded-2xl focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none">
-              <Card className="h-full gap-0 overflow-hidden p-6">
+              <Panel className="h-full gap-0 overflow-hidden p-6">
                 <Spotlight />
                 <div className="flex items-start justify-between">
                   <div>
@@ -423,7 +424,7 @@ function TenantDashboard() {
                   {tx('Son 14 günde açılan talepler')}
                   <ArrowUpRight className="ml-auto size-4 text-primary opacity-0 transition-opacity group-hover:opacity-100" />
                 </p>
-              </Card>
+              </Panel>
             </Link>
           </Tile>
         )}
@@ -509,7 +510,7 @@ function TenantDashboard() {
         {/* --------------------------- Sıradaki talepler --------------------------- */}
         {canWorkflow && (
           <Tile i={8} className="md:col-span-6 xl:col-span-4 xl:row-span-2">
-            <Card className="h-full gap-0 overflow-hidden py-0">
+            <Panel className="h-full gap-0 overflow-hidden py-0">
               <div className="flex items-center justify-between border-b border-border px-5 py-4">
                 <div>
                   <p className="flex items-center gap-2 text-[14.5px] font-semibold tracking-tight">
@@ -579,7 +580,7 @@ function TenantDashboard() {
                   </AnimatePresence>
                 </ul>
               )}
-            </Card>
+            </Panel>
           </Tile>
         )}
 
@@ -590,7 +591,7 @@ function TenantDashboard() {
         {/* ----------------------------- Organizasyon ----------------------------- */}
         {can('organization:view') && (
           <Tile i={9} className="md:col-span-6 xl:col-span-4">
-            <Card className="h-full gap-0 overflow-hidden py-0">
+            <Panel className="h-full gap-0 overflow-hidden py-0">
               <div className="border-b border-border px-5 py-4">
                 <p className="text-[14.5px] font-semibold tracking-tight">{tx('Organizasyon')}</p>
                 <p className="mt-0.5 text-[12.5px] text-muted-foreground">{tx('Şirketler ve departmanlar')}</p>
@@ -624,7 +625,7 @@ function TenantDashboard() {
                   ))}
                 </ul>
               )}
-            </Card>
+            </Panel>
           </Tile>
         )}
 
@@ -634,7 +635,7 @@ function TenantDashboard() {
       <>
         {/* ---------------------------- Modül fırlatıcı ---------------------------- */}
         <Tile i={10} className={cn('md:col-span-6', orgVisible ? 'xl:col-span-4' : 'xl:col-span-8')}>
-          <Card className="h-full gap-0 overflow-hidden py-0">
+          <Panel className="h-full gap-0 overflow-hidden py-0">
             <div className="border-b border-border px-5 py-4">
               <p className="text-[14.5px] font-semibold tracking-tight">{tx('Modülleriniz')}</p>
               <p className="mt-0.5 text-[12.5px] text-muted-foreground">{tx('Yetkinize göre açık olan alanlar')}</p>
@@ -659,7 +660,7 @@ function TenantDashboard() {
                 </motion.li>
               ))}
             </ul>
-          </Card>
+          </Panel>
         </Tile>
 
       </>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Sparkles } from 'lucide-react'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { useLeaveHolidays } from '@/api/queries-modules'
 import { bridgeSuggestions, type BridgeSuggestion } from '@/lib/bridgeDays'

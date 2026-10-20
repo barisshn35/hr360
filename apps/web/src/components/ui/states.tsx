@@ -1,3 +1,4 @@
+import { Callout } from '@/components/ui/callout'
 import type { ReactNode } from 'react'
 import { Inbox, LoaderCircle, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -150,10 +151,7 @@ export function ErrorState({
 }
 
 /** Sayfa başlığı altındaki kısa bilgi şeridi (ör. Kafka otomasyonu notu). */
+/** Nötr bilgi notu (Callout tone="neutral"). */
 export function InfoNote({ children }: { children: ReactNode }) {
-  return (
-    <p className="rounded-xl border border-border bg-card/50 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted-foreground backdrop-blur">
-      {children}
-    </p>
-  )
+  return <Callout>{children}</Callout>
 }

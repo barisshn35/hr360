@@ -1,17 +1,19 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { LoaderCircle, ShieldAlert } from 'lucide-react'
 import { governanceApi } from '@/api/governance'
 import { mlModelApi } from '@/api/mlModel'
 import type { Employee, ExplainResponse, PredictResponse } from '@/api/types'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
-import { ProgressBar } from '@/components/ui/Progress'
-import { useToast } from '@/components/ui/Toast'
+import { StatusBadge, type StatusTone } from '@/components/ui/status-badge'
+import { ProgressBar } from '@/components/ui/progress'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { formatPercent } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { appLocale, tx } from '@/lib/i18n'
@@ -139,11 +141,10 @@ export function AttritionRiskPanel({ employee }: { employee: Employee }) {
           {tx('KVKK m.11: Bu skor otomatik bir analizdir; tek başına karar için kullanılamaz. Çalışan itiraz edebilir ve her hesaplama çalışanın erişim kaydında görünür.')}
         </p>
         {blocked && (
-          <div role="status" className="flex items-start gap-2 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-3 text-[12.5px]">
-            <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-            <span>{objection.data?.status === 'Upheld'
+          <div role="status">
+            <Callout tone="warning" icon={ShieldAlert}>{objection.data?.status === 'Upheld'
               ? tx('Çalışanın bu analize itirazı kabul edildi; skor üretilmez.')
-              : tx('Çalışan bu analize itiraz etti; itiraz sonuçlanana kadar skor üretilmez.')}</span>
+              : tx('Çalışan bu analize itiraz etti; itiraz sonuçlanana kadar skor üretilmez.')}</Callout>
           </div>
         )}
 

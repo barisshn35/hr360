@@ -7,9 +7,9 @@ import { useEmployees, useMyEmployeeId } from '@/api/queries'
 import { useDirectory } from '@/api/directory'
 import { useAuth } from '@/auth/useAuth'
 import { workflowTypeLabels, type WorkflowType } from '@/api/types'
-import { Modal, ErrorSummary, type SummaryItem } from '@/components/ui/Modal'
+import { Modal, ErrorSummary, type SummaryItem } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
+import { SelectField, TextAreaField, TextField } from '@/components/ui/field'
 import {
   Select,
   SelectContent,
@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useToast } from '@/components/ui/Toast'
+import { useToast } from '@/components/ui/toast'
 import { fullName } from '@/lib/format'
 import { tx } from '@/lib/i18n'
 

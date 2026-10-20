@@ -17,6 +17,7 @@ import type {
 } from '@/api/timeshift'
 import { cn } from '@/lib/utils'
 import { tx, appLocale } from '@/lib/i18n'
+import { Callout } from '@/components/ui/callout'
 
 /* ------------------------------------ Tarih ------------------------------------ */
 
@@ -363,19 +364,14 @@ export function LaborWarnings({ days, className }: { days: LaborDay[]; className
   const list = laborWarnings(days)
   if (list.length === 0) return null
   return (
-    <div
-      role="note"
-      className={cn(
-        'rounded-lg border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/8 px-3 py-2 text-[12px]',
-        className,
-      )}
-    >
-      <p className="font-medium">{tx('Yasal sınır uyarısı (kaydı engellemez)')}</p>
-      <ul className="mt-1 list-disc space-y-0.5 pl-4">
-        {list.map((w) => (
-          <li key={w}>{w}</li>
-        ))}
-      </ul>
+    <div role="note" className={className}>
+      <Callout tone="warning" title={tx('Yasal sınır uyarısı (kaydı engellemez)')}>
+        <ul className="mt-1 list-disc space-y-0.5 pl-4">
+          {list.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      </Callout>
     </div>
   )
 }

@@ -1,9 +1,10 @@
-import { ArrowRight, ExternalLink, Key, Monitor, Moon, SlidersHorizontal, Sun, TriangleAlert } from 'lucide-react'
+import { ArrowRight, ExternalLink, Key, Monitor, Moon, SlidersHorizontal, Sun } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { DataField, Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { DataField, Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/ui/StatusBadge'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { Callout } from '@/components/ui/callout'
 import { useAuth } from '@/auth/useAuth'
 import { permissionsFor, primaryRole, roleLabels, type Role } from '@/auth/roles'
 import { tenantStatusLabels } from '@/api/tenant'
@@ -94,17 +95,10 @@ export function SettingsPage() {
                 {tx('ekranından yönetirsiniz.')}
               </p>
             ) : !tenantSlug ? (
-              <div
-                role="alert"
-                className="flex items-start gap-2.5 rounded-lg border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-3.5"
-              >
-                <TriangleAlert
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0 text-[hsl(var(--warning))]"
-                />
-                <p className="text-[13px] leading-relaxed">
+              <div role="alert">
+                <Callout tone="warning">
                   {tx('Oturumunuzda')}{' '}<code className="font-mono text-[12px]">{tx('organization')}</code>{' '}{tx('claim\'i yok. Bu yüzden listeler boş görünür. Oturumu kapatıp yeniden girin.')}
-                </p>
+                </Callout>
               </div>
             ) : tenantError ? (
               <p className="text-[13px] leading-relaxed text-muted-foreground">{tenantError}</p>

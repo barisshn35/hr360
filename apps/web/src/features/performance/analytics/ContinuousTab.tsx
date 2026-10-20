@@ -18,9 +18,9 @@ import {
   useVsTeam,
   type AnalyticsPeriod,
 } from '@/api/performance'
-import { Panel } from '@/components/ui/Panel'
+import { Panel } from '@/components/ui/panel'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState, ErrorState } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/states'
 import { cn } from '@/lib/utils'
 import { EASE } from '@/motion/primitives'
 import { CHART, ChartLegend, DualTrendChart, Histogram, TrendChart } from '../components/charts'

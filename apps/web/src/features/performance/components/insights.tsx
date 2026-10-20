@@ -17,6 +17,7 @@ import { AnimatedNumber } from './AnimatedNumber'
 import { PersonAvatar } from './people'
 import { scoreColor } from './score'
 import { tx } from '@/lib/i18n'
+import { Callout } from '@/components/ui/callout'
 
 export function StatTile({ label, value, hint, format = (v: number) => formatScore(v) }: { label: string; value: number | null; hint?: ReactNode; format?: (v: number) => string }) {
   return (
@@ -36,13 +37,8 @@ export function SpreadNote({ note }: { note: string | null }) {
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: EASE }}
-      className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3"
     >
-      <Scale className="mt-0.5 size-4.5 shrink-0 text-primary" aria-hidden />
-      <div>
-        <p className="text-[13px] font-semibold">{tx('Sıralamayı tek başına okumayın')}</p>
-        <p className="mt-0.5 text-[13px] leading-relaxed text-foreground/80">{note}</p>
-      </div>
+      <Callout tone="info" icon={Scale} title={tx('Sıralamayı tek başına okumayın')}>{note}</Callout>
     </motion.div>
   )
 }

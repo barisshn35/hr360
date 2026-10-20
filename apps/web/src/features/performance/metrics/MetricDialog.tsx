@@ -33,10 +33,10 @@ import {
   type MetricScale,
 } from '@/api/performance'
 import { ApiError } from '@/api/client'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
-import { useToast } from '@/components/ui/Toast'
+import { SelectField, TextAreaField, TextField } from '@/components/ui/field'
+import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import { Switch, errorText } from '../components/controls'
 import { ScaleInput, ScaleBadge } from '../components/ScaleInput'

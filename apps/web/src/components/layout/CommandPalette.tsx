@@ -6,7 +6,7 @@ import {
   OmniCommandPalette,
   type OmniItem,
   type OmniSource,
-} from '@/components/ui/omni-command-palette'
+} from '@/components/ui/primitives/omni-command-palette'
 import { employeeApi } from '@/api/employees'
 import { organizationApi } from '@/api/organization'
 import { workflowApi } from '@/api/workflows'

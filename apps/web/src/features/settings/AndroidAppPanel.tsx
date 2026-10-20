@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Download, Smartphone } from 'lucide-react'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { tx } from '@/lib/i18n'
 import { MODULE_IDS, useModules } from '@/lib/modules'

@@ -3,15 +3,16 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Calculator, Lock, LockOpen, Plus, Printer, ShieldAlert, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { DataTable, type Column } from '@/components/ui/DataTable'
-import { Modal } from '@/components/ui/Modal'
-import { useConfirm } from '@/components/ui/Confirm'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { Tabs, useTabParam } from '@/components/ui/Tabs'
+import { DataTable, type Column } from '@/components/ui/data-table'
+import { Modal } from '@/components/ui/modal'
+import { useConfirm } from '@/components/ui/confirm'
+import { SelectField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { Tabs, useTabParam } from '@/components/ui/tabs'
+import { Callout } from '@/components/ui/callout'
 import { useAuth } from '@/auth/useAuth'
 import { useDirectory } from '@/api/directory'
 import { payrollApi, type Payslip, type PayrollPeriod, type PayrollPeriodStatus } from '@/api/payroll'
@@ -270,10 +271,14 @@ export function PayrollPeriodPage() {
           </div>
         } />
       {!closed && paramsMissing && (
-        <div role="alert" className="mb-5 rounded-xl border border-[hsl(var(--warning))]/35 bg-[hsl(var(--warning))]/[0.08] px-4 py-3 text-[13px] leading-relaxed">
-          <p className="font-semibold">{tx('{0} için bordro parametreleri girilmemiş', [periodLabel(period)])}</p>
-          <p className="mt-0.5 text-muted-foreground">{tx('Dönem, bu ay için geçerli parametreler (asgari ücret, oranlar, vergi dilimleri) girilene kadar hesaplanamaz. Değerleri resmî kaynaklardan alıp Bordro › Parametreler sekmesinde girin.')}</p>
-          {admin && <Button size="sm" variant="outline" className="mt-2" asChild><Link to={`/panel/bordro?bolum=params&yil=${period.year}`}>{tx('Parametreleri gir')}</Link></Button>}
+        <div role="alert" className="mb-5">
+          <Callout
+            tone="warning"
+            title={tx('{0} için bordro parametreleri girilmemiş', [periodLabel(period)])}
+            action={admin && <Button size="sm" variant="outline" asChild><Link to={`/panel/bordro?bolum=params&yil=${period.year}`}>{tx('Parametreleri gir')}</Link></Button>}
+          >
+            {tx('Dönem, bu ay için geçerli parametreler (asgari ücret, oranlar, vergi dilimleri) girilene kadar hesaplanamaz. Değerleri resmî kaynaklardan alıp Bordro › Parametreler sekmesinde girin.')}
+          </Callout>
         </div>
       )}
       {!closed && params.data?.configured && params.data.seed && (

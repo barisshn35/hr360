@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Inbox, CalendarDays, Wallet, LifeBuoy, Clock,
   Building2, Users, UserPlus, ClipboardCheck, Laptop, Target, GraduationCap,
   BadgeDollarSign, FileText, Bell, Shield, UsersRound, UserRound, Crosshair,
-  ClipboardList, Gauge, LineChart, MessageSquareText, Lightbulb, CalendarRange, CalendarHeart, MailOpen, Coffee, HardDrive,
+  ClipboardList, Gauge, LineChart, MessageSquareText, Lightbulb, CalendarRange, CalendarHeart, MailOpen, Coffee, HardDrive, Shapes,
   Ruler, SlidersHorizontal, CalendarClock, Key, Sparkles, Briefcase, Sprout,
   Settings2, Globe2, HeartHandshake, PartyPopper, MapPin, Handshake, Megaphone,
   MessagesSquare, HeartPulse, GitBranch, LogOut, ScrollText, ShieldCheck, FileStack,
@@ -250,17 +250,18 @@ export const navGroups: NavGroupData[] = [
       { id: 'tenants', title: tx('Kiracılar'), description: tx('Şirketler ve yöneticileri'), icon: Shield, path: '/panel/platform/kiracilar', permission: 'platform:manage' },
       { id: 'system-settings', title: tx('Sistem ayarları'), description: tx('E-posta, kayıt ve parola linkleri'), icon: Settings2, path: '/panel/platform/sistem', permission: 'platform:manage' },
       { id: 'maintenance', title: tx('Bakım'), description: tx('Güncelleme, yedek ve geri yükleme'), icon: HardDrive, path: '/panel/platform/bakim', permission: 'platform:manage' },
+      { id: 'components', title: tx('Bileşenler'), description: tx('Arayüz parçaları kataloğu'), icon: Shapes, path: '/panel/platform/bilesenler', permission: 'platform:manage' },
     ],
   },
 ]
 
 /**
- * Tek şirket kipi: ayrı "Platform" bölümü yok; Kiracılar gizlenir, Sistem ayarları ve Bakım
- * "Yönetim"in sonuna taşınır. Çok şirketli kipte ağaç olduğu gibi döner.
+ * Tek şirket kipi: ayrı "Platform" bölümü yok; Kiracılar ve geliştirici aracı Bileşenler gizlenir,
+ * Sistem ayarları ve Bakım "Yönetim"in sonuna taşınır. Çok şirketli kipte ağaç olduğu gibi döner.
  */
 const singleNavGroups: NavGroupData[] = (() => {
   const platform = navGroups.find((g) => g.id === 'platform')
-  const moved = (platform?.items ?? []).filter((i) => i.id !== 'tenants')
+  const moved = (platform?.items ?? []).filter((i) => i.id !== 'tenants' && i.id !== 'components')
   return navGroups
     .filter((g) => g.id !== 'platform')
     .map((g) => (g.id === 'admin' ? { ...g, items: [...g.items, ...moved] } : g))

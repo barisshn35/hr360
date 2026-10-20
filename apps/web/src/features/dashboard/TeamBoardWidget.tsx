@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { BookX, Cake, CalendarOff, Inbox, MessagesSquare, PartyPopper, Sparkles, Users } from 'lucide-react'
-import { Card } from '@/components/ui/card'
 import { EmployeeAvatar } from '@/components/people/EmployeeAvatar'
 import { leaveApi } from '@/api/leave'
 import { engagementApi } from '@/api/engagement'
@@ -12,6 +11,7 @@ import { useMyTodos } from '@/features/todos/useMyTodos'
 import { localISODate } from '@/lib/dates'
 import { formatDateTime } from '@/lib/format'
 import { tx } from '@/lib/i18n'
+import { Panel } from '@/components/ui/panel'
 
 function Row({ icon: Icon, label, children, to }: { icon: React.ElementType; label: string; children: React.ReactNode; to?: string }) {
   const body = (
@@ -52,7 +52,7 @@ export function TeamBoardWidget() {
   const overdue = due.data?.summary.overdue ?? 0
 
   return (
-    <Card className="h-full gap-0 overflow-hidden py-0">
+    <Panel className="h-full gap-0 overflow-hidden py-0">
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
         <span className="flex items-center gap-2 text-[14px] font-semibold"><Users className="size-4 text-primary" />{tx('Ekibim bugün')}</span>
         {cal.data && <span className="text-[12px] text-muted-foreground">{tx('{0} kişilik ekip', [cal.data.teamSize])}</span>}
@@ -88,6 +88,6 @@ export function TeamBoardWidget() {
           {isEnabled('learning') && <Row icon={BookX} label={tx('Gecikmiş eğitim')} to={can('learning:view') ? '/panel/egitim-takibi' : undefined}><span className={overdue ? 'text-[18px] font-semibold text-destructive tabular-nums' : 'text-[18px] font-semibold tabular-nums'}>{overdue}</span></Row>}
         </div>
       </div>
-    </Card>
+    </Panel>
   )
 }

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { FileSignature, KeyRound, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { InfoNote } from '@/components/ui/States'
+import { SelectField, TextField } from '@/components/ui/field'
+import { InfoNote } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import { ApiError } from '@/api/client'
 import { formatDateTime } from '@/lib/format'
 import { errMsg } from '@/features/shared/kit'
@@ -17,10 +18,9 @@ import { tx } from '@/lib/i18n'
 /** Her imza ekranında görünen yasal açıklama (API'deki "disclaimer" ile aynı metin). */
 export function SimpleSignatureDisclaimer() {
   return (
-    <p className="flex gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12.5px] leading-relaxed text-amber-800 dark:text-amber-300">
-      <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+    <Callout tone="warning" icon={ShieldAlert}>
       {tx('Basit elektronik imza — 5070 sayılı Kanun kapsamında nitelikli (güvenli) elektronik imza değildir.')}
-    </p>
+    </Callout>
   )
 }
 

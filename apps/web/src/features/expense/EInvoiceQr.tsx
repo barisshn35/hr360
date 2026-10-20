@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { LoaderCircle, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { TextAreaField } from '@/components/ui/Field'
+import { TextAreaField } from '@/components/ui/field'
 import { expenseApi } from '@/api/expense'
 import { qrDetectorAvailable, readQrFromImage, type EInvoice } from '@/lib/expenseAudit'
 import { tx } from '@/lib/i18n'

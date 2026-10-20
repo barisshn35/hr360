@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { tx } from '@/lib/i18n'
 import { moveWidget, resolveLayout, type DashboardPref, type WidgetId } from './dashboardLayout'
 

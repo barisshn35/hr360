@@ -14,9 +14,10 @@ import { ArrowRight, ClipboardList, FilePen, Lock, Plus, UserRound } from 'lucid
 import { reviewTypeLabels, useMyEmployeeId, useReviews, type Review, type ReviewType } from '@/api/performance'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/ui/button'
-import { Panel } from '@/components/ui/Panel'
+import { Panel } from '@/components/ui/panel'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState, ErrorState } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import { formatDate, formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { CountUp, EASE } from '@/motion/primitives'
@@ -111,16 +112,21 @@ export function ReviewsPage() {
       </PerfPageHeader>
 
       {cycle?.status === 'Open' && !hasSelf && me.employeeId && !reviews.isPending && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="flex items-center gap-2 text-[13px]">
-            <UserRound className="size-4 text-primary" aria-hidden />
-            {tx('{0} için öz değerlendirmenizi henüz başlatmadınız.', [cycle.name])}</p>
-          <Button size="sm" asChild>
-            <Link to={`/panel/performans/degerlendirme/yeni?calisan=${me.employeeId}&donem=${cycle.id}&tur=Self`}>
-              {tx('Öz değerlendirmeyi başlat')}
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
+          <Callout
+            tone="info"
+            icon={UserRound}
+            action={
+              <Button size="sm" asChild>
+                <Link to={`/panel/performans/degerlendirme/yeni?calisan=${me.employeeId}&donem=${cycle.id}&tur=Self`}>
+                  {tx('Öz değerlendirmeyi başlat')}
+                  <ArrowRight aria-hidden />
+                </Link>
+              </Button>
+            }
+          >
+            {tx('{0} için öz değerlendirmenizi henüz başlatmadınız.', [cycle.name])}
+          </Callout>
         </motion.div>
       )}
 

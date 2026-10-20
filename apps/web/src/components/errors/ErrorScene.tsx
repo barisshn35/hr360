@@ -6,7 +6,8 @@
  * belirir; hareket azaltma tercihinde animasyonlar durur, içerik hemen görünür.
  */
 import type { ReactNode } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { AmbientBackground } from '@/components/fx/ambient-background'
 import { EASE } from '@/motion/primitives'
 import { cn } from '@/lib/utils'

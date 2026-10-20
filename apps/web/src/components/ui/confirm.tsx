@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
-import { CircleAlert, CircleHelp } from 'lucide-react'
+import { CircleAlert, CircleHelp, LoaderCircle } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,7 +9,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from '@/components/ui/primitives/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
 
@@ -56,32 +57,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     setOpen(false)
   }
 
-  const destructive = opts?.destructive !== false
-  const Icon = destructive ? CircleAlert : CircleHelp
-
   return (
     <Ctx.Provider value={confirm}>
       {children}
       <AlertDialog open={open} onOpenChange={(next) => !next && done(false)}>
         <AlertDialogContent>
-          <div className="flex flex-col gap-3 max-sm:items-center sm:flex-row sm:gap-4">
-            <div
-              className={cn(
-                'flex size-10 shrink-0 items-center justify-center rounded-full border',
-                destructive ? 'border-destructive/30 bg-destructive/10 text-destructive' : 'border-primary/30 bg-primary/10 text-primary',
-              )}
-              aria-hidden="true"
-            >
-              <Icon className="size-[18px]" strokeWidth={2} />
-            </div>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{opts?.title ?? ''}</AlertDialogTitle>
-              {opts?.note ? <AlertDialogDescription>{opts.note}</AlertDialogDescription> : <AlertDialogDescription className="sr-only">{opts?.title ?? ''}</AlertDialogDescription>}
-            </AlertDialogHeader>
-          </div>
+          <ConfirmHead title={opts?.title ?? ''} note={opts?.note} destructive={opts?.destructive !== false} />
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => done(false)}>{tx('Vazgeç')}</AlertDialogCancel>
-            <AlertDialogAction variant={destructive ? 'destructive' : 'default'} onClick={() => done(true)}>
+            <AlertDialogAction variant={opts?.destructive !== false ? 'destructive' : 'default'} onClick={() => done(true)}>
               {opts?.action ?? tx('Onayla')}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -95,4 +79,60 @@ export function useConfirm(): ConfirmFn {
   const fn = useContext(Ctx)
   if (!fn) throw new Error('useConfirm, ConfirmProvider içinde kullanılmalı')
   return fn
+}
+
+function ConfirmHead({ title, note, destructive }: { title: string; note?: ReactNode; destructive: boolean }) {
+  const Icon = destructive ? CircleAlert : CircleHelp
+  return (
+    <div className="flex flex-col gap-3 max-sm:items-center sm:flex-row sm:gap-4">
+      <div
+        className={cn(
+          'flex size-10 shrink-0 items-center justify-center rounded-full border',
+          destructive ? 'border-destructive/30 bg-destructive/10 text-destructive' : 'border-primary/30 bg-primary/10 text-primary',
+        )}
+        aria-hidden="true"
+      >
+        <Icon className="size-[18px]" strokeWidth={2} />
+      </div>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{title}</AlertDialogTitle>
+        {note ? <AlertDialogDescription>{note}</AlertDialogDescription> : <AlertDialogDescription className="sr-only">{title}</AlertDialogDescription>}
+      </AlertDialogHeader>
+    </div>
+  )
+}
+
+/**
+ * Denetimli onay penceresi: useConfirm'ün görünümü, ama ek içerik (önizleme, hata iletisi) taşır ve
+ * onay düğmesi pencereyi kendisi kapatmaz — sunucu hatası (ör. 409) pencerede gösterilebilsin.
+ * Dışarı tıklamak kapatmaz, odak "Vazgeç"te başlar, Esc = Vazgeç.
+ */
+export function ConfirmDialog({ open, onClose, title, note, action, onConfirm, pending, disabled, destructive = true, children }: {
+  open: boolean
+  onClose: () => void
+  title: string
+  note?: ReactNode
+  /** Onay düğmesinin metni. */
+  action: string
+  onConfirm: () => void
+  pending?: boolean
+  disabled?: boolean
+  destructive?: boolean
+  children?: ReactNode
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <AlertDialogContent className="sm:max-w-lg">
+        <ConfirmHead title={title} note={note} destructive={destructive} />
+        {children && <div className="space-y-3 text-[13px]">{children}</div>}
+        <AlertDialogFooter>
+          <AlertDialogCancel>{tx('Vazgeç')}</AlertDialogCancel>
+          <Button variant={destructive ? 'destructive' : 'default'} disabled={pending || disabled} onClick={onConfirm}>
+            {pending && <LoaderCircle className="size-4 animate-spin" />}
+            {action}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
 }

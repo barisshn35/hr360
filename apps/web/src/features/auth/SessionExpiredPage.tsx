@@ -1,7 +1,7 @@
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { AppShellSkeleton } from '@/components/ui/AppShellSkeleton'
+import { AppShellSkeleton } from '@/components/ui/app-shell-skeleton'
 import { ErrorScene } from '@/components/errors/ErrorScene'
 import { HourglassArt } from '@/components/errors/art'
 import { useAuth } from '@/auth/useAuth'

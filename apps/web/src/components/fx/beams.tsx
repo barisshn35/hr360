@@ -5,7 +5,8 @@
  * zemini kapsayıcının alt kenarı; renk zümrüt; hüzme konumları yüzde cinsinden.
  */
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 const BEAMS = [

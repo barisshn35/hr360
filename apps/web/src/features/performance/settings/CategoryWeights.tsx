@@ -21,6 +21,7 @@ import { Chip, Slider } from '../components/controls'
 import { NumberStepper } from '../components/NumberStepper'
 import { ShareBar } from '../components/WeightShare'
 import { tx } from '@/lib/i18n'
+import { Callout } from '@/components/ui/callout'
 
 export function CategoryWeights({
   draft,
@@ -45,15 +46,15 @@ export function CategoryWeights({
 
       <AnimatePresence>
         {allZero && (
-          <motion.p
+          <motion.div
             role="alert"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 overflow-hidden rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12px] text-destructive"
+            className="mt-3 overflow-hidden"
           >
-            {tx('En az bir kategorinin ağırlığı sıfırdan büyük olmalı; aksi hâlde metrik ayağı hesaplanamaz.')}
-          </motion.p>
+            <Callout tone="danger">{tx('En az bir kategorinin ağırlığı sıfırdan büyük olmalı; aksi hâlde metrik ayağı hesaplanamaz.')}</Callout>
+          </motion.div>
         )}
       </AnimatePresence>
 

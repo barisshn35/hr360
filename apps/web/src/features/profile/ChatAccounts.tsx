@@ -2,10 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useSearchParams, Link } from 'react-router-dom'
 import { CheckCircle2, MessageSquare, ShieldAlert } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ErrorState, RowsSkeleton } from '@/components/ui/States'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { ErrorState, RowsSkeleton } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import { governanceApi } from '@/api/governance'
 import { formatDateTime } from '@/lib/format'
 import { errMsg, useAction } from '@/features/shared/kit'
@@ -75,9 +76,8 @@ export function ChatLinkPage() {
                       <dt className="text-muted-foreground">{tx('HR360 hesabınız')}</dt><dd>{q.data!.myName ?? '—'}</dd>
                     </dl>
                     {!q.data!.emailMatches ? (
-                      <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-[13px]">
-                        <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-                        <span>{tx('Bu sohbet hesabının e-postası HR360 e-postanızla aynı değil; size bağlanamaz. Bağlantıyı size başkası gönderdiyse kullanmayın.')}</span>
+                      <div role="alert">
+                        <Callout tone="danger" icon={ShieldAlert}>{tx('Bu sohbet hesabının e-postası HR360 e-postanızla aynı değil; size bağlanamaz. Bağlantıyı size başkası gönderdiyse kullanmayın.')}</Callout>
                       </div>
                     ) : (
                       <>

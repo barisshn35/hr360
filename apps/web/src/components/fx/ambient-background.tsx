@@ -8,7 +8,8 @@
  * Background" (ruixen.ui, id 7645) deseni.
  */
 import { useEffect } from 'react'
-import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react'
+import { motion, useMotionValue, useSpring } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { Meteors } from './meteors'
 import { cn } from '@/lib/utils'
 

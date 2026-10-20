@@ -9,12 +9,13 @@ import { Plus, Sparkles, Trash2 } from 'lucide-react'
 import { useShiftTeams } from '@/api/queries-shift-engine'
 import { useShifts } from '@/api/queries'
 import { applyBody, shiftOptimizerApi, type DemandRow, type Proposal, type ProposalDiffRow } from '@/api/shiftOptimizer'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { SelectField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EmptyState, InfoNote } from '@/components/ui/States'
+import { SelectField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState, InfoNote } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import { isoDayLabels } from '@/api/opsPlus'
 import { formatDate, formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -143,9 +144,10 @@ export function OptimizerView() {
               </p>
             )}
             {proposal.uncovered.length > 0 && (
-              <div role="alert" className="rounded-lg border border-[hsl(var(--warning))]/40 p-2 text-[12.5px]">
-                <p className="font-medium">{tx('Karşılanamayan talep')}</p>
-                <p className="text-muted-foreground">{proposal.uncovered.slice(0, 30).map((u) => `${formatDate(u.date)} ${shiftName(u.shiftId)}${u.skill ? ` [${u.skill}]` : ''}: ${u.missing}`).join(' · ')}</p>
+              <div role="alert">
+                <Callout tone="warning" title={tx('Karşılanamayan talep')}>
+                  {proposal.uncovered.slice(0, 30).map((u) => `${formatDate(u.date)} ${shiftName(u.shiftId)}${u.skill ? ` [${u.skill}]` : ''}: ${u.missing}`).join(' · ')}
+                </Callout>
               </div>
             )}
             <label className="flex items-center gap-2 text-[13px]"><Checkbox checked={showSame} onCheckedChange={(v) => setShowSame(v === true)} /> {tx('Değişmeyenleri de göster')}</label>

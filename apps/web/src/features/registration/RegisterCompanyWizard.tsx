@@ -22,14 +22,14 @@ import { TextReveal } from '@/components/fx/text-reveal'
 import { GradientText } from '@/components/fx/shiny-text'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   CircleCheck,
   LoaderCircle,
-  TriangleAlert,
   X,
 } from 'lucide-react'
 import { ApiError } from '@/api/client'
@@ -38,6 +38,7 @@ import { usePublicConfig, useRegisterTenant, useSlugAvailability } from '@/api/q
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Callout } from '@/components/ui/callout'
 import { EASE } from '@/motion/primitives'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
@@ -578,20 +579,10 @@ function RegisterCompanyWizardForm() {
               </dl>
 
               {submitError && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3.5"
-                >
-                  <TriangleAlert
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0 text-destructive"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold">{submitError.title}</p>
-                    <p className="mt-1 text-[12px] leading-relaxed break-words text-muted-foreground">
-                      {submitError.detail}
-                    </p>
-                  </div>
+                <div role="alert">
+                  <Callout tone="danger" title={submitError.title}>
+                    <p className="break-words">{submitError.detail}</p>
+                  </Callout>
                 </div>
               )}
             </div>

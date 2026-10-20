@@ -5,9 +5,9 @@
 
 import { Archive, History, ShieldCheck } from 'lucide-react'
 import { categoryLabels, useArchiveMetric, type Metric } from '@/api/performance'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/Toast'
+import { useToast } from '@/components/ui/toast'
 import { errorText } from '../components/controls'
 import { tx } from '@/lib/i18n'
 

@@ -3,20 +3,21 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { FileStack, FileText, Plus, Printer, Save, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Modal } from '@/components/ui/Modal'
-import { TextField } from '@/components/ui/Field'
-import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/modal'
+import { TextField } from '@/components/ui/field'
+import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
 import { governanceApi, type DocTemplate, type RenderedDoc } from '@/api/governance'
 import { useDirectory } from '@/api/directory'
 import { cn } from '@/lib/utils'
 import { TenantGate, errMsg, useAction } from '@/features/shared/kit'
 import { tx, appLocale } from '@/lib/i18n'
-import { useConfirm } from '@/components/ui/Confirm'
+import { useConfirm } from '@/components/ui/confirm'
+import { Callout } from '@/components/ui/callout'
 import { requestTrace, WATERMARK_CSS, watermarkHtml } from '@/lib/watermark'
 
 /** Belgeleri sayfa sonlarıyla tek pencerede açar ve yazdırma diyaloğunu tetikler (PDF olarak kaydet). */
@@ -202,9 +203,11 @@ export function DocTemplatesPage() {
                 </div>
               </div>
               {unknownKeys.length > 0 && (
-                <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12.5px] text-destructive">
-                  {tx('Tanımsız yer tutucu: {0}. Yukarıdaki listeden geçerli bir yer tutucu seçin.', [unknownKeys.map((k) => `{{${k}}}`).join(', ')])}
-                </p>
+                <div role="alert">
+                  <Callout tone="danger">
+                    {tx('Tanımsız yer tutucu: {0}. Yukarıdaki listeden geçerli bir yer tutucu seçin.', [unknownKeys.map((k) => `{{${k}}}`).join(', ')])}
+                  </Callout>
+                </div>
               )}
               <InfoNote>{tx('Güvenlik: kaydedilirken betik, iframe ve olay öznitelikleri (onclick vb.) sunucuda temizlenir; değerler HTML olarak kaçışlanır.')}</InfoNote>
             </PanelBody>

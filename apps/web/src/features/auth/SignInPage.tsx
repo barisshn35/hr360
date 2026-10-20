@@ -17,7 +17,8 @@
  */
 
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import {
   ArrowRight,
   BadgeDollarSign,
@@ -29,14 +30,13 @@ import {
   LockKeyhole,
   ShieldCheck,
   Target,
-  TriangleAlert,
   UserPlus,
   Wallet,
   Building2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { AppShellSkeleton } from '@/components/ui/AppShellSkeleton'
+import { AppShellSkeleton } from '@/components/ui/app-shell-skeleton'
+import { Callout } from '@/components/ui/callout'
 import { OfflineScreen } from '@/components/errors/OfflineScreen'
 import { AmbientBackground } from '@/components/fx/ambient-background'
 import { Lamp } from '@/components/fx/lamp'
@@ -53,6 +53,7 @@ import { useModules } from '@/lib/modules'
 import { IntegrationsMarquee } from './IntegrationsMarquee'
 import { SiteFooter } from '@/features/site/SiteChrome'
 import { CustomDomainBrandBadge, loginWithTenantHint, useCustomDomainBranding } from './CustomDomainBranding'
+import { Panel } from '@/components/ui/panel'
 
 const MODULES = [
   { icon: CalendarDays, label: tx('İzin') },
@@ -128,17 +129,13 @@ export function SignInPage() {
         </motion.p>
 
         <motion.div {...up(0.45)} className="mt-9 w-full">
-          <Card className="gap-0 overflow-hidden p-6 sm:p-7">
+          <Panel className="gap-0 overflow-hidden p-6 sm:p-7">
             <BorderBeam size={200} duration={9} />
             {brand && <CustomDomainBrandBadge brand={brand} />}
 
             {error && (
-              <div
-                role="alert"
-                className="mb-5 flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/[0.08] p-3.5 text-[13px] leading-relaxed"
-              >
-                <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" />
-                <span>{tx('Kimlik sağlayıcıya ulaşılamadı. {0}', [error])}</span>
+              <div role="alert" className="mb-5">
+                <Callout tone="danger">{tx('Kimlik sağlayıcıya ulaşılamadı. {0}', [error])}</Callout>
               </div>
             )}
 
@@ -167,7 +164,7 @@ export function SignInPage() {
             <p className="mt-5 text-center text-[11.5px] leading-relaxed text-muted-foreground">
               {tx('Parolanızı unuttuysanız oturum açma ekranındaki “Parolamı unuttum” bağlantısını kullanın. Giriş yapamıyorsanız İK yöneticiniz hesabınızı askıya almış olabilir.')}
             </p>
-          </Card>
+          </Panel>
         </motion.div>
 
         <motion.ul {...up(0.6)} className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[12px] text-muted-foreground">

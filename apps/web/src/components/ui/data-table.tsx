@@ -9,9 +9,9 @@
 
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown, Download, MoreHorizontal, Search } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/primitives/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/primitives/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
@@ -34,17 +34,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/States'
+} from '@/components/ui/primitives/table'
+import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/states'
 import { EASE } from '@/motion/primitives'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { ApiError } from '@/api/client'
 import { normalizeSearch } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
 import { requestTrace, withCsvWatermark } from '@/lib/watermark'
 import type { TableViewState } from '@/lib/savedViews'
-import { SavedViews } from '@/components/ui/SavedViews'
+import { SavedViews } from '@/components/ui/saved-views'
 
 export type Column<T> = {
   id: string

@@ -7,7 +7,7 @@
 import { Component, Suspense, type ReactNode } from 'react'
 import { Box, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { InfoNote } from '@/components/ui/States'
+import { InfoNote } from '@/components/ui/states'
 import { tx } from '@/lib/i18n'
 import { useThreeDSupport } from './webgl'
 

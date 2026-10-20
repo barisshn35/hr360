@@ -6,7 +6,8 @@
  */
 import { useEffect, useMemo } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { ArrowRight, Check, KeyRound, LogIn, MailCheck, Settings2, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AmbientBackground } from '@/components/fx/ambient-background'

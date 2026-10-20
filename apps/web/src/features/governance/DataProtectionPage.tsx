@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, BellRing, CheckCircle2, ClipboardCheck, Fingerprint, Play, Search, ShieldAlert, ShieldCheck, Unlock, UserCheck, UserX } from 'lucide-react'
+import { BellRing, CheckCircle2, ClipboardCheck, Fingerprint, Play, Search, ShieldAlert, ShieldCheck, Unlock, UserCheck, UserX } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Modal } from '@/components/ui/Modal'
-import { TextAreaField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { Tabs, useTabParam } from '@/components/ui/Tabs'
-import { useConfirm } from '@/components/ui/Confirm'
+import { Modal } from '@/components/ui/modal'
+import { TextAreaField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState, ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { Tabs, useTabParam } from '@/components/ui/tabs'
+import { useConfirm } from '@/components/ui/confirm'
+import { Callout } from '@/components/ui/callout'
 import { useAuth } from '@/auth/useAuth'
 import { roleLabels, type Role } from '@/auth/roles'
 import {
@@ -296,10 +297,9 @@ function SettingsForm({ s }: { s: SecuritySettings }) {
         <PanelHead title={tx('Bordro görevler ayrılığı')} note={tx('Bordroyu hazırlayan (hesaplayan ya da elle kalem giren) kişi aynı dönemi kapatamaz; bir çalışanın IBAN\'ını değiştiren kişi o değişikliğin ilk uygulandığı bordroyu kapatamaz.')} />
         <PanelBody className="space-y-3 text-[13px]">
           {capable !== null && capable <= 1 && (
-            <p className="flex items-start gap-2 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-3">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <Callout tone="warning">
               {tx('Şirkette bordroyu hazırlayıp kapatabilecek tek bir kullanıcı var. Kural açıkken bu kişi dönemi kapatamaz; ikinci bir İK kullanıcısı ekleyin ya da kuralı gerekçeyle kapatın.')}
-            </p>
+            </Callout>
           )}
           <label className="flex items-center gap-2">
             <Checkbox disabled={disabled} checked={f.payrollSod} onCheckedChange={(v) => setF({ ...f, payrollSod: v === true })} />

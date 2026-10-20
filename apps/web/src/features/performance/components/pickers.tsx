@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react'
 import { cycleStatusLabels, useTeams, type ReviewCycle } from '@/api/performance'
-import { SelectField } from '@/components/ui/Field'
+import { SelectField } from '@/components/ui/field'
 import { usePeople } from '../hooks'
 import { tx } from '@/lib/i18n'
 

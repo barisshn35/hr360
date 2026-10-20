@@ -5,7 +5,8 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { animate, useReducedMotion } from 'motion/react'
+import { animate } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export function AnimatedNumber({

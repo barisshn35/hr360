@@ -4,7 +4,8 @@
  * ebeveyn stillerini değiştirmek yerine kendi tam boy katmanında çalışır.
  */
 import { useEffect, useRef, useState } from 'react'
-import { motion, useReducedMotion, useSpring, useTransform } from 'motion/react'
+import { motion, useSpring, useTransform } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export function Spotlight({ className, size = 260 }: { className?: string; size?: number }) {

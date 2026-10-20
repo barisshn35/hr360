@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useEmployees } from '@/api/queries'
 import { useAuth } from '@/auth/useAuth'
 import { canListEmployees } from '@/auth/roles'
-import { SelectField } from './Field'
+import { SelectField } from './field'
 import { fullName } from '@/lib/format'
 import { tx } from '@/lib/i18n'
 

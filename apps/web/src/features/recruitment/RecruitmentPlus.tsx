@@ -6,14 +6,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, CalendarClock, ClipboardCheck, Copy, FileSignature, GripVertical, Plus, Printer, Star, Trash2, Video } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Modal } from '@/components/ui/Modal'
-import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
-import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
+import { Modal } from '@/components/ui/modal'
+import { SelectField, TextAreaField, TextField } from '@/components/ui/field'
+import { StatusBadge, type StatusTone } from '@/components/ui/status-badge'
+import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { useDirectory } from '@/api/directory'
 import {
   applicationStatusLabels,
@@ -61,11 +62,12 @@ export function printLetter(title: string, text: string) {
 export function NoteWarnings({ warnings }: { warnings: NoteWarning[] }) {
   if (!warnings.length) return null
   return (
-    <div role="alert" className="space-y-1 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12.5px]">
-      <p className="flex items-center gap-1.5 font-medium"><AlertTriangle className="size-4 text-amber-600" />{tx('Özel nitelikli veri yazmayın')}</p>
-      <ul className="list-disc pl-5 text-muted-foreground">
-        {warnings.map((w) => <li key={w.category}>{w.message}</li>)}
-      </ul>
+    <div role="alert">
+      <Callout tone="warning" title={tx('Özel nitelikli veri yazmayın')}>
+        <ul className="list-disc pl-5">
+          {warnings.map((w) => <li key={w.category}>{w.message}</li>)}
+        </ul>
+      </Callout>
     </div>
   )
 }

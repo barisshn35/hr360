@@ -2,9 +2,10 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Crown, MessageSquareQuote, Scale } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/States'
+import { ErrorState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { Callout } from '@/components/ui/callout'
 import { EmployeeAvatar } from '@/components/people/EmployeeAvatar'
 import { useAction } from '@/features/shared/kit'
 import { eomApi, eomKeys, periodLabel, unitLabel, visibilityNotice, type EomResultUnit } from '@/api/eom'
@@ -14,16 +15,15 @@ import { tx } from '@/lib/i18n'
 function ResolveTie({ unit }: { unit: EomResultUnit }) {
   const resolve = useAction((id: string) => eomApi.resolve(unit.id, id), { success: tx('Beraberlik çözüldü.'), invalidate: [eomKeys.all] })
   return (
-    <div className="space-y-2 rounded-xl border border-amber-400/40 bg-amber-400/5 p-3">
-      <p className="flex items-center gap-1.5 text-[13px] font-medium"><Scale className="size-4 text-amber-500" />{tx('Beraberlik: kazananı seçin')}</p>
-      <div className="flex flex-wrap gap-2">
+    <Callout tone="warning" icon={Scale} title={tx('Beraberlik: kazananı seçin')}>
+      <div className="mt-2 flex flex-wrap gap-2">
         {(unit.tied ?? []).map((p) => (
           <Button key={p.id} size="sm" variant="outline" disabled={resolve.isPending} onClick={() => resolve.mutate(p.id)}>
             <EmployeeAvatar id={p.id} name={p.name} version={p.photoVersion} size={20} />{p.name}
           </Button>
         ))}
       </div>
-    </div>
+    </Callout>
   )
 }
 

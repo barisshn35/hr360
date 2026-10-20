@@ -10,7 +10,7 @@ import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/ui/button'
 import { AmbientBackground } from '@/components/fx/ambient-background'
 import { GradientText } from '@/components/fx/shiny-text'
-import { CenteredSpinner } from '@/components/ui/States'
+import { CenteredSpinner } from '@/components/ui/states'
 import { Initials } from '@/features/shared/kit'
 import { tx } from '@/lib/i18n'
 

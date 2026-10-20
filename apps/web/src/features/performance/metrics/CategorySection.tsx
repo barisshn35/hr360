@@ -21,8 +21,9 @@ import {
   type Metric,
   type MetricCategory,
 } from '@/api/performance'
-import { Panel } from '@/components/ui/Panel'
+import { Panel } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
+import { Callout } from '@/components/ui/callout'
 import { cn } from '@/lib/utils'
 import { EASE } from '@/motion/primitives'
 import { Chip } from '../components/controls'
@@ -146,9 +147,9 @@ export function CategorySection({
           )}
 
           {excluded && (
-            <p className="mt-2.5 rounded-md border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/8 px-2.5 py-1.5 text-[12px] leading-relaxed text-foreground">
+            <Callout tone="warning" className="mt-2.5">
               {tx('Puanlama ayarında bu kategorinin ağırlığı')}{' '}<strong className="font-semibold">0</strong>{tx('. Buradaki metrikler değerlendirmede sorulur ve puan dökümünde görünür, ama nihai puana katkı vermez.')}
-            </p>
+            </Callout>
           )}
 
           {basis.mixed && scope === 'all' && (

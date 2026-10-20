@@ -8,14 +8,15 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeftRight, CalendarCheck2, Check, Settings2, X } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Modal } from '@/components/ui/Modal'
-import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/States'
-import { Tabs } from '@/components/ui/Tabs'
+import { Modal } from '@/components/ui/modal'
+import { SelectField, TextAreaField, TextField } from '@/components/ui/field'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/states'
+import { Tabs } from '@/components/ui/tabs'
+import { Callout } from '@/components/ui/callout'
 import { useAuth } from '@/auth/useAuth'
 import { isHr } from '@/auth/roles'
 import { useMyEmployeeId, useShifts } from '@/api/queries'
@@ -215,9 +216,10 @@ function PlannerAssignPanel() {
             {check.ruleWarnings && (check.ruleWarnings.length === 0
               ? <p className="text-[hsl(var(--success))]">{tx('Çalışma süresi kurallarına uygun (dinlenme, günlük/haftalık süre, gece çalışması, ardışık gün).')}</p>
               : (
-                <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-2">
-                  <p className="mb-1 font-medium text-destructive">{tx('Çalışma süresi kuralı uyarısı')}</p>
-                  <ul className="list-disc space-y-0.5 pl-5">{check.ruleWarnings.map((w, i) => <li key={`${w.code}-${i}`}>{txServer(w.message)}</li>)}</ul>
+                <div role="alert">
+                  <Callout tone="danger" title={tx('Çalışma süresi kuralı uyarısı')}>
+                    <ul className="list-disc space-y-0.5 pl-5">{check.ruleWarnings.map((w, i) => <li key={`${w.code}-${i}`}>{txServer(w.message)}</li>)}</ul>
+                  </Callout>
                 </div>
               ))}
             {p && p.updatedAt && (

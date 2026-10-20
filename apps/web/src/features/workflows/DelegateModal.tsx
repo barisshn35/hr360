@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import type { ApprovalStep } from '@/api/types'
 import { useEmployees } from '@/api/queries'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { SelectField, TextAreaField } from '@/components/ui/Field'
+import { SelectField, TextAreaField } from '@/components/ui/field'
+import { Callout } from '@/components/ui/callout'
 import { fullName } from '@/lib/format'
 import { tx } from '@/lib/i18n'
 
@@ -83,12 +84,9 @@ export function DelegateModal({
         {employees.isPending ? (
           <p className="text-[13px] text-muted-foreground">{tx('Çalışanlar yükleniyor…')}</p>
         ) : candidates.length === 0 ? (
-          <p
-            role="alert"
-            className="rounded-md border border-[hsl(var(--warning))]/30 bg-[hsl(var(--warning))]/10 p-3 text-[13px]"
-          >
-            {tx('Devredilebilecek başka çalışan kaydı bulunamadı.')}
-          </p>
+          <div role="alert">
+            <Callout tone="warning">{tx('Devredilebilecek başka çalışan kaydı bulunamadı.')}</Callout>
+          </div>
         ) : (
           <SelectField
             id="delegate-target"

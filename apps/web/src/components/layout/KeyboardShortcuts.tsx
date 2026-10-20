@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { GOTO_SHORTCUTS, isTypingTarget, useShortcutsEnabled } from '@/lib/shortcuts'
 import { tx } from '@/lib/i18n'
 import { useModules } from '@/lib/modules'

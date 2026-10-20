@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { useQueryClient } from '@tanstack/react-query'
 import { platformGovApi, type SignatureEvidence } from '@/api/platformGov'
 import { tx } from '@/lib/i18n'

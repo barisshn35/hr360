@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import type { ApprovalStep } from '@/api/types'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { TextAreaField } from '@/components/ui/Field'
+import { TextAreaField } from '@/components/ui/field'
 import { tx } from '@/lib/i18n'
 
 export function DecisionModal({

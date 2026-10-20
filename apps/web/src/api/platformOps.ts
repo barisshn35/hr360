@@ -5,6 +5,7 @@ const B = '/api/tenant/platform/ops'
 
 export type OpsKind = 'backup' | 'backup-verify' | 'schedule' | 'unschedule' | 'check-updates' | 'update' | 'rollback' | 'restore' | 'db-isolation'
   | 'pitr-enable' | 'pitr-disable' | 'pitr-restore' | 'pitr-cleanup' | 'modules-set' | 'tenancy-multi' | 'tenancy-single'
+  | 'monitoring-enable' | 'monitoring-disable' | 'monitoring-alerts' | 'monitoring-test' | 'monitoring-tracing'
 export type OpsStatus = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Cancelled'
 
 export interface OpsBackup { name: string; size: number; createdAt: string; encrypted: boolean; manifest: boolean }
@@ -50,6 +51,17 @@ export interface OpsTenancy {
   mode: 'single' | 'multi' | 'unknown'
   tenants: number | null
 }
+/** İzleme yığını (Prometheus, Grafana, Alertmanager…). Webhook adresi yerine yalnızca kökeni gelir. Eski çalıştırıcıda yoktur. */
+export interface OpsMonitoring {
+  enabled: boolean
+  /** Çalışan bileşen sayısı; izleme kapalıysa ya da okunamadıysa null. */
+  running: number | null
+  total: number
+  alerts: { email: string[]; slack: string | null; teams: string | null }
+  tracing: { on: boolean; ratio: string | null }
+  /** Grafana'ya HR360 hesabıyla giriş ayarlı mı. */
+  sso: boolean
+}
 export interface OpsSnapshot {
   version: string | null
   commit: string
@@ -66,6 +78,9 @@ export interface OpsSnapshot {
   pitr?: OpsPitr
   modules?: OpsModules
   tenancy?: OpsTenancy
+  monitoring?: OpsMonitoring
+  /** Sunucu belleği (bayt). */
+  memory?: { total: number; available: number }
 }
 export interface OpsJob {
   id: string

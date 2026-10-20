@@ -11,7 +11,7 @@
  * görünümü dışarıdan (`renderItem`) verilir; SPA olduğu için useLayoutEffect.
  */
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { useReducedMotion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 const RAMP = 0.19

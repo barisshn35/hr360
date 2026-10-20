@@ -9,7 +9,7 @@
  */
 
 import { TrendingDown, TrendingUp, Minus } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/primitives/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Sparkline } from '@/components/ui/sparkline'
 import { GlowingEffect } from '@/components/fx/glowing-effect'

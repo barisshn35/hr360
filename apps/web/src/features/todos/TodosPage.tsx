@@ -4,10 +4,9 @@ import {
   Award, BookOpen, CheckCheck, ClipboardList, FileSignature, FileWarning, Sprout, Gavel, Inbox, Megaphone, MessageSquareHeart, Rocket, ShieldCheck, Vote,
 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Panel, PanelBody, PanelHead } from '@/components/ui/Panel'
-import { Card } from '@/components/ui/card'
+import { Panel, PanelBody, PanelHead } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
-import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/States'
+import { EmptyState, InfoNote, RowsSkeleton } from '@/components/ui/states'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
@@ -58,7 +57,7 @@ export function TodoRow({ t, i = 0 }: { t: Todo; i?: number }) {
 export function TodosWidget({ className }: { className?: string }) {
   const { items, isPending } = useMyTodos()
   return (
-    <Card className={cn('h-full gap-0 overflow-hidden py-0', className)}>
+    <Panel className={cn('h-full gap-0 overflow-hidden py-0', className)}>
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
         <span className="flex items-center gap-2 text-[14px] font-semibold"><ClipboardList className="size-4 text-primary" />{tx('Yapılacaklarım')}</span>
         {items.length > 0 && <span className="rounded-full bg-primary/10 px-2 text-[12px] text-primary tabular-nums">{items.length}</span>}
@@ -71,7 +70,7 @@ export function TodosWidget({ className }: { className?: string }) {
           <div className="px-5 py-3"><Button size="sm" variant="ghost" asChild><Link to="/panel/yapilacaklarim">{tx('Tümünü gör')}</Link></Button></div>
         </>
       )}
-    </Card>
+    </Panel>
   )
 }
 
@@ -90,9 +89,9 @@ export function TodosPage() {
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Card className="gap-1 p-4"><span className="text-[12px] text-muted-foreground">{tx('Toplam')}</span><span className="text-[26px] font-semibold tabular-nums">{items.length}</span></Card>
-            <Card className="gap-1 p-4"><span className="text-[12px] text-muted-foreground">{tx('Gecikmiş')}</span><span className={cn('text-[26px] font-semibold tabular-nums', late > 0 && 'text-destructive')}>{late}</span></Card>
-            <Card className="gap-1 p-4"><span className="text-[12px] text-muted-foreground">{tx('Bu hafta')}</span><span className="text-[26px] font-semibold tabular-nums">{items.filter((t) => { const n = daysLeft(t.due); return n !== null && n >= 0 && n <= 7 }).length}</span></Card>
+            <Panel className="gap-1 p-4"><span className="text-[12px] text-muted-foreground">{tx('Toplam')}</span><span className="text-[26px] font-semibold tabular-nums">{items.length}</span></Panel>
+            <Panel className="gap-1 p-4"><span className="text-[12px] text-muted-foreground">{tx('Gecikmiş')}</span><span className={cn('text-[26px] font-semibold tabular-nums', late > 0 && 'text-destructive')}>{late}</span></Panel>
+            <Panel className="gap-1 p-4"><span className="text-[12px] text-muted-foreground">{tx('Bu hafta')}</span><span className="text-[26px] font-semibold tabular-nums">{items.filter((t) => { const n = daysLeft(t.due); return n !== null && n >= 0 && n <= 7 }).length}</span></Panel>
           </div>
           <Panel>
             <PanelHead title={tx('Son tarihe göre')} />

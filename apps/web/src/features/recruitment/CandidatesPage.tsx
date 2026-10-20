@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, ArrowLeft, FileUp, LoaderCircle, Plus } from 'lucide-react'
+import { ArrowLeft, FileUp, LoaderCircle, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
-import { DataTable, type Column } from '@/components/ui/DataTable'
-import { ApplicationStatusBadge } from '@/components/ui/ModuleBadges'
-import { Modal } from '@/components/ui/Modal'
-import { TextAreaField, TextField } from '@/components/ui/Field'
-import { useToast } from '@/components/ui/Toast'
+import { DataTable, type Column } from '@/components/ui/data-table'
+import { ApplicationStatusBadge } from '@/components/ui/module-badges'
+import { Modal } from '@/components/ui/modal'
+import { TextAreaField, TextField } from '@/components/ui/field'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { useAuth } from '@/auth/useAuth'
 import { recruitmentApi } from '@/api/recruitment'
 import { useCandidates } from '@/api/queries'
@@ -197,19 +198,20 @@ function NewCandidateModal({ open, onClose }: { open: boolean; onClose: () => vo
           onChange={(e) => setResumeText(e.target.value)} hint={tx('Özel nitelikli veri (sağlık, din, medeni hal…) eklemeyin.')} />
 
         {duplicate && (
-          <div role="alert" className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-[13px]">
-            <p className="flex items-center gap-1.5 font-medium"><AlertTriangle className="size-4 text-amber-600" />{tx('Olası tekrar aday')}</p>
-            <p>{duplicate.message}</p>
-            <div className="flex flex-wrap gap-2">
-              {duplicate.canForce && (
-                <Button type="button" size="sm" variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate(true)}>
-                  {tx('Yine de yeni aday olarak kaydet')}
+          <div role="alert">
+            <Callout tone="warning" title={tx('Olası tekrar aday')}>
+              <p>{duplicate.message}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {duplicate.canForce && (
+                  <Button type="button" size="sm" variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate(true)}>
+                    {tx('Yine de yeni aday olarak kaydet')}
+                  </Button>
+                )}
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setDuplicate(null); onClose() }}>
+                  {tx('Vazgeç, mevcut adayı kullan')}
                 </Button>
-              )}
-              <Button type="button" size="sm" variant="ghost" onClick={() => { setDuplicate(null); onClose() }}>
-                {tx('Vazgeç, mevcut adayı kullan')}
-              </Button>
-            </div>
+              </div>
+            </Callout>
           </div>
         )}
       </form>

@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Flame, TriangleAlert } from 'lucide-react'
+import { Flame } from 'lucide-react'
 import {
   GOAL_STATUSES,
   formatShareOf,
@@ -18,10 +18,11 @@ import {
   type GoalStatus,
   type ReviewCycle,
 } from '@/api/performance'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
-import { TextAreaField, TextField } from '@/components/ui/Field'
-import { useToast } from '@/components/ui/Toast'
+import { TextAreaField, TextField } from '@/components/ui/field'
+import { useToast } from '@/components/ui/toast'
+import { Callout } from '@/components/ui/callout'
 import { EASE } from '@/motion/primitives'
 import { Segmented, Switch, errorText } from '../components/controls'
 import { NumberStepper } from '../components/NumberStepper'
@@ -34,16 +35,15 @@ function ErrorLine({ message }: { message: string | null }) {
   return (
     <AnimatePresence>
       {message && (
-        <motion.p
+        <motion.div
           role="alert"
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="mb-4 flex items-start gap-2 overflow-hidden rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-[13px] text-destructive"
+          className="mb-4 overflow-hidden"
         >
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-          {message}
-        </motion.p>
+          <Callout tone="danger">{message}</Callout>
+        </motion.div>
       )}
     </AnimatePresence>
   )

@@ -184,3 +184,19 @@
   .hr-sheen:hover::after { animation: none !important; }
   .hr-dash { stroke-dashoffset: 0; }
 }
+/* Profil › Erişilebilirlik › "Animasyonları azalt" (lib/motion.ts): aynı kural, sistem ayarından bağımsız. */
+:root[data-motion="reduce"] .hr-aurora,
+:root[data-motion="reduce"] .hr-marquee,
+:root[data-motion="reduce"] .hr-float,
+:root[data-motion="reduce"] .hr-ring,
+:root[data-motion="reduce"] .hr-caret,
+:root[data-motion="reduce"] .hr-dash-run,
+:root[data-motion="reduce"] .hr-conic-border::before {
+  animation: none !important;
+}
+:root[data-motion="reduce"] .hr-sheen:hover::after {
+  animation: none !important;
+}
+:root[data-motion="reduce"] .hr-dash {
+  stroke-dashoffset: 0;
+}

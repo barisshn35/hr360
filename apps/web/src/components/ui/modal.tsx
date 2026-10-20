@@ -6,7 +6,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from '@/components/ui/primitives/dialog'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/i18n'
 

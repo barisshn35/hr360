@@ -4,7 +4,8 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { ArrowRight, Building2, Cookie, Hash, Landmark, Mail, MapPin, MessageCircleQuestion, Phone, Search, Stamp } from 'lucide-react'
 import { Accordion } from '@/components/ui/accordion'
 import { CopyButton } from '@/components/ui/copy-button'

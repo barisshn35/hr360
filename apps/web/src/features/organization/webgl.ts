@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useSyncExternalStore } from 'react'
+import { prefersReducedMotion as reducedMotionSetting } from '@/lib/motion'
 
 const PREF_KEY = 'hr360.org3d.off'
 
@@ -64,13 +65,8 @@ const subscribe = (l: () => void) => {
 }
 const snapshot = () => memoryPref ?? read3dDisabled()
 
-export function prefersReducedMotion(): boolean {
-  try {
-    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-  } catch {
-    return false
-  }
-}
+/** Sistem ayarı ya da Profil › Erişilebilirlik › "Animasyonları azalt" (lib/motion.ts). */
+export const prefersReducedMotion = reducedMotionSetting
 
 export interface ThreeDSupport {
   /** Tarayıcıda WebGL 2 var. */

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Callout } from '@/components/ui/callout'
 import { tx } from '@/lib/i18n'
 
 const POLL_MS = 5 * 60_000
@@ -38,12 +39,10 @@ export function NewVersionBanner() {
   if (next === null) return null
   return (
     <div className="mx-auto mt-3 w-full max-w-[1480px] px-3 sm:px-5">
-      <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-[13px]">
-        <RefreshCw aria-hidden="true" className="size-4 shrink-0 text-primary" />
-        <p className="min-w-0 flex-1">
+      <div role="status">
+        <Callout tone="info" icon={RefreshCw} action={<Button size="sm" onClick={() => window.location.reload()}>{tx('Yenile')}</Button>}>
           {next && next !== __APP_VERSION__ ? tx('HR360 {0} yayımlandı. Yeni özellikleri görmek için sayfayı yenileyin.', [next]) : tx('Uygulamanın yeni bir sürümü hazır. Yeni özellikleri görmek için sayfayı yenileyin.')}
-        </p>
-        <Button size="sm" onClick={() => window.location.reload()}>{tx('Yenile')}</Button>
+        </Callout>
       </div>
     </div>
   )

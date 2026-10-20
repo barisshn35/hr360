@@ -16,6 +16,7 @@ import { arcPath, computeLayout, intersects, linkPath, matrixPath, NODE_H, NODE_
 import { clampZoom, navigate, visibleRoots, type NavMode } from './orgViewState'
 import { OrgMinimap } from './OrgMinimap'
 import { OrgSelectionCard } from './OrgSelectionCard'
+import { prefersReducedMotion } from '@/lib/motion'
 
 export type SvgLayoutKind = 'horizontal' | 'radial' | 'sunburst' | 'treemap'
 
@@ -57,8 +58,7 @@ interface View {
   y: number
 }
 
-const reducedMotion = () =>
-  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+const reducedMotion = () => typeof window !== 'undefined' && prefersReducedMotion()
 
 export function OrgSvgView(props: OrgSvgViewProps) {
   const { model, kind, focus, collapsed, peopleKnown, colorOf, subtitleOf, path, matches, selectedDept, matrix } = props

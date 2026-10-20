@@ -5,7 +5,8 @@
  * yeni üst menülü düzende anlamını yitirdi; yerine marka işaretinin etrafında
  * dönen yörüngeler (21st.dev "Orbiting Circles", id 1411) geldi.
  */
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { OrbitingCircles } from '@/components/fx/orbiting-circles'
 import { AmbientBackground } from '@/components/fx/ambient-background'
 import { tx } from '@/lib/i18n'

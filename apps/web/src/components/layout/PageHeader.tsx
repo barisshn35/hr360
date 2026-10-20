@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '@/lib/motion'
 import { ChevronRight } from 'lucide-react'
 import { TextReveal } from '@/components/fx/text-reveal'
 import { useLocate } from './use-nav'

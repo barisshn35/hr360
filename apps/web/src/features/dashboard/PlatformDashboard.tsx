@@ -9,17 +9,17 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, Brain, Building2, ChevronRight, HardDrive, Settings2, Shield } from 'lucide-react'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { StatCard, StatCardsSkeleton } from '@/components/ui/StatCard'
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
-import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/States'
+import { StatCard, StatCardsSkeleton } from '@/components/ui/stat-card'
+import { StatusBadge, type StatusTone } from '@/components/ui/status-badge'
+import { EmptyState, ErrorState, RowsSkeleton } from '@/components/ui/states'
 import { useAuth } from '@/auth/useAuth'
 import { useTenants } from '@/api/queries-tenant'
 import { tenantStatusLabels, type TenantStatus } from '@/api/tenant'
 import { formatNumber, formatRelativeToNow } from '@/lib/format'
 import { tx, appLocale } from '@/lib/i18n'
 import { useModules } from '@/lib/modules'
+import { Panel } from '@/components/ui/panel'
 
 const STATUS_TONE: Record<TenantStatus, StatusTone> = {
   Pending: 'warning',
@@ -71,7 +71,7 @@ export function PlatformDashboard() {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-6 xl:grid-cols-12">
-      <Card className="gap-0 p-6 sm:p-8 md:col-span-6 xl:col-span-12">
+      <Panel className="gap-0 p-6 sm:p-8 md:col-span-6 xl:col-span-12">
         <p className="text-[12.5px] text-muted-foreground first-letter:uppercase">
           {new Date().toLocaleDateString(appLocale, { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
@@ -93,7 +93,7 @@ export function PlatformDashboard() {
             </Button>
           ))}
         </div>
-      </Card>
+      </Panel>
 
       {!single && <>
       <div className="md:col-span-6 xl:col-span-12">
@@ -111,7 +111,7 @@ export function PlatformDashboard() {
         )}
       </div>
 
-      <Card className="gap-0 overflow-hidden py-0 md:col-span-6 xl:col-span-12">
+      <Panel className="gap-0 overflow-hidden py-0 md:col-span-6 xl:col-span-12">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
             <p className="text-[14.5px] font-semibold tracking-tight">{tx('Kiracılar')}</p>
@@ -149,7 +149,7 @@ export function PlatformDashboard() {
             ))}
           </ul>
         )}
-      </Card>
+      </Panel>
       </>}
     </div>
   )
