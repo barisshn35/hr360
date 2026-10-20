@@ -21,9 +21,11 @@ namespace TenantService.Controllers;
 public partial class PlatformOpsController : ControllerBase
 {
     public static readonly string[] Kinds = ["backup", "backup-verify", "schedule", "unschedule", "check-updates", "update", "rollback", "restore", "db-isolation",
-        "pitr-enable", "pitr-disable", "pitr-restore", "pitr-cleanup", "modules-set", "tenancy-multi", "tenancy-single"];
+        "pitr-enable", "pitr-disable", "pitr-restore", "pitr-cleanup", "modules-set", "tenancy-multi", "tenancy-single",
+        "monitoring-enable", "monitoring-disable", "monitoring-alerts", "monitoring-test", "monitoring-tracing"];
     // Servisleri yeniden başlatan / derleyen işler de sürmekte olan iş varken kuyruğa alınmaz.
-    private static readonly string[] Destructive = ["update", "rollback", "restore", "pitr-restore", "modules-set", "tenancy-multi", "tenancy-single"];
+    private static readonly string[] Destructive = ["update", "rollback", "restore", "pitr-restore", "modules-set", "tenancy-multi", "tenancy-single",
+        "monitoring-enable", "monitoring-disable", "monitoring-tracing"];
     public const string RestoreConfirm = "GERİ YÜKLE", RollbackConfirm = "GERİ AL", PitrConfirm = "GERİ DÖN",
         ModuleOffConfirm = "MODÜLÜ KAPAT", MultiTenancyConfirm = "ÇOK ŞİRKET";
     /// <summary>İsteğe bağlı modüller (scripts/lib/modules.sh tablo sırası; çalıştırıcıdaki MODULES ile aynı).</summary>
@@ -35,6 +37,23 @@ public partial class PlatformOpsController : ControllerBase
     [GeneratedRegex(@"^hr360-[A-Za-z0-9_.-]+\.tar\.gz(\.enc)?$")] private static partial Regex ArchiveRx();
     [GeneratedRegex(@"^([01]\d|2[0-3]):[0-5]\d$")] private static partial Regex AtRx();
     [GeneratedRegex(@"^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}\z")] private static partial Regex TargetRx();
+    // Çalıştırıcıdaki EMAIL / WEBHOOK ile aynı (orada da ayrıca denetlenir).
+    [GeneratedRegex(@"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\z")] private static partial Regex EmailRx();
+    [GeneratedRegex(@"^https://[^\s'""#$`\\]{8,500}\z")] private static partial Regex WebhookRx();
+    [GeneratedRegex(@"^(https?://[^/?#]+)")] private static partial Regex OriginRx();
+
+    /// <summary>Webhook adresi sırdır: listelerde ve denetim kaydında yalnızca kökeni gösterilir.</summary>
+    public static string MaskUrl(string? url) => OriginRx().Match(url ?? "") is { Success: true } m ? m.Groups[1].Value + "/…" : "…";
+
+    /// <summary>Slack/Teams alarm işinin bağımsız değişkenlerindeki adres maskelenir (diğer işler olduğu gibi).</summary>
+    public static JsonElement RedactArgs(string kind, JsonElement args)
+    {
+        if (kind != "monitoring-alerts" || args.ValueKind != JsonValueKind.Object
+            || !args.TryGetProperty("channel", out var ch) || ch.GetString() is not ("slack" or "teams")
+            || !args.TryGetProperty("value", out var v) || v.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(v.GetString()))
+            return args;
+        return JsonSerializer.SerializeToElement(new { channel = ch.GetString(), value = MaskUrl(v.GetString()) });
+    }
 
     private readonly TenantDbContext _db;
     private readonly SecurityNotifier _audit;
@@ -66,7 +85,7 @@ public partial class PlatformOpsController : ControllerBase
 
     private static object View(JobRow j, bool withOutput) => new
     {
-        j.Id, j.Kind, args = JsonDocument.Parse(j.Args).RootElement, j.Status, j.RequestedBy, j.RequestedAt, j.StartedAt, j.FinishedAt, j.ExitCode,
+        j.Id, j.Kind, args = RedactArgs(j.Kind, JsonDocument.Parse(j.Args).RootElement), j.Status, j.RequestedBy, j.RequestedAt, j.StartedAt, j.FinishedAt, j.ExitCode,
         output = withOutput ? j.Output : null,
     };
 
@@ -175,6 +194,34 @@ public partial class PlatformOpsController : ControllerBase
             case "tenancy-multi":
                 if (confirm != MultiTenancyConfirm) return (null, $"Onay için \"{MultiTenancyConfirm}\" yazın");
                 return (new { }, null);
+            case "monitoring-disable":
+                return (new { purge = Bool("purge") }, null);
+            case "monitoring-alerts":
+                var channel = Str("channel");
+                if (channel is not ("email" or "slack" or "teams")) return (null, "Bilinmeyen alarm kanalı");
+                var value = Str("value")?.Trim();
+                if (string.IsNullOrEmpty(value)) return (new { channel, value = (string?)null }, null);
+                if (channel == "email")
+                {
+                    var addrs = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                    if (addrs.Length is < 1 or > 10) return (null, "En fazla 10 e-posta adresi girilebilir");
+                    if (addrs.FirstOrDefault(x => !EmailRx().IsMatch(x)) is { } badAddr) return (null, $"Geçersiz e-posta adresi: {badAddr}");
+                    return (new { channel, value = string.Join(',', addrs) }, null);
+                }
+                if (!WebhookRx().IsMatch(value)) return (null, "Webhook adresi https:// ile başlamalı ve boşluk içermemeli");
+                return (new { channel, value }, null);
+            case "monitoring-test":
+            case "monitoring-tracing":
+                var monOn = snap.TryGetProperty("monitoring", out var mon) && mon.ValueKind == JsonValueKind.Object
+                    && mon.TryGetProperty("enabled", out var monEnabled) && monEnabled.ValueKind == JsonValueKind.True;
+                if (kind == "monitoring-test")
+                    return monOn ? (new { }, null) : (null, "Önce izlemeyi açın");
+                if (!Bool("on")) return (new { on = false }, null);
+                if (!monOn) return (null, "Önce izlemeyi açın");
+                var ratio = a.ValueKind == JsonValueKind.Object && a.TryGetProperty("ratio", out var rv) && rv.ValueKind == JsonValueKind.Number
+                    && rv.TryGetDecimal(out var dec) ? dec : (decimal?)null;
+                if (ratio is not (>= 0.001m and <= 1m)) return (null, "Örnekleme oranı 0 ile 1 arasında olmalı");
+                return (new { on = true, ratio = Math.Round(ratio.Value, 3).ToString("0.###", CultureInfo.InvariantCulture) }, null);
             default:
                 return (new { }, null);
         }
@@ -206,7 +253,7 @@ public partial class PlatformOpsController : ControllerBase
         await _db.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO platform_ops_jobs ("Id","Kind","Args","Status","RequestedBy","RequestedAt") VALUES ({id}, {body.Kind}, {json}::jsonb, 'Pending', {by}, now())
             """, ct);
-        await _audit.AuditAsync(null, "PlatformOps", id.ToString(), $"PlatformOps:{body.Kind}", args!, ActorId, ActorName, ct);
+        await _audit.AuditAsync(null, "PlatformOps", id.ToString(), $"PlatformOps:{body.Kind}", RedactArgs(body.Kind, JsonSerializer.SerializeToElement(args)), ActorId, ActorName, ct);
         return Ok(new { id, status = "Pending" });
     }
 

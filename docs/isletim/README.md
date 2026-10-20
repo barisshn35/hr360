@@ -16,9 +16,9 @@ ve testler. Kurulum, güncelleme ve yedekleme özeti ana [README](../../README.m
 | Sunucunun kendi posta servisi (gelişmiş, isteğe bağlı) | `scripts/smtp.sh self [--from noreply@hr.sirket.com]` (aç: 25/tcp + PTR denetimi, DNS kayıtları), `scripts/smtp.sh dns` (kayıtları yeniden yaz), kapatmak için `scripts/smtp.sh set …` ya da `scripts/smtp.sh mailpit`. Ayrıntı aşağıda |
 | Keycloak giriş ekranı teması (HR360 görünümü + Türkçe) | Kurulum ve güncelleme (`./install.sh`) sırasında otomatik uygulanır. Elle: `scripts/keycloak-theme.sh`; Keycloak'ın kendi temasına dönmek için `scripts/keycloak-theme.sh default` |
 | Yeni sürüme güncelleme (tek komut, otomatik geri dönüş) | `scripts/update.sh` (önce yedek, sonra sürüm, göçler, imajlar ve tüm servislerin sağlık denetimi; denetim geçmezse önceki sürüme döner). `scripts/update.sh --ref v1.0.0`, `scripts/update.sh rollback`, `scripts/update.sh status` |
-| İzleme (Prometheus + Grafana + Loki + Alertmanager) | `scripts/monitoring.sh enable / status / password / disable / purge` |
-| Alarm kanalları (e-posta, Slack, Teams) | `scripts/monitoring.sh alerts status / email … / slack … / teams … / test` |
-| Dağıtık izleme (OpenTelemetry → Tempo, KVKK maskeli) | `scripts/monitoring.sh tracing on [oran] / off / status` |
+| İzleme (Prometheus + Grafana + Loki + Alertmanager) | Arayüzden: **Platform › Bakım › İzleme ve alarmlar** (aç/kapat, verileri sil). Sunucudan: `scripts/monitoring.sh enable / status / password / sso / disable / purge` |
+| Alarm kanalları (e-posta, Slack, Teams) | Arayüzden: **Platform › Bakım › İzleme ve alarmlar** (kanal ayarla/kapat, deneme alarmı). Sunucudan: `scripts/monitoring.sh alerts status / email … / slack … / teams … / test` |
+| Dağıtık izleme (OpenTelemetry → Tempo, KVKK maskeli) | Arayüzden: **Platform › Bakım › İzleme ve alarmlar**. Sunucudan: `scripts/monitoring.sh tracing on [oran] / off / status` |
 | Testler | `scripts/test.sh unit / integration / e2e / all` (ayrıntı: [tests/README.md](../../tests/README.md)) |
 | Yük testi | `scripts/loadtest.sh smoke / load / stress` |
 | Güvenlik taraması | `scripts/security-scan.sh repo / deps / images` (Trivy, npm audit, NuGet) |
@@ -180,13 +180,19 @@ için PostgreSQL WAL arşivi kullanılır:
 
 ## İzleme
 
-`scripts/monitoring.sh enable` isteğe bağlı `monitoring` profilini açar:
+İzleme **varsayılan kapalıdır**; **Platform › Bakım › İzleme ve alarmlar** kartından (ya da
+`scripts/monitoring.sh enable`) açılır, kapatılır ve yapılandırılır. Kart kullanılabilir belleği
+gösterir, alarm kanallarını (e-posta, Slack, Teams) ayarlar, deneme alarmı gönderir ve dağıtık
+izlemeyi açıp kapatır; webhook adresleri iş kayıtlarında ve ekranda yalnızca alan adıyla görünür.
+Açmak isteğe bağlı `monitoring` profilini başlatır:
 Prometheus (15 .NET servisi, ML servisi, PostgreSQL ve sunucu metrikleri),
 Loki + Promtail (tüm konteyner logları, 7 gün) ve Grafana. Saklama süreleri ve disk
 tavanları (`PROMETHEUS_RETENTION[_SIZE]`, `LOKI_RETENTION`): `docs/runbooks/izleme-saklama.md`;
 yavaş sorgu incelemesi (isteğe bağlı pg_stat_statements): `docs/runbooks/yavas-sorgu.md`. Grafana
-`<adres>/grafana/` altında açılır (kullanıcı `admin`, parola
-`scripts/monitoring.sh password`). "HR360 — Servis sağlığı" panosu hazır gelir:
+`<adres>/grafana/` altında açılır; **HR360 hesabıyla** girilir ("Sign in with HR360"; Keycloak istemcisi
+`hr360-grafana`, izleme açılırken `scripts/monitoring.sh sso` ile kurulur). Yalnızca platform
+yöneticisi girer; tek şirket kipinde şirket yöneticisi (`yonetici`) de girer. Yedek giriş: kullanıcı
+`admin`, parola `scripts/monitoring.sh password`. "HR360 — Servis sağlığı" panosu hazır gelir:
 ayakta olan servisler, istek hızı, 5xx oranı, p95 süre, en yavaş uçlar,
 bellek/CPU, PostgreSQL bağlantı ve boyutu, son yedek, geri yükleme testi, TLS sertifikası,
 Kafka outbox birikimi, etkin alarmlar, hata logları ve log araması.
@@ -204,12 +210,15 @@ ve ne yapılacağı: `docs/runbooks/izleme-alarmlari.md`) Alertmanager üzerinde
 e-posta, Slack ve Microsoft Teams'e gider; düzelince "düzeldi" mesajı gelir:
 
 ```bash
-scripts/monitoring.sh alerts email ops@sirket.com,it@sirket.com   # SMTP_* ile (Microsoft 365: smtp.office365.com:587)
+scripts/monitoring.sh alerts email ops@sirket.com,it@sirket.com   # platformun e-posta ayarıyla
 scripts/monitoring.sh alerts slack https://hooks.slack.com/services/…
 scripts/monitoring.sh alerts teams https://….logic.azure.com/workflows/…
 scripts/monitoring.sh alerts test     # tüm kanallara deneme alarmı
 ```
 
+E-posta alarmları Alertmanager'dan doğrudan SMTP'ye gitmez: notification-service'e
+(`/api/internal/alerts`, servisler arası anahtarla) iletilir ve **Platform › Sistem ayarları**ndaki
+e-posta sunucusuyla gönderilir; böylece arayüzden girilen SMTP ayarı alarmlar için de geçerlidir.
 Teams adresi kanalda **Workflows › "Post to a channel when a webhook request is
 received"** şablonuyla alınır (eski "Incoming Webhook" bağlayıcıları Microsoft
 tarafından kapatıldı). Alarmlar Grafana'da da (Alerting, "Alertmanager" veri

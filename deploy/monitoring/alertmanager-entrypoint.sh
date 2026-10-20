@@ -1,10 +1,12 @@
 #!/bin/sh
 # Alertmanager yapilandirmasini konteyner acilirken ortam degiskenlerinden uretir.
-# Boylece SMTP parolasi ve webhook adresleri diske yazilmaz; yalnizca .env'de durur.
+# Boylece servis anahtari ve webhook adresleri diske yazilmaz; yalnizca .env'de durur.
 # Kanallar: scripts/monitoring.sh alerts ... ile ayarlanir.
 #
-#   ALERT_EMAIL_TO           Virgullu alici listesi (SMTP_* ayarlariyla gonderilir;
-#                            Microsoft 365 icin SMTP_HOST=smtp.office365.com, port 587)
+#   ALERT_EMAIL_TO           Virgullu alici listesi. Alertmanager SMTP'ye baglanmaz: alarm
+#                            notification-service'e (webhook) gider ve platformun e-posta
+#                            ayariyla (Platform > Sistem ayarlari ya da kurulumdaki SMTP) gonderilir.
+#   INTERNAL_SERVICE_TOKEN   notification-service'e kimlik (Authorization: Bearer)
 #   ALERT_SLACK_WEBHOOK_URL  Slack "Incoming Webhook" adresi
 #   ALERT_TEAMS_WEBHOOK_URL  Microsoft Teams "Workflows" (Power Automate) webhook adresi
 #
@@ -14,24 +16,12 @@ set -eu
 OUT=/tmp/alertmanager.yml
 q() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"; }
 
-SMTP_PORT="${SMTP_PORT:-25}"
-# 587 (STARTTLS) ve 465 (dogrudan TLS) disindaki portlar sifresiz kabul edilir
-# (Mailpit 1025, ic aga acik role 25). Go'nun SMTP istemcisi sifresiz baglantida
-# parola gondermeyi reddettigi icin o durumda kimlik bilgisi de verilmez.
-case "$SMTP_PORT" in 465|587) TLS=true ;; *) TLS=false ;; esac
+# Alici listesi sorgu parametresine yazilir; adreslerdeki ozel karakterler kodlanir.
+urlenc() { printf '%s' "$1" | tr -d ' ' | sed 's/%/%25/g; s/+/%2B/g; s/&/%26/g; s/#/%23/g; s/?/%3F/g'; }
 
 {
   echo "global:"
   echo "  resolve_timeout: 5m"
-  if [ -n "${ALERT_EMAIL_TO:-}" ]; then
-    echo "  smtp_smarthost: $(q "${SMTP_HOST:-localhost}:$SMTP_PORT")"
-    echo "  smtp_from: $(q "${SMTP_FROM_NAME:-HR360} <${SMTP_FROM_ADDRESS:-noreply@localhost}>")"
-    echo "  smtp_require_tls: $TLS"
-    if [ "$TLS" = true ] && [ -n "${SMTP_USER:-}" ]; then
-      echo "  smtp_auth_username: $(q "$SMTP_USER")"
-      echo "  smtp_auth_password: $(q "${SMTP_PASSWORD:-}")"
-    fi
-  fi
   cat <<'EOF'
 
 templates:
@@ -73,15 +63,14 @@ receivers:
   - name: hr360
 EOF
   if [ -n "${ALERT_EMAIL_TO:-}" ]; then
-    echo "    email_configs:"
-    echo "$ALERT_EMAIL_TO" | tr ',' '\n' | while read -r to; do
-      to="$(echo "$to" | tr -d ' ')"
-      [ -n "$to" ] || continue
-      echo "      - to: $(q "$to")"
-      echo "        send_resolved: true"
-      echo "        headers: { Subject: '{{ template \"hr360.title\" . }}' }"
-      echo "        html: '{{ template \"hr360.email\" . }}'"
-    done
+    echo "    webhook_configs:"
+    echo "      - url: $(q "http://notification-service:8080/api/internal/alerts?to=$(urlenc "$ALERT_EMAIL_TO")")"
+    echo "        send_resolved: true"
+    echo "        max_alerts: 20"
+    echo "        http_config:"
+    echo "          authorization:"
+    echo "            type: Bearer"
+    echo "            credentials: $(q "${INTERNAL_SERVICE_TOKEN:-}")"
   fi
   if [ -n "${ALERT_SLACK_WEBHOOK_URL:-}" ]; then
     echo "    slack_configs:"

@@ -203,5 +203,87 @@ class AfterRestoreTests(unittest.TestCase):
         psql.assert_not_called()
 
 
+class MonitoringTests(unittest.TestCase):
+    SLACK = "https://hooks.slack.com/services/T000/B000/XXXXSECRET"
+    TEAMS = "https://prod-00.westeurope.logic.azure.com:443/workflows/abc/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers&sig=SECRET"
+
+    def test_izinli_komutlar(self):
+        self.assertEqual(r.command("monitoring-enable", {"x": "; id"}), ["scripts/monitoring.sh", "enable"])
+        self.assertEqual(r.command("monitoring-disable", {}), ["scripts/monitoring.sh", "disable"])
+        self.assertEqual(r.command("monitoring-disable", {"purge": True}), ["scripts/monitoring.sh", "purge"])
+        self.assertEqual(r.command("monitoring-disable", {"purge": "true"}), ["scripts/monitoring.sh", "disable"])
+        self.assertEqual(r.command("monitoring-test", {}), ["scripts/monitoring.sh", "alerts", "test"])
+        self.assertEqual(r.command("monitoring-alerts", {"channel": "email", "value": "ops@a.com,it@b.com.tr"}),
+                         ["scripts/monitoring.sh", "alerts", "email", "ops@a.com,it@b.com.tr"])
+        self.assertEqual(r.command("monitoring-alerts", {"channel": "slack", "value": self.SLACK}),
+                         ["scripts/monitoring.sh", "alerts", "slack", self.SLACK])
+        self.assertEqual(r.command("monitoring-alerts", {"channel": "teams", "value": self.TEAMS})[3], self.TEAMS)
+        for off in (None, ""):
+            self.assertEqual(r.command("monitoring-alerts", {"channel": "teams", "value": off}), ["scripts/monitoring.sh", "alerts", "teams", "off"])
+        self.assertEqual(r.command("monitoring-tracing", {"on": True, "ratio": "0.25"}), ["scripts/monitoring.sh", "tracing", "on", "0.25"])
+        self.assertEqual(r.command("monitoring-tracing", {"on": "true", "ratio": "1"}), ["scripts/monitoring.sh", "tracing", "off"])
+
+    def test_gecersiz_degerler_reddedilir(self):
+        bad = [("email", "ops"), ("email", "a@b.com, c@d.com"), ("email", "a@b.com\nx@y.com"), ("email", ",".join(["a@b.co"] * 11)),
+               ("email", "a'b@c.com"), ("email", "a@b.com;id"), ("email", 5), ("slack", "http://hooks.slack.com/x/y/zzzz"),
+               ("slack", "https://h.com/a b"), ("slack", "https://h.com/#frag"), ("teams", "https://x.com/" + "a" * 600),
+               ("teams", "https://x.com/abcdefgh\n"), ("slack", "https://x.com/a${HOME}b"), ("slack", "https://x.com/a\\b"), ("slack", "https://x.com/`id`"), ("sms", "https://x.com/abcdefgh"), (None, "a@b.com")]
+        for ch, v in bad:
+            with self.subTest(ch=ch, v=v), self.assertRaises(ValueError):
+                r.command("monitoring-alerts", {"channel": ch, "value": v})
+        for ratio in (None, 0.5, "2", "-1", "0.5; id", "1.5", ".5", "0.12345"):
+            with self.subTest(ratio=ratio), self.assertRaises(ValueError):
+                r.command("monitoring-tracing", {"on": True, "ratio": ratio})
+
+    def test_webhook_kayitlarda_maskelenir(self):
+        job = {"id": "m1", "kind": "monitoring-alerts", "args": {"channel": "teams", "value": self.TEAMS}, "requestedAt": "x"}
+        recorded = []
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(r, "LOGS", d), \
+             mock.patch.object(r, "record", side_effect=lambda j: recorded.append(dict(j))), \
+             mock.patch.object(r.subprocess, "run", return_value=mock.Mock(returncode=0)) as run:
+            r.run(job)
+            self.assertEqual(run.call_args.args[0][3], self.TEAMS)  # komut gerçek adresi alır
+            log = (Path(d) / "m1.log").read_text()
+        self.assertNotIn("SECRET", log)
+        self.assertNotIn("SECRET", str(recorded))
+        self.assertEqual(recorded[-1]["args"]["value"], "https://prod-00.westeurope.logic.azure.com:443/…")
+
+    def test_reddedilen_iste_de_maskelenir(self):
+        job = {"id": "m2", "kind": "monitoring-alerts", "args": {"channel": "slack", "value": "https://x.com/SECRET token"}, "requestedAt": "x"}
+        recorded = []
+        with mock.patch.object(r, "record", side_effect=lambda j: recorded.append(dict(j))):
+            r.run(job)
+        self.assertEqual(recorded[-1]["status"], "Failed")
+        self.assertNotIn("SECRET", str(recorded))
+
+    def test_durum_sir_icermez(self):
+        env = {"COMPOSE_PROFILES": "mailer,monitoring", "ALERT_EMAIL_TO": "ops@a.com, it@b.com", "ALERT_SLACK_WEBHOOK_URL": self.SLACK,
+               "SMTP_HOST": "smtp.office365.com", "GRAFANA_SSO_ENABLED": "true", "GRAFANA_OAUTH_CLIENT_SECRET": "S3CRET",
+               "GRAFANA_ADMIN_PASSWORD": "PW"}
+        with mock.patch.object(r, "sh", return_value=(0, "grafana\nprometheus\nmailpit\n")), \
+             tempfile.TemporaryDirectory() as d, mock.patch.object(r, "ROOT", d):
+            m = r.monitoring_status(env)
+        self.assertEqual(m["enabled"], True)
+        self.assertEqual(m["running"], 2)
+        self.assertEqual(m["alerts"], {"email": ["ops@a.com", "it@b.com"], "slack": "https://hooks.slack.com/…", "teams": None})
+        self.assertTrue(m["sso"])
+        self.assertEqual(m["tracing"], {"on": False, "ratio": None})
+        for secret in ("SECRET", "S3CRET", "PW\""):
+            self.assertNotIn(secret, str(m))
+
+    def test_kapali_izleme(self):
+        with mock.patch.object(r, "sh") as sh:
+            m = r.monitoring_status({"COMPOSE_PROFILES": "mailer", "SMTP_HOST": "mailpit"})
+        sh.assert_not_called()
+        self.assertEqual((m["enabled"], m["running"], m["sso"]), (False, None, False))
+
+    def test_izleme_orani_dosyadan(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(r, "ROOT", d):
+            (Path(d) / "deploy" / "monitoring").mkdir(parents=True)
+            (Path(d) / "deploy" / "monitoring" / "tracing.env").write_text("OTEL_EXPORTER_OTLP_ENDPOINT=x\nOTEL_TRACES_SAMPLER_ARG=0.2\n")
+            m = r.monitoring_status({})
+        self.assertEqual(m["tracing"], {"on": True, "ratio": "0.2"})
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -837,12 +837,8 @@ services:
       ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
       ALERT_SLACK_WEBHOOK_URL: ${ALERT_SLACK_WEBHOOK_URL:-}
       ALERT_TEAMS_WEBHOOK_URL: ${ALERT_TEAMS_WEBHOOK_URL:-}
-      SMTP_HOST: ${SMTP_HOST:-mailpit}
-      SMTP_PORT: ${SMTP_PORT:-1025}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@hr360.local}
-      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-HR360}
+      # E-posta alarmlari notification-service uzerinden platformun e-posta ayariyla gider.
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-}"
     volumes:
       - ./deploy/monitoring/alertmanager-entrypoint.sh:/etc/alertmanager/entrypoint.sh:ro
       - ./deploy/monitoring/alertmanager.tmpl:/etc/alertmanager/templates/hr360.tmpl:ro
@@ -937,6 +933,23 @@ services:
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/hr360-overview.json
+      # HR360 hesabiyla giris (scripts/monitoring.sh sso; Keycloak istemcisi hr360-grafana). Yalnizca
+      # platform yoneticisi girer; tek sirket kipinde (HR360_TENANCY=single) sirket yoneticisi de
+      # (single-platform-manage). Rolu olmayan reddedilir (strict). admin parolasi yedek giris olarak kalir.
+      GF_AUTH_GENERIC_OAUTH_ENABLED: "${GRAFANA_SSO_ENABLED:-false}"
+      GF_AUTH_GENERIC_OAUTH_NAME: HR360
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: hr360-grafana
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ${GRAFANA_OAUTH_CLIENT_SECRET:-}
+      GF_AUTH_GENERIC_OAUTH_SCOPES: openid profile email
+      GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
+      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: ${PUBLIC_ORIGIN:-http://localhost}/auth/realms/hr360/protocol/openid-connect/auth
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: http://keycloak:8080/auth/realms/hr360/protocol/openid-connect/token
+      GF_AUTH_GENERIC_OAUTH_API_URL: http://keycloak:8080/auth/realms/hr360/protocol/openid-connect/userinfo
+      GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: preferred_username
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "(contains(roles[*], 'platform-admin') || contains(roles[*], '${HR360_TENANCY:-multi}-platform-manage')) && 'Admin'"
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT: "true"
+      GF_AUTH_SIGNOUT_REDIRECT_URL: ${PUBLIC_ORIGIN:-http://localhost}/auth/realms/hr360/protocol/openid-connect/logout?client_id=hr360-grafana
     volumes:
       - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro

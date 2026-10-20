@@ -7,6 +7,9 @@
 #   scripts/monitoring.sh status     Hedeflerin ve alarmlarin ozetini gosterir.
 #   scripts/monitoring.sh password   Grafana yonetici sifresini gosterir.
 #   scripts/monitoring.sh purge      Durdurur ve metrik/log/iz verilerini siler.
+#   scripts/monitoring.sh sso        Grafana'ya HR360 hesabiyla giris (Keycloak istemcisi hr360-grafana);
+#                                    enable bunu kendisi cagirir. Yalnizca platform yoneticisi girer
+#                                    (tek sirket kipinde sirket yoneticisi de).
 #
 # Dagitik izleme (G25, OpenTelemetry -> otel-collector -> Tempo; varsayilan KAPALI):
 #   scripts/monitoring.sh tracing on [oran]   .NET servislerini collector'a baglar (oran 0..1, varsayilan 1)
@@ -17,7 +20,7 @@
 #
 # Alarm kanallari (Alertmanager):
 #   scripts/monitoring.sh alerts status
-#   scripts/monitoring.sh alerts email ops@sirket.com,it@sirket.com   (SMTP_* ile; Microsoft 365 dahil)
+#   scripts/monitoring.sh alerts email ops@sirket.com,it@sirket.com   (platformun e-posta ayariyla gider)
 #   scripts/monitoring.sh alerts slack https://hooks.slack.com/services/...
 #   scripts/monitoring.sh alerts teams https://....logic.azure.com/workflows/...
 #   scripts/monitoring.sh alerts <email|slack|teams> off
@@ -45,7 +48,6 @@ DOTNET_SERVICES=(organization-service employee-service workflow-service leave-se
   expense-service notification-service tenant-service)
 TRACING_ENV=deploy/monitoring/tracing.env
 
-sed_i() { if sed --version >/dev/null 2>&1; then sed -i "$@"; else sed -i '' "$@"; fi; }
 die() { echo "HATA: $*" >&2; exit 1; }
 [ -f "$ENV_FILE" ] || die ".env bulunamadi; once install.sh calistirin."
 
@@ -53,10 +55,10 @@ if ! declare -F docker >/dev/null && ! docker info >/dev/null 2>&1 && sudo docke
   docker() { command sudo docker "$@"; }
 fi
 
-set_env() {
-  if grep -q "^$1=" "$ENV_FILE"; then sed_i "s#^$1=.*#$1=$2#" "$ENV_FILE"
-  else printf '%s=%s\n' "$1" "$2" >> "$ENV_FILE"; fi
-}
+# shellcheck source=lib/secrets.sh
+. scripts/lib/secrets.sh
+# Deger sed'e verilmez: Teams webhook adresindeki "&" ya da "\\" sed'de ozel anlam tasir.
+set_env() { env_file_set "$1" "$2"; }
 get_env() { grep "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- || true; }
 profile_set() { # profile_set NAME on|off  (diger profiller korunur)
   local cur out=""
@@ -67,6 +69,51 @@ profile_set() { # profile_set NAME on|off  (diger profiller korunur)
 }
 gen_password() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24 || true; }
 origin() { local o; o="$(get_env PUBLIC_ORIGIN)"; [ -n "$o" ] || o="$(get_env PUBLIC_URL)"; echo "${o:-http://localhost}"; }
+
+# Grafana tek oturum acma: hr360 realm'inde gizli "hr360-grafana" istemcisi (yalnizca tarayici akisi,
+# PKCE) ve realm rollerini "roles" talebine yazan eslemeci. Grafana rolu bu talepten hesaplar
+# (docker-compose.yml GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH); rolu olmayan giremez.
+ensure_sso() {
+  local secret o
+  secret="$(get_env GRAFANA_OAUTH_CLIENT_SECRET)"
+  if [ -z "$secret" ]; then
+    secret="$({ openssl rand -base64 48 2>/dev/null || head -c 48 /dev/urandom | base64; } | tr -dc 'A-Za-z0-9' | head -c 40)"
+    [ "${#secret}" -ge 32 ] || { echo "UYARI: Grafana istemci anahtari uretilemedi" >&2; return 1; }
+    set_env GRAFANA_OAUTH_CLIENT_SECRET "$secret"
+  fi
+  o="$(origin)"; o="${o%/}"
+  # shellcheck disable=SC2016  # $ ifadeleri konteynerdeki kabukta acilir.
+  printf '%s\n%s\n' "$secret" "$o" | docker compose exec -T keycloak sh -c '
+read -r SECRET; read -r ORIGIN
+K=/opt/keycloak/bin/kcadm.sh; C=/tmp/kcadm-gf.$$.config; trap "rm -f $C" EXIT
+for i in $(seq 1 20); do
+  $K config credentials --config $C --server http://127.0.0.1:8080/auth --realm master \
+    --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null 2>&1 && break
+  [ "$i" = 20 ] && { echo "Keycloak yoneticisiyle oturum acilamadi" >&2; exit 1; }
+  sleep 3
+done
+R=hr360; CID=hr360-grafana
+id=$($K get clients -r $R -q clientId=$CID --fields id --format csv --noquotes --config $C | head -1)
+set -- -s enabled=true -s publicClient=false -s standardFlowEnabled=true -s implicitFlowEnabled=false \
+  -s directAccessGrantsEnabled=false -s serviceAccountsEnabled=false -s "secret=$SECRET" -s "name=Grafana (izleme)" \
+  -s "redirectUris=[\"$ORIGIN/grafana/login/generic_oauth\"]" -s "webOrigins=[\"$ORIGIN\"]" \
+  -s "attributes.\"pkce.code.challenge.method\"=S256" -s "attributes.\"post.logout.redirect.uris\"=$ORIGIN/grafana/*"
+if [ -z "$id" ]; then
+  $K create clients -r $R -s clientId=$CID "$@" --config $C >/dev/null || exit 1
+  id=$($K get clients -r $R -q clientId=$CID --fields id --format csv --noquotes --config $C | head -1)
+else
+  $K update clients/$id -r $R "$@" --config $C || exit 1
+fi
+if ! $K get clients/$id/protocol-mappers/models -r $R --fields name --format csv --noquotes --config $C | grep -qx roles; then
+  $K create clients/$id/protocol-mappers/models -r $R --config $C -s name=roles -s protocol=openid-connect \
+    -s protocolMapper=oidc-usermodel-realm-role-mapper -s "config.\"claim.name\"=roles" -s "config.multivalued=true" \
+    -s "config.\"jsonType.label\"=String" -s "config.\"id.token.claim\"=true" -s "config.\"userinfo.token.claim\"=true" \
+    -s "config.\"access.token.claim\"=false" >/dev/null || exit 1
+fi
+' || { echo "UYARI: Grafana tek oturum acma ayarlanamadi; Grafana'ya yonetici parolasiyla girilir." >&2; return 1; }
+  set_env GRAFANA_SSO_ENABLED true
+  echo "Grafana girisi: HR360 hesabiyla (platform yoneticisi)."
+}
 
 wait_http() { # wait_http SERVICE PATH PORT
   local i
@@ -84,6 +131,7 @@ case "$cmd" in
       set_env GRAFANA_ADMIN_PASSWORD "$(gen_password)"
     fi
     profile_set monitoring on
+    ensure_sso || true
     docker compose --profile monitoring up -d "${SERVICES[@]}"
     # prometheus.yml / alerts.yml degismis olabilir; konteyner yeniden olusmadiysa da okusun.
     docker compose exec -T prometheus wget -qO- --post-data '' http://127.0.0.1:9090/-/reload >/dev/null 2>&1 || true
@@ -142,7 +190,7 @@ case "$cmd" in
     }
     case "$sub" in
       status)
-        echo "E-posta: $(get_env ALERT_EMAIL_TO | sed 's/^$/(kapali)/')   [SMTP: $(get_env SMTP_HOST | tr -d "'"):$(get_env SMTP_PORT)]"
+        echo "E-posta: $(get_env ALERT_EMAIL_TO | sed 's/^$/(kapali)/')   [platformun e-posta ayariyla: Platform > Sistem ayarlari]"
         echo "Slack:   $(mask "$(get_env ALERT_SLACK_WEBHOOK_URL)")"
         echo "Teams:   $(mask "$(get_env ALERT_TEAMS_WEBHOOK_URL)")"
         ;;
@@ -156,7 +204,7 @@ case "$cmd" in
         key=ALERT_SLACK_WEBHOOK_URL; [ "$sub" = teams ] && key=ALERT_TEAMS_WEBHOOK_URL
         v="${3:-}"; [ -n "$v" ] || die "kullanim: alerts $sub <webhook-adresi> | off"
         if [ "$v" = off ]; then v=""; else
-          [[ "$v" =~ ^https?://[^[:space:]\'\"#]+$ ]] || die "gecersiz adres: $v"
+          [[ "$v" =~ ^https?://[^[:space:]\'\"#\$\`\\]+$ ]] || die "gecersiz adres: $v"
         fi
         set_env "$key" "$v"; apply_alerts ;;
       test)
@@ -186,6 +234,12 @@ case "$cmd" in
     for v in prometheus-data grafana-data loki-data alertmanager-data tempo-data; do
       docker volume rm "hr360_$v" >/dev/null 2>&1 && echo "silindi: hr360_$v" || true
     done
+    ;;
+  sso)
+    ensure_sso
+    if docker compose --profile monitoring ps --status running --services 2>/dev/null | grep -qx grafana; then
+      docker compose --profile monitoring up -d grafana >/dev/null
+    fi
     ;;
   password)
     p="$(get_env GRAFANA_ADMIN_PASSWORD)"
@@ -217,6 +271,6 @@ for x in a: print("  -", x["labels"]["alertname"], x["labels"].get("service","")
     fi
     ;;
   *)
-    die "bilinmeyen komut: $cmd (enable | disable | status | password | purge | alerts | tracing)"
+    die "bilinmeyen komut: $cmd (enable | disable | status | password | purge | sso | alerts | tracing)"
     ;;
 esac

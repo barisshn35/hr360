@@ -161,9 +161,8 @@ jobs:
       - name: Alertmanager yapilandirmasi (tum kanallar acik)
         run: |
           docker run --rm --entrypoint /bin/sh \
-            -e ALERT_EMAIL_TO=a@example.com,b@example.com -e ALERT_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T/B/X \
-            -e ALERT_TEAMS_WEBHOOK_URL=https://example.logic.azure.com/workflows/x -e SMTP_HOST=smtp.office365.com -e SMTP_PORT=587 \
-            -e SMTP_USER=u -e "SMTP_PASSWORD=p'q" \
+            -e ALERT_EMAIL_TO=a@example.com,b+ops@example.com -e ALERT_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T/B/X \
+            -e "ALERT_TEAMS_WEBHOOK_URL=https://example.logic.azure.com/workflows/x?api-version=1&sig=a%2Fb" -e "INTERNAL_SERVICE_TOKEN=t'k" \
             -v "$PWD/deploy/monitoring/alertmanager-entrypoint.sh:/e.sh:ro" -v "$PWD/deploy/monitoring/alertmanager.tmpl:/etc/alertmanager/templates/hr360.tmpl:ro" \
             prom/alertmanager:v0.28.1 /e.sh check
       - name: Grafana panoları JSON

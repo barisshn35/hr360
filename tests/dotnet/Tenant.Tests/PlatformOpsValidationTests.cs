@@ -212,4 +212,66 @@ public class PlatformOpsValidationTests
         Assert.Null(error);
         Assert.Equal("{}", JsonSerializer.Serialize(args));
     }
+
+    private static JsonElement MonSnap(bool enabled) => JsonDocument.Parse(JsonSerializer.Serialize(new { monitoring = new { enabled } })).RootElement;
+    private static (object? Args, string? Error) Mon(string kind, object? args, bool enabled = true)
+        => PlatformOpsController.ValidateArgs(kind, args is null ? null : Args(args), null, MonSnap(enabled), Now);
+
+    [Fact]
+    public void Izleme_turleri_izinli_ve_yeniden_baslatanlar_tek_basina()
+    {
+        foreach (var k in new[] { "monitoring-enable", "monitoring-disable", "monitoring-alerts", "monitoring-test", "monitoring-tracing" })
+            Assert.Contains(k, PlatformOpsController.Kinds);
+        var destructive = (string[])typeof(PlatformOpsController).GetField("Destructive", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+        Assert.Contains("monitoring-enable", destructive);
+        Assert.Contains("monitoring-tracing", destructive);
+        Assert.DoesNotContain("monitoring-alerts", destructive);
+    }
+
+    [Fact]
+    public void Alarm_e_postasi_dogrulanir_ve_duzenlenir()
+    {
+        var (args, error) = Mon("monitoring-alerts", new { channel = "email", value = " ops@sirket.com , it@sirket.com.tr " });
+        Assert.Null(error);
+        Assert.Equal("""{"channel":"email","value":"ops@sirket.com,it@sirket.com.tr"}""", JsonSerializer.Serialize(args));
+        Assert.Equal("Geçersiz e-posta adresi: a;id@b.com", Mon("monitoring-alerts", new { channel = "email", value = "a;id@b.com" }).Error);
+        Assert.NotNull(Mon("monitoring-alerts", new { channel = "email", value = string.Join(',', Enumerable.Repeat("a@b.co", 11)) }).Error);
+        Assert.Equal("Bilinmeyen alarm kanalı", Mon("monitoring-alerts", new { channel = "sms", value = "a@b.co" }).Error);
+        // bos deger kanali kapatir
+        Assert.Equal("""{"channel":"slack","value":null}""", JsonSerializer.Serialize(Mon("monitoring-alerts", new { channel = "slack", value = "" }).Args));
+    }
+
+    [Fact]
+    public void Webhook_https_olmali_ve_listede_maskelenir()
+    {
+        const string url = "https://prod-00.westeurope.logic.azure.com:443/workflows/x/invoke?api-version=1&sig=SECRET";
+        Assert.Null(Mon("monitoring-alerts", new { channel = "teams", value = url }).Error);
+        foreach (var bad in new[] { "http://hooks.slack.com/services/x", "https://a.com/b c", "https://a.com/#x", "https://a.com/x\nfoo", "javascript:alert(1)", "https://a.com/${HOME}", "https://a.com/a\\b" })
+            Assert.NotNull(Mon("monitoring-alerts", new { channel = "slack", value = bad }).Error);
+        var masked = PlatformOpsController.RedactArgs("monitoring-alerts", Args(new { channel = "teams", value = url }));
+        Assert.Equal("https://prod-00.westeurope.logic.azure.com:443/…", masked.GetProperty("value").GetString());
+        Assert.DoesNotContain("SECRET", masked.GetRawText());
+        // e-posta ve diger isler olduğu gibi
+        var email = Args(new { channel = "email", value = "ops@a.com" });
+        Assert.Equal(email.GetRawText(), PlatformOpsController.RedactArgs("monitoring-alerts", email).GetRawText());
+    }
+
+    [Fact]
+    public void Izleme_kapaliyken_deneme_ve_iz_reddedilir()
+    {
+        Assert.Equal("Önce izlemeyi açın", Mon("monitoring-test", null, enabled: false).Error);
+        Assert.Null(Mon("monitoring-test", null).Error);
+        Assert.Equal("Önce izlemeyi açın", Mon("monitoring-tracing", new { on = true, ratio = 0.5 }, enabled: false).Error);
+        Assert.Null(Mon("monitoring-tracing", new { on = false }, enabled: false).Error); // kapatmak her zaman olur
+    }
+
+    [Fact]
+    public void Iz_orani_sinirlanir_ve_metne_cevrilir()
+    {
+        Assert.Equal("""{"on":true,"ratio":"0.25"}""", JsonSerializer.Serialize(Mon("monitoring-tracing", new { on = true, ratio = 0.25 }).Args));
+        Assert.Equal("""{"on":true,"ratio":"1"}""", JsonSerializer.Serialize(Mon("monitoring-tracing", new { on = true, ratio = 1 }).Args));
+        foreach (var bad in new object[] { 0, 1.5, -0.1, "0.5", 0.0001 })
+            Assert.Equal("Örnekleme oranı 0 ile 1 arasında olmalı", Mon("monitoring-tracing", new { on = true, ratio = bad }).Error);
+        Assert.Equal("""{"purge":true}""", JsonSerializer.Serialize(Mon("monitoring-disable", new { purge = true }).Args));
+    }
 }

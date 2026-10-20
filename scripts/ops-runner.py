@@ -22,10 +22,15 @@ izinli komutları, doğrulanmış bağımsız değişkenlerle çalıştırır:
   modules-set     scripts/modules.sh set MODÜL,MODÜL… | all   (boş seçim: scripts/modules.sh disable <hepsi>)
   tenancy-multi   scripts/tenancy.sh multi
   tenancy-single  scripts/tenancy.sh single
+  monitoring-enable    scripts/monitoring.sh enable
+  monitoring-disable   scripts/monitoring.sh disable | purge
+  monitoring-alerts    scripts/monitoring.sh alerts email|slack|teams DEĞER|off   (webhook adresi kayıtlarda maskelenir)
+  monitoring-test      scripts/monitoring.sh alerts test
+  monitoring-tracing   scripts/monitoring.sh tracing on ORAN | off
 
 Sonuç hem veritabanına hem ops-logs/<iş>.json dosyasına yazılır: geri yükleme veritabanını değiştirdiği
 için iş kaydı kaybolursa dosyadan geri yazılır. Her turda sunucu durum özeti
-(sürüm, etiketler, yedekler, zamanlama, disk, anlık geri dönüş, modüller, şirket kipi) platform_ops_status tablosuna yazılır.
+(sürüm, etiketler, yedekler, zamanlama, disk, bellek, anlık geri dönüş, modüller, şirket kipi, izleme) platform_ops_status tablosuna yazılır.
 Tek seferde tek çalıştırıcı (dosya kilidi).
 """
 import datetime as dt
@@ -49,6 +54,12 @@ TAG = re.compile(r"^v\d+\.\d+\.\d+$")
 ARCHIVE = re.compile(r"^hr360-[A-Za-z0-9_.-]+\.tar\.gz(\.enc)?$")
 AT = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 TARGET = re.compile(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", re.ASCII)  # fullmatch: sondaki satır sonu da reddedilir
+# İzleme alarm kanalları (scripts/monitoring.sh alerts). Hepsi fullmatch; boşluk, tırnak, # ve satır sonu reddedilir.
+EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}", re.ASCII)
+WEBHOOK = re.compile(r"https://[^\s'\"#$`\\]{8,500}", re.ASCII)
+RATIO = re.compile(r"0(\.\d{1,3})?|1(\.0{1,3})?", re.ASCII)
+MONITORING_SERVICES = ("prometheus", "alertmanager", "postgres-exporter", "node-exporter", "blackbox-exporter", "loki", "promtail",
+                       "tempo", "otel-collector", "grafana")
 # İsteğe bağlı modüller (scripts/lib/modules.sh HR360_MODULE_TABLE ile aynı, tablo sırasıyla). Arayüzden
 # gelen metin komuta hiçbir zaman olduğu gibi geçmez: yalnızca bu kimlikler, bu sırayla yazılır.
 MODULES = ("recruitment", "onboarding", "timeshift", "performance", "learning", "compensation", "ml", "expense")
@@ -237,6 +248,49 @@ def parse_tenancy(out):
     return t
 
 
+def mask_url(u):
+    """Webhook adresi bir sırdır: yalnızca kökeni gösterilir (https://hooks.slack.com/…)."""
+    m = re.match(r"^(https?://[^/?#]+)", u or "")
+    return (m.group(1) + "/…") if m else "…"
+
+
+def monitoring_status(env=None):
+    """İzleme yığını: açık mı, kaç konteyner çalışıyor, alarm kanalları (webhook adresi yerine yalnızca
+    açık/kapalı ve köken), dağıtık izleme, Grafana girişi. Sır değeri YOK."""
+    env = env_keys() if env is None else env
+    enabled = "monitoring" in env.get("COMPOSE_PROFILES", "").split(",")
+    running = None
+    if enabled:
+        rc, out = sh(["docker", "compose", "--profile", "monitoring", "ps", "--status", "running", "--services"])
+        running = len([x for x in out.splitlines() if x.strip() in MONITORING_SERVICES]) if rc == 0 else None
+    ratio = None
+    try:
+        with open(os.path.join(ROOT, "deploy", "monitoring", "tracing.env")) as f:
+            for line in f:
+                if line.startswith("OTEL_TRACES_SAMPLER_ARG="):
+                    ratio = line.split("=", 1)[1].strip() or "1"
+    except OSError:
+        pass
+    emails = [e.strip() for e in env.get("ALERT_EMAIL_TO", "").split(",") if e.strip()]
+    slack, teams = env.get("ALERT_SLACK_WEBHOOK_URL", ""), env.get("ALERT_TEAMS_WEBHOOK_URL", "")
+    return {
+        "enabled": enabled, "running": running, "total": len(MONITORING_SERVICES),
+        "alerts": {"email": emails, "slack": mask_url(slack) if slack else None, "teams": mask_url(teams) if teams else None},
+        "tracing": {"on": ratio is not None, "ratio": ratio},
+        "sso": env.get("GRAFANA_SSO_ENABLED", "").lower() == "true",
+    }
+
+
+def memory():
+    """/proc/meminfo → toplam ve kullanılabilir bellek (bayt); okunamazsa None."""
+    try:
+        with open("/proc/meminfo") as f:
+            kv = {k.strip(): v.split()[0] for k, v in (line.split(":", 1) for line in f if ":" in line)}
+        return {"total": int(kv["MemTotal"]) * 1024, "available": int(kv["MemAvailable"]) * 1024}
+    except (OSError, KeyError, ValueError, IndexError):
+        return None
+
+
 def snapshot():
     def read(p):
         try:
@@ -256,6 +310,11 @@ def snapshot():
     tenancy = parse_tenancy(_run_script(["scripts/tenancy.sh", "status"]))
     if tenancy is not None:
         extra["tenancy"] = tenancy
+    if os.path.exists(os.path.join(ROOT, "scripts", "monitoring.sh")):
+        extra["monitoring"] = monitoring_status()
+    mem = memory()
+    if mem is not None:
+        extra["memory"] = mem
     return {
         "version": read("VERSION"), "commit": commit, "commitDate": date, "tags": tags(), "backups": backups(),
         "backupStatus": bstatus, "updateStatus": ustatus, "diskFree": usage.free, "diskTotal": usage.total,
@@ -332,6 +391,34 @@ def command(kind, args):
         return ["scripts/tenancy.sh", "multi"]
     if kind == "tenancy-single":
         return ["scripts/tenancy.sh", "single"]
+    if kind == "monitoring-enable":
+        return ["scripts/monitoring.sh", "enable"]
+    if kind == "monitoring-disable":
+        return ["scripts/monitoring.sh", "purge" if args.get("purge") is True else "disable"]
+    if kind == "monitoring-alerts":
+        ch, v = args.get("channel"), args.get("value")
+        if ch not in ("email", "slack", "teams"):
+            raise ValueError("geçersiz alarm kanalı")
+        if v is None or v == "":
+            return ["scripts/monitoring.sh", "alerts", ch, "off"]
+        if not isinstance(v, str):
+            raise ValueError("geçersiz alarm adresi")
+        if ch == "email":
+            addrs = v.split(",")
+            if not (1 <= len(addrs) <= 10 and all(EMAIL.fullmatch(a) for a in addrs)):
+                raise ValueError("geçersiz e-posta adresi")
+        elif not WEBHOOK.fullmatch(v):
+            raise ValueError("geçersiz webhook adresi")
+        return ["scripts/monitoring.sh", "alerts", ch, v]
+    if kind == "monitoring-test":
+        return ["scripts/monitoring.sh", "alerts", "test"]
+    if kind == "monitoring-tracing":
+        if args.get("on") is not True:
+            return ["scripts/monitoring.sh", "tracing", "off"]
+        r = args.get("ratio")
+        if not (isinstance(r, str) and RATIO.fullmatch(r)):
+            raise ValueError("geçersiz örnekleme oranı")
+        return ["scripts/monitoring.sh", "tracing", "on", r]
     raise ValueError("izinli olmayan iş türü")
 
 
@@ -342,7 +429,7 @@ def record(job):
     psql("""INSERT INTO platform_ops_jobs ("Id","Kind","Args","Status","RequestedBy","RequestedAt","StartedAt","FinishedAt","ExitCode","Output")
             VALUES (:'id', :'kind', :'args'::jsonb, :'status', NULLIF(:'by',''), :'reqat'::timestamptz, NULLIF(:'start','')::timestamptz,
                     NULLIF(:'fin','')::timestamptz, NULLIF(:'code','')::int, :'out')
-            ON CONFLICT ("Id") DO UPDATE SET "Status" = EXCLUDED."Status", "StartedAt" = EXCLUDED."StartedAt", "FinishedAt" = EXCLUDED."FinishedAt",
+            ON CONFLICT ("Id") DO UPDATE SET "Args" = EXCLUDED."Args", "Status" = EXCLUDED."Status", "StartedAt" = EXCLUDED."StartedAt", "FinishedAt" = EXCLUDED."FinishedAt",
                 "ExitCode" = EXCLUDED."ExitCode", "Output" = EXCLUDED."Output" """,
          id=job["id"], kind=job["kind"], args=json.dumps(job["args"]), status=job["status"], by=job.get("requestedBy") or "",
          reqat=job["requestedAt"], start=job.get("startedAt") or "", fin=job.get("finishedAt") or "",
@@ -384,17 +471,29 @@ def claim():
     return json.loads(row) if row else None
 
 
+def redact(job):
+    """Webhook adresi sırdır: iş kaydında (veritabanı, ops-logs) yalnızca kökeni kalır."""
+    a = job.get("args") or {}
+    if job["kind"] == "monitoring-alerts" and a.get("channel") in ("slack", "teams") and isinstance(a.get("value"), str) and a["value"]:
+        job["args"] = {**a, "value": mask_url(a["value"])}
+
+
 def run(job):
     try:
         cmd = command(job["kind"], job["args"] or {})
     except ValueError as e:
+        redact(job)
         job.update(status="Failed", exitCode=None, finishedAt=now(), output=f"Reddedildi: {e}")
         record(job)
         return
+    shown = list(cmd)
+    if job["kind"] == "monitoring-alerts" and cmd[2] in ("slack", "teams") and cmd[3] != "off":
+        shown[3] = mask_url(cmd[3])
+    redact(job)
     log = os.path.join(LOGS, f"{job['id']}.log")
     started = time.time()
     with open(log, "w") as out:
-        out.write(f"$ {' '.join(cmd)}\n")
+        out.write(f"$ {' '.join(shown)}\n")
         out.flush()
         try:
             code = subprocess.run(cmd, cwd=ROOT, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, timeout=TIMEOUT).returncode

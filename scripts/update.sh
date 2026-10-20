@@ -234,6 +234,12 @@ if deploy && healthy; then
     scripts/keycloak-service-account.sh apply \
       || echo "UYARI: servis hesabi olusturulamadi; scripts/keycloak-service-account.sh ile tekrar deneyin." >&2
   fi
+  # Izleme aciksa ve Grafana'ya HR360 hesabiyla giris henuz kurulmadiysa (bir kez) kurulur.
+  if [ -x scripts/monitoring.sh ] && grep -Eq '^COMPOSE_PROFILES=(.*,)?monitoring(,|$)' .env \
+     && ! grep -q '^GRAFANA_SSO_ENABLED=true' .env; then
+    info "Grafana'ya HR360 hesabiyla giris ayarlaniyor"
+    scripts/monitoring.sh sso || echo "UYARI: Grafana girisi ayarlanamadi; scripts/monitoring.sh sso ile tekrar deneyin." >&2
+  fi
   info "Guncelleme tamamlandi: $(version_at "$TARGET") (${TARGET:0:12})"
   exit 0
 fi
